@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { useNetwork } from '@/contexts/NetworkContext';
 // Call server API; avoid importing server-only toolkit client-side
 import type { SupportedEvm } from '@/lib/providers';
+import { EVM_TOKENS } from '@/lib/tokens';
 
 interface SendFlowProps {
   asset: {
@@ -26,14 +27,23 @@ interface SendFlowProps {
   onClose: () => void;
 }
 
-const destinationChains = [
-  { value: 'ethereum', label: 'Ethereum', icon: '🔷' },
-  { value: 'solana', label: 'Solana', icon: '☀️' },
-  { value: 'sui', label: 'Sui', icon: '🔵' },
-  { value: 'ton', label: 'TON', icon: '💎' },
-  { value: 'polygon', label: 'Polygon', icon: '🟣' },
-  { value: 'bsc', label: 'BSC', icon: '🟡' }
-];
+function toLabel(key: string) {
+  switch (key) {
+    case 'bsc': return 'BNB Chain'
+    case 'eth':
+    case 'ethereum': return 'Ethereum'
+    case 'avax':
+    case 'avalanche': return 'Avalanche'
+    case 'matic':
+    case 'polygon': return 'Polygon'
+    case 'arb':
+    case 'arbitrum': return 'Arbitrum'
+    case 'op':
+    case 'optimism': return 'Optimism'
+    case 'base': return 'Base'
+    default: return key.charAt(0).toUpperCase() + key.slice(1)
+  }
+}
 
 export default function SendFlow({ asset, onClose }: SendFlowProps) {
   const [recipientAddress, setRecipientAddress] = useState('');
@@ -41,7 +51,13 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
   const [destinationChain, setDestinationChain] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { network } = useNetwork();
-  
+  const destinationChains = useMemo(() => {
+    // Use keys of EVM_TOKENS to represent supported EVM chains
+    return Object.keys(EVM_TOKENS).map((key) => ({
+      value: key,
+      label: toLabel(key),
+    }))
+  }, [])
 
   const handleSend = async () => {
     if (!recipientAddress.trim()) {
@@ -183,7 +199,6 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
                 {destinationChains.map((chain) => (
                   <SelectItem key={chain.value} value={chain.value}>
                     <div className="flex items-center space-x-2">
-                      <span>{chain.icon}</span>
                       <span>{chain.label}</span>
                     </div>
                   </SelectItem>
