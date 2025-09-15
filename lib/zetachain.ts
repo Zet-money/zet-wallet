@@ -2,11 +2,17 @@ import { evmDeposit, evmDepositAndCall } from '@zetachain/toolkit'
 import { ContractTransactionResponse } from 'ethers'
 import { getEvmSignerFromPhrase, type SupportedEvm } from './providers'
 
+export type Erc20Token = {
+  symbol: string
+  address: string
+  decimals?: number
+}
+
 export type EvmDepositParams = {
   originChain: SupportedEvm
   amount: string
   receiver: string // receiver on ZetaChain
-  token?: string // ERC-20 on origin chain (optional for native)
+  token?: Erc20Token | string // token object or address for convenience
   mnemonicPhrase: string
 }
 
@@ -16,7 +22,7 @@ export async function depositToZeta({ originChain, amount, receiver, token, mnem
     {
       amount,
       receiver,
-      token,
+      token: typeof token === 'string' ? token : token?.address,
     },
     { signer }
   )
@@ -29,7 +35,7 @@ export async function depositAndCall({ originChain, amount, receiver, token, mne
     {
       amount,
       receiver,
-      token,
+      token: typeof token === 'string' ? token : token?.address,
     },
     { signer }
   )
