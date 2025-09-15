@@ -61,11 +61,18 @@ export default function WalletSetup() {
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="bg-muted p-4 rounded-lg">
+              {!showMnemonic && (
+                <div className="text-center py-4 text-muted-foreground">
+                  <p className="text-sm">Click "Show Phrase" to reveal your recovery phrase</p>
+                </div>
+              )}
               <div className="grid grid-cols-3 gap-2 text-sm">
                 {wallet.mnemonic.split(' ').map((word, index) => (
                   <div key={index} className="flex items-center space-x-2">
                     <span className="text-muted-foreground w-6">{index + 1}.</span>
-                    <span className="font-mono">{word}</span>
+                    <span className="font-mono">
+                      {showMnemonic ? word : '••••••••'}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -83,6 +90,7 @@ export default function WalletSetup() {
               
               <Button
                 onClick={() => copyToClipboard(wallet.mnemonic)}
+                disabled={!showMnemonic}
                 className="flex items-center space-x-2"
               >
                 {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
