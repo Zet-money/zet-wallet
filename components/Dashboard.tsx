@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Search, Send, Download, Settings, Copy, Check } from 'lucide-react';
 import { useWallet } from '@/contexts/WalletContext';
 import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
 
 interface Asset {
   id: string;
@@ -79,6 +80,7 @@ const chains = [
 
 export default function Dashboard() {
   const { wallet } = useWallet();
+  const router = useRouter();
   const [selectedChain, setSelectedChain] = useState('ethereum');
   const [searchQuery, setSearchQuery] = useState('');
   const [copied, setCopied] = useState(false);
@@ -199,7 +201,11 @@ export default function Dashboard() {
         {/* Assets List */}
         <div className="space-y-3">
           {filteredAssets.map((asset) => (
-            <Card key={asset.id} className="hover:shadow-md transition-shadow cursor-pointer">
+            <Card 
+              key={asset.id} 
+              className="hover:shadow-md transition-shadow cursor-pointer"
+              onClick={() => router.push(`/asset/${asset.id}`)}
+            >
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
