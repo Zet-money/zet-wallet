@@ -16,7 +16,6 @@ import { getTokensFor } from '@/lib/tokens';
 import { fetchBalancesForChain } from '@/lib/balances';
 import { IN_APP_RPC_MAP } from '@/lib/rpc';
 import { getTokenPriceUSD, getTokenChangeUSD24h } from '@/lib/prices';
-import { fetchZetaTokens } from '@/lib/zetaRegistry';
 import ReceiveFlow from './ReceiveFlow';
 
 const chains = [
@@ -63,8 +62,7 @@ export default function Dashboard() {
   }, [selectedChain])
 
   const chainKey = selectedChain as any
-  const [zetaTokens, setZetaTokens] = useState<any[]>([])
-  const baseTokens = chainKey === 'zetachain' ? zetaTokens : getTokensFor(chainKey, network)
+  const baseTokens = getTokensFor(chainKey, network)
   const networkTokens = baseTokens.map((t, idx) => ({
     id: `${chainKey}-${t.symbol}-${idx}`,
     symbol: t.symbol,
@@ -79,22 +77,6 @@ export default function Dashboard() {
   const [loadingBalances, setLoadingBalances] = useState(false)
   const [prices, setPrices] = useState<Record<string, number>>({})
   const [changes, setChanges] = useState<Record<string, number>>({})
-
-  useEffect(() => {
-    // load zeta registry when zetachain selected
-    const loadZeta = async () => {
-      if (chainKey !== 'zetachain') return
-      const list = await fetchZetaTokens(network)
-      // Map. For native ZETA, leave address undefined/null to treat as native balance
-      setZetaTokens(list.map((t) => ({
-        symbol: t.symbol.toUpperCase(),
-        name: t.name,
-        logo: t.symbol.toUpperCase(),
-        addressByNetwork: t.address ? { [network]: t.address } : {},
-      })))
-    }
-    loadZeta()
-  }, [chainKey, network])
 
   useEffect(() => {
     const load = async () => {

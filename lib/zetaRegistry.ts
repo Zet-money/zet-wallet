@@ -3,35 +3,26 @@ export type ZetaToken = {
   name: string
   address: string // ZRC-20 on Zeta EVM
   origin?: string // e.g., USDC.Base → origin Base
+  decimals?: number
 }
 
 // Best-effort registry fetch. Falls back to empty on unknown schema.
 export async function fetchZetaTokens(network: 'mainnet' | 'testnet'): Promise<ZetaToken[]> {
   const url = network === 'mainnet'
-    ? 'https://zetachain.blockpi.network/lcd/v1/public/zeta-chain/observer/supportedChains'
-    : 'https://zetachain-athens.blockpi.network/lcd/v1/public/zeta-chain/observer/supportedChains'
+    ? 'https://zetachain.blockpi.network/lcd/v1/public/zeta-chain/observer/foreign_coins'
+    : 'https://zetachain-athens.blockpi.network/lcd/v1/public/zeta-chain/observer/foreign_coins'
   try {
     const res = await fetch(url, { next: { revalidate: 300 } })
     const data = await res.json()
-    // Try common shapes
-    // If API includes assets/tokens arrays with zrc20Address fields, map them.
-    const tokens: ZetaToken[] = []
-    const pushToken = (t: any) => {
-      const addr = t?.zrc20Address || t?.zrc20_address || t?.address
-      const symbol = t?.symbol || t?.ticker
-      const name = t?.name || symbol
-      if (addr && symbol) tokens.push({ symbol, name, address: addr, origin: t?.origin })
-    }
-    if (Array.isArray(data?.chains)) {
-      for (const ch of data.chains) {
-        const arr = ch?.assets || ch?.tokens || []
-        if (Array.isArray(arr)) arr.forEach(pushToken)
-      }
-    } else if (Array.isArray(data?.assets)) {
-      data.assets.forEach(pushToken)
-    } else if (Array.isArray(data?.tokens)) {
-      data.tokens.forEach(pushToken)
-    }
+    const tokens: ZetaToken[] = Array.isArray(data?.foreignCoins)
+      ? data.foreignCoins.map((fc: any) => ({
+          symbol: String(fc?.symbol || '').toUpperCase(),
+          name: fc?.name || String(fc?.symbol || ''),
+          address: fc?.zrc20_contract_address || '',
+          origin: String(fc?.foreign_chain_id || ''),
+          decimals: typeof fc?.decimals === 'number' ? fc.decimals : undefined,
+        }))
+      : []
     // If no token data present (chains-only response), return native ZETA as fallback
     if (tokens.length === 0) {
       tokens.push({ symbol: 'ZETA', name: 'ZetaChain', address: '' })
