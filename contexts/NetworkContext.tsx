@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useMemo, useState } from 'react'
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react'
 
 export type Network = 'mainnet' | 'testnet'
 
@@ -13,6 +13,26 @@ const NetworkContext = createContext<Ctx | undefined>(undefined)
 
 export function NetworkProvider({ children }: { children: React.ReactNode }) {
   const [network, setNetwork] = useState<Network>('testnet')
+
+  // Load saved network on mount
+  useEffect(() => {
+    try {
+      const saved = typeof window !== 'undefined' ? window.localStorage.getItem('zet.network') : null
+      if (saved === 'mainnet' || saved === 'testnet') {
+        setNetwork(saved)
+      }
+    } catch {}
+  }, [])
+
+  // Persist on change
+  useEffect(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem('zet.network', network)
+      }
+    } catch {}
+  }, [network])
+
   const value = useMemo(() => ({ network, setNetwork }), [network])
   return <NetworkContext.Provider value={value}>{children}</NetworkContext.Provider>
 }
