@@ -45,6 +45,19 @@ function toLabel(key: string) {
   }
 }
 
+function logoSymbolForChain(key: string) {
+  switch (key) {
+    case 'ethereum': return 'ETH'
+    case 'polygon': return 'MATIC'
+    case 'bsc': return 'BNB'
+    case 'avalanche': return 'AVAX'
+    case 'arbitrum': return 'ARB'
+    case 'optimism': return 'OP'
+    case 'base': return 'BASE'
+    default: return 'ETH'
+  }
+}
+
 export default function SendFlow({ asset, onClose }: SendFlowProps) {
   const [recipientAddress, setRecipientAddress] = useState('');
   const [amount, setAmount] = useState('');
@@ -53,10 +66,11 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
   const { network } = useNetwork();
   const destinationChains = useMemo(() => {
     // Use keys of EVM_TOKENS to represent supported EVM chains
-    return Object.keys(EVM_TOKENS).map((key) => ({
-      value: key,
-      label: toLabel(key),
-    }))
+    return Object.keys(EVM_TOKENS).map((key) => {
+      const symbol = logoSymbolForChain(key)
+      const icon = `https://assets.parqet.com/logos/crypto/${symbol}?format=png`
+      return { value: key, label: toLabel(key), icon }
+    })
   }, [])
 
   const handleSend = async () => {
@@ -199,6 +213,12 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
                 {destinationChains.map((chain) => (
                   <SelectItem key={chain.value} value={chain.value}>
                     <div className="flex items-center space-x-2">
+                      <img 
+                        src={chain.icon}
+                        alt={chain.label}
+                        className="w-4 h-4 object-contain"
+                        onError={(e) => { e.currentTarget.style.display = 'none' }}
+                      />
                       <span>{chain.label}</span>
                     </div>
                   </SelectItem>
