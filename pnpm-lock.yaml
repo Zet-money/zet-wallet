@@ -44,6 +44,9 @@ importers:
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
+      ethers:
+        specifier: ^6.15.0
+        version: 6.15.0(bufferutil@4.0.9)(utf-8-validate@5.0.10)
       lucide-react:
         specifier: ^0.544.0
         version: 0.544.0(react@19.1.0)
