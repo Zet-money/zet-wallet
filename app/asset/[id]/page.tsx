@@ -12,7 +12,7 @@ const mockAssets = [
     balance: '2.45',
     usdValue: '4,890.50',
     chain: 'Ethereum',
-    logo: '🔷'
+    logo: 'https://assets.parqet.com/logos/crypto/ETH?format=png'
   },
   {
     id: '2',
@@ -21,7 +21,7 @@ const mockAssets = [
     balance: '1,250.00',
     usdValue: '1,250.00',
     chain: 'Ethereum',
-    logo: '💵'
+    logo: 'https://assets.parqet.com/logos/crypto/USDC?format=png'
   },
   {
     id: '3',
@@ -30,7 +30,7 @@ const mockAssets = [
     balance: '15.8',
     usdValue: '2,340.20',
     chain: 'Solana',
-    logo: '☀️'
+    logo: 'https://assets.parqet.com/logos/crypto/SOL?format=png'
   },
   {
     id: '4',
@@ -39,7 +39,7 @@ const mockAssets = [
     balance: '500.0',
     usdValue: '125.00',
     chain: 'Sui',
-    logo: '🔵'
+    logo: 'https://assets.parqet.com/logos/crypto/SUI?format=png'
   },
   {
     id: '5',
@@ -48,7 +48,7 @@ const mockAssets = [
     balance: '25.5',
     usdValue: '89.25',
     chain: 'TON',
-    logo: '💎'
+    logo: 'https://assets.parqet.com/logos/crypto/TON?format=png'
   }
 ];
 

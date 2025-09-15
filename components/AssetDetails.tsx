@@ -45,8 +45,19 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
               <ArrowLeft className="w-4 h-4" />
             </Button>
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center text-lg">
-                {asset.logo}
+              <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center overflow-hidden">
+                <img 
+                  src={asset.logo} 
+                  alt={asset.symbol}
+                  className="w-8 h-8 object-contain"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                    e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                  }}
+                />
+                <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center text-xs font-semibold hidden">
+                  {asset.symbol}
+                </div>
               </div>
               <div>
                 <h1 className="font-semibold text-lg">{asset.symbol}</h1>

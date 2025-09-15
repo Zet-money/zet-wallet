@@ -32,7 +32,7 @@ const mockAssets: Asset[] = [
     balance: '2.45',
     usdValue: '4,890.50',
     chain: 'Ethereum',
-    logo: '🔷'
+    logo: 'https://assets.parqet.com/logos/crypto/ETH?format=png'
   },
   {
     id: '2',
@@ -41,7 +41,7 @@ const mockAssets: Asset[] = [
     balance: '1,250.00',
     usdValue: '1,250.00',
     chain: 'Ethereum',
-    logo: '💵'
+    logo: 'https://assets.parqet.com/logos/crypto/USDC?format=png'
   },
   {
     id: '3',
@@ -50,7 +50,7 @@ const mockAssets: Asset[] = [
     balance: '15.8',
     usdValue: '2,340.20',
     chain: 'Solana',
-    logo: '☀️'
+    logo: 'https://assets.parqet.com/logos/crypto/SOL?format=png'
   },
   {
     id: '4',
@@ -59,7 +59,7 @@ const mockAssets: Asset[] = [
     balance: '500.0',
     usdValue: '125.00',
     chain: 'Sui',
-    logo: '🔵'
+    logo: 'https://assets.parqet.com/logos/crypto/SUI?format=png'
   },
   {
     id: '5',
@@ -68,17 +68,17 @@ const mockAssets: Asset[] = [
     balance: '25.5',
     usdValue: '89.25',
     chain: 'TON',
-    logo: '💎'
+    logo: 'https://assets.parqet.com/logos/crypto/TON?format=png'
   }
 ];
 
 const chains = [
-  { value: 'ethereum', label: 'Ethereum', icon: '🔷' },
-  { value: 'solana', label: 'Solana', icon: '☀️' },
-  { value: 'sui', label: 'Sui', icon: '🔵' },
-  { value: 'ton', label: 'TON', icon: '💎' },
-  { value: 'polygon', label: 'Polygon', icon: '🟣' },
-  { value: 'bsc', label: 'BSC', icon: '🟡' }
+  { value: 'ethereum', label: 'Ethereum', icon: 'https://assets.parqet.com/logos/crypto/ETH?format=png' },
+  { value: 'solana', label: 'Solana', icon: 'https://assets.parqet.com/logos/crypto/SOL?format=png' },
+  { value: 'sui', label: 'Sui', icon: 'https://assets.parqet.com/logos/crypto/SUI?format=png' },
+  { value: 'ton', label: 'TON', icon: 'https://assets.parqet.com/logos/crypto/TON?format=png' },
+  { value: 'polygon', label: 'Polygon', icon: 'https://assets.parqet.com/logos/crypto/MATIC?format=png' },
+  { value: 'bsc', label: 'BSC', icon: 'https://assets.parqet.com/logos/crypto/BNB?format=png' }
 ];
 
 export default function Dashboard() {
@@ -173,7 +173,14 @@ export default function Dashboard() {
               {chains.map((chain) => (
                 <SelectItem key={chain.value} value={chain.value}>
                   <div className="flex items-center space-x-2">
-                    <span>{chain.icon}</span>
+                    <img 
+                      src={chain.icon} 
+                      alt={chain.label}
+                      className="w-4 h-4 object-contain"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
                     <span>{chain.label}</span>
                   </div>
                 </SelectItem>
@@ -223,8 +230,19 @@ export default function Dashboard() {
               <CardContent className="p-3 sm:p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3 min-w-0 flex-1">
-                    <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center text-lg flex-shrink-0">
-                      {asset.logo}
+                    <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                      <img 
+                        src={asset.logo} 
+                        alt={asset.symbol}
+                        className="w-8 h-8 object-contain"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                          e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                        }}
+                      />
+                      <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center text-xs font-semibold hidden">
+                        {asset.symbol}
+                      </div>
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center space-x-2 mb-1">
@@ -280,8 +298,19 @@ export default function Dashboard() {
                   >
                     <CardContent className="p-3">
                       <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center text-sm">
-                          {asset.logo}
+                        <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center overflow-hidden">
+                          <img 
+                            src={asset.logo} 
+                            alt={asset.symbol}
+                            className="w-6 h-6 object-contain"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                              e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                            }}
+                          />
+                          <div className="w-6 h-6 bg-muted rounded-full flex items-center justify-center text-xs font-semibold hidden">
+                            {asset.symbol}
+                          </div>
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center space-x-2">
@@ -310,7 +339,7 @@ export default function Dashboard() {
             balance: '2.45',
             usdValue: '4,890.50',
             chain: 'Ethereum',
-            logo: '🔷'
+            logo: 'https://assets.parqet.com/logos/crypto/ETH?format=png'
           }}
           onClose={() => setShowReceiveModal(false)} 
         />
