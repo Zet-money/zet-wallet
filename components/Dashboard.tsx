@@ -15,7 +15,7 @@ import { useNetwork } from '@/contexts/NetworkContext';
 import { getTokensFor } from '@/lib/tokens';
 import { fetchBalancesForChain } from '@/lib/balances';
 import { IN_APP_RPC_MAP } from '@/lib/rpc';
-import { getTokenPriceUSD } from '@/lib/prices';
+import { getTokenPriceUSD, getTokenChangeUSD24h } from '@/lib/prices';
 import ReceiveFlow from './ReceiveFlow';
 
 const chains = [
@@ -75,6 +75,7 @@ export default function Dashboard() {
   const [balances, setBalances] = useState<Record<string, string>>({})
   const [loadingBalances, setLoadingBalances] = useState(false)
   const [prices, setPrices] = useState<Record<string, number>>({})
+  const [changes, setChanges] = useState<Record<string, number>>({})
 
   useEffect(() => {
     const load = async () => {
@@ -103,12 +104,23 @@ export default function Dashboard() {
         // Load USD prices for visible symbols
         const uniqueSymbols = Array.from(new Set(baseTokens.map(t => t.symbol)))
         const entries = await Promise.all(uniqueSymbols.map(async (sym) => {
-          const price = await getTokenPriceUSD(sym)
-          return [sym, price ?? 0]
+          const [price, change] = await Promise.all([
+            getTokenPriceUSD(sym),
+            getTokenChangeUSD24h(sym),
+          ])
+          return [sym, price ?? 0, change ?? 0]
         }))
         const priceMap: Record<string, number> = {}
-        for (const [sym, p] of entries) priceMap[sym as string] = p as number
+        const changeMap: Record<string, number> = {}
+        for (const row of entries) {
+          const sym = row[0] as string
+          const p = row[1] as number
+          const c = row[2] as number
+          priceMap[sym] = p
+          changeMap[sym] = c
+        }
         setPrices(priceMap)
+        setChanges(changeMap)
       } catch (e) {
         console.error('error loading balances', e)
       } finally {

@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Send, Download, TrendingUp, TrendingDown } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { getTokenChangeUSD24h } from '@/lib/prices';
 import { useRouter } from 'next/navigation';
 import SendFlow from './SendFlow';
 import ReceiveFlow from './ReceiveFlow';
@@ -25,10 +26,16 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
   const router = useRouter();
   const [showSend, setShowSend] = useState(false);
   const [showReceive, setShowReceive] = useState(false);
+  const [priceChange, setPriceChange] = useState<number | null>(null)
+  const isPositive = (priceChange ?? 0) > 0;
 
-  // Mock price change data
-  const priceChange = Math.random() > 0.5 ? 2.45 : -1.23;
-  const isPositive = priceChange > 0;
+  useEffect(() => {
+    const load = async () => {
+      const c = await getTokenChangeUSD24h(asset.symbol)
+      setPriceChange(c)
+    }
+    load()
+  }, [asset.symbol])
 
   return (
     <div className="min-h-screen bg-background">
@@ -81,12 +88,14 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
               
               <div className="flex items-center justify-center space-x-2">
                 <Badge variant="secondary">{asset.chain}</Badge>
-                <div className={`flex items-center space-x-1 text-sm ${
-                  isPositive ? 'text-green-600' : 'text-red-600'
-                }`}>
-                  {isPositive ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-                  <span>{isPositive ? '+' : ''}{priceChange}%</span>
-                </div>
+                {priceChange !== null && (
+                  <div className={`flex items-center space-x-1 text-sm ${
+                    isPositive ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {isPositive ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+                    <span>{isPositive ? '+' : ''}{priceChange.toFixed(2)}%</span>
+                  </div>
+                )}
               </div>
             </div>
           </CardContent>
