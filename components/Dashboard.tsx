@@ -26,61 +26,26 @@ interface Asset {
   logo: string;
 }
 
-const mockAssets: Asset[] = [
-  {
-    id: '1',
-    symbol: 'ETH',
-    name: 'Ethereum',
-    balance: '2.45',
-    usdValue: '4,890.50',
-    chain: 'Ethereum',
-    logo: 'https://assets.parqet.com/logos/crypto/ETH?format=png'
-  },
-  {
-    id: '2',
-    symbol: 'USDC',
-    name: 'USD Coin',
-    balance: '1,250.00',
-    usdValue: '1,250.00',
-    chain: 'Ethereum',
-    logo: 'https://assets.parqet.com/logos/crypto/USDC?format=png'
-  },
-  {
-    id: '3',
-    symbol: 'SOL',
-    name: 'Solana',
-    balance: '15.8',
-    usdValue: '2,340.20',
-    chain: 'Solana',
-    logo: 'https://assets.parqet.com/logos/crypto/SOL?format=png'
-  },
-  {
-    id: '4',
-    symbol: 'SUI',
-    name: 'Sui',
-    balance: '500.0',
-    usdValue: '125.00',
-    chain: 'Sui',
-    logo: 'https://assets.parqet.com/logos/crypto/SUI?format=png'
-  },
-  {
-    id: '5',
-    symbol: 'TON',
-    name: 'Toncoin',
-    balance: '25.5',
-    usdValue: '89.25',
-    chain: 'TON',
-    logo: 'https://assets.parqet.com/logos/crypto/TON?format=png'
-  }
-];
-
 const chains = [
   { value: 'ethereum', label: 'Ethereum', icon: 'https://assets.parqet.com/logos/crypto/ETH?format=png' },
-  { value: 'solana', label: 'Solana', icon: 'https://assets.parqet.com/logos/crypto/SOL?format=png' },
-  { value: 'sui', label: 'Sui', icon: 'https://assets.parqet.com/logos/crypto/SUI?format=png' },
-  { value: 'ton', label: 'TON', icon: 'https://assets.parqet.com/logos/crypto/TON?format=png' },
   { value: 'polygon', label: 'Polygon', icon: 'https://assets.parqet.com/logos/crypto/MATIC?format=png' },
-  { value: 'bsc', label: 'BSC', icon: 'https://assets.parqet.com/logos/crypto/BNB?format=png' }
+  { value: 'bsc', label: 'BNB Chain', icon: 'https://assets.parqet.com/logos/crypto/BNB?format=png' },
+  { value: 'avalanche', label: 'Avalanche', icon: 'https://assets.parqet.com/logos/crypto/AVAX?format=png' },
+  { value: 'arbitrum', label: 'Arbitrum', icon: 'https://assets.parqet.com/logos/crypto/ARB?format=png' },
+  { value: 'optimism', label: 'Optimism', icon: 'https://assets.parqet.com/logos/crypto/OP?format=png' },
+  { value: 'base', label: 'Base', icon: 'https://assets.parqet.com/logos/crypto/BASE?format=png' },
+  { value: 'fantom', label: 'Fantom', icon: 'https://assets.parqet.com/logos/crypto/FTM?format=png' },
+  { value: 'gnosis', label: 'Gnosis', icon: 'https://assets.parqet.com/logos/crypto/XDAI?format=png' },
+  { value: 'celo', label: 'Celo', icon: 'https://assets.parqet.com/logos/crypto/CELO?format=png' },
+  { value: 'moonbeam', label: 'Moonbeam', icon: 'https://assets.parqet.com/logos/crypto/GLMR?format=png' },
+  { value: 'moonriver', label: 'Moonriver', icon: 'https://assets.parqet.com/logos/crypto/MOVR?format=png' },
+  { value: 'aurora', label: 'Aurora', icon: 'https://assets.parqet.com/logos/crypto/AURORA?format=png' },
+  { value: 'linea', label: 'Linea', icon: 'https://assets.parqet.com/logos/crypto/LINEA?format=png' },
+  { value: 'mantle', label: 'Mantle', icon: 'https://assets.parqet.com/logos/crypto/MNT?format=png' },
+  { value: 'scroll', label: 'Scroll', icon: 'https://assets.parqet.com/logos/crypto/SCROLL?format=png' },
+  { value: 'zksync', label: 'zkSync', icon: 'https://assets.parqet.com/logos/crypto/ZKSYNC?format=png' },
+  { value: 'blast', label: 'Blast', icon: 'https://assets.parqet.com/logos/crypto/BLAST?format=png' },
+  { value: 'zora', label: 'Zora', icon: 'https://assets.parqet.com/logos/crypto/ZORA?format=png' },
 ];
 
 export default function Dashboard() {
@@ -296,7 +261,7 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {mockAssets.slice(0, 3).map((asset) => (
+                {networkTokens.slice(0, 6).map((asset) => (
                   <Card 
                     key={asset.id} 
                     className="cursor-pointer hover:bg-muted/50"
@@ -341,15 +306,15 @@ export default function Dashboard() {
       {/* Receive Modal */}
       {showReceiveModal && (
         <ReceiveFlow 
-          asset={{
-            id: '1',
-            symbol: 'ETH',
-            name: 'Ethereum',
-            balance: '2.45',
-            usdValue: '4,890.50',
-            chain: 'Ethereum',
+          asset={(networkTokens[0] || {
+            id: `${chainKey}-NATIVE-0`,
+            symbol: chains.find(c => c.value === selectedChain)?.label === 'BNB Chain' ? 'BNB' : (chains.find(c => c.value === selectedChain)?.label === 'Polygon' ? 'MATIC' : 'ETH'),
+            name: chains.find(c => c.value === selectedChain)?.label || 'Ethereum',
+            balance: '0.00',
+            usdValue: '0.00',
+            chain: chains.find(c => c.value === selectedChain)?.label || 'Ethereum',
             logo: 'https://assets.parqet.com/logos/crypto/ETH?format=png'
-          }}
+          })}
           onClose={() => setShowReceiveModal(false)} 
         />
       )}
