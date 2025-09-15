@@ -9,6 +9,7 @@ import { useWallet } from '@/contexts/WalletContext';
 import { fetchBalancesForChain } from '@/lib/balances';
 import { IN_APP_RPC_MAP } from '@/lib/rpc';
 import { getTokenPriceUSD } from '@/lib/prices';
+import { fetchZetaTokens } from '@/lib/zetaRegistry';
 
 export default function AssetPage() {
   const params = useParams();
@@ -18,7 +19,16 @@ export default function AssetPage() {
   
   // Expect id format: `${chain}-${symbol}-${index}` from Dashboard
   const [chainKey, symbolFromId] = assetId.split('-');
-  const tokens = getTokensFor(chainKey, network);
+  const [zetaTokens, setZetaTokens] = useState<any[]>([])
+  useEffect(() => {
+    const load = async () => {
+      if (chainKey !== 'zetachain') return
+      const list = await fetchZetaTokens(network)
+      setZetaTokens(list.map((t) => ({ symbol: t.symbol.toUpperCase(), name: t.name, logo: t.symbol.toUpperCase(), addressByNetwork: { [network]: t.address } })))
+    }
+    load()
+  }, [chainKey, network])
+  const tokens = chainKey === 'zetachain' ? zetaTokens : getTokensFor(chainKey, network);
   const token = tokens.find(t => t.symbol.toLowerCase() === (symbolFromId || '').toLowerCase());
   const [balance, setBalance] = useState<string>('—')
   const [usdValue, setUsdValue] = useState<string>('0.00')
