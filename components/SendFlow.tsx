@@ -69,10 +69,9 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
     }, 2000);
   };
 
-  const maxAmount = parseFloat(asset.balance.replace(',', ''));
-  const usdAmount = amount 
-    ? (parseFloat(amount) * parseFloat(asset.usdValue.replace(',', '')) / maxAmount) 
-    : 0;
+  const maxAmount = parseFloat(asset.balance.replace(/,/g, ''));
+  const assetUsd = parseFloat(asset.usdValue.replace(/,/g, ''));
+  const usdAmount = amount ? (parseFloat(amount || '0') * (maxAmount > 0 ? assetUsd / maxAmount : 0)) : 0;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-2 sm:p-4 z-50">
