@@ -14,6 +14,7 @@ import ThemeToggle from './ThemeToggle';
 import { useNetwork } from '@/contexts/NetworkContext';
 import { getTokensFor } from '@/lib/tokens';
 import { fetchBalancesForChain } from '@/lib/balances';
+import { IN_APP_RPC_MAP } from '@/lib/rpc';
 import SendFlow from './SendFlow';
 import ReceiveFlow from './ReceiveFlow';
 
@@ -66,20 +67,27 @@ export default function Dashboard() {
     const load = async () => {
       if (!wallet?.address) return
       setLoadingBalances(true)
+      console.log('loading balances for', chainKey, network, wallet.address)
       try {
-        const tokensForFetch = baseTokens.map((t) => ({
-          symbol: t.symbol,
-          address: t.addressByNetwork?.[network] || null,
-        }))
+        const tokensForFetch = baseTokens.map((t) => {
+          const addr = t.addressByNetwork?.[network]
+          const isErc20 = Boolean(t.addressByNetwork?.mainnet || t.addressByNetwork?.testnet)
+          return {
+            symbol: t.symbol,
+            address: isErc20 ? (addr && addr.length > 0 ? addr : undefined) : null,
+          }
+        })
         const map = await fetchBalancesForChain({
           chain: chainKey,
           network,
           address: wallet.address,
           tokens: tokensForFetch,
+          rpcMap: IN_APP_RPC_MAP as any,
         })
+        console.log('balances', map)
         setBalances(map)
       } catch (e) {
-        // noop
+        console.error('error loading balances', e)
       } finally {
         setLoadingBalances(false)
       }
@@ -253,7 +261,9 @@ export default function Dashboard() {
                       {loadingBalances ? (
                         <span className="inline-block h-4 w-16 bg-muted animate-pulse rounded" />
                       ) : (
-                        balances[asset.symbol]?.toString?.() ?? asset.balance
+                        (balances[asset.symbol] !== undefined
+                          ? Number(balances[asset.symbol]).toFixed(4)
+                          : asset.balance)
                       )}
                     </p>
                     <p className="text-xs sm:text-sm text-muted-foreground">${asset.usdValue}</p>

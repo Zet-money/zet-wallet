@@ -27,6 +27,12 @@ export function getRpcUrl(chain: SupportedEvm, network: Network, rpc?: RpcMap): 
   if (candidate) return candidate
   const key = network === 'testnet' ? `${chainToEnvKey[chain]}_TESTNET` : chainToEnvKey[chain]
   const url = process.env[key]
+  if (!url) {
+    // Surface helpful diagnostics in development
+    if (typeof window !== 'undefined') {
+      console.error(`[RPC] Missing env ${key}. Ensure NEXT_PUBLIC vars are set and dev server restarted.`)
+    }
+  }
   if (!url) throw new Error(`Missing RPC for ${chain} (${network}). Provide via in-app RPC map or env ${key}`)
   return url
 }
