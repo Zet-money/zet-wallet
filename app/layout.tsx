@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/sonner";
 import { NetworkProvider } from "@/contexts/NetworkContext";
+import { WalletProvider } from "@/contexts/WalletContext";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -37,7 +38,9 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <NetworkProvider>
-            {children}
+            <WalletProvider>
+              {children}
+            </WalletProvider>
           </NetworkProvider>
           <Toaster position="top-center" />
         </ThemeProvider>
