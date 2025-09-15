@@ -8,6 +8,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useWallet } from '@/contexts/WalletContext';
 import { fetchBalancesForChain } from '@/lib/balances';
 import { IN_APP_RPC_MAP } from '@/lib/rpc';
+import { getTokenPriceUSD } from '@/lib/prices';
 
 export default function AssetPage() {
   const params = useParams();
@@ -20,6 +21,7 @@ export default function AssetPage() {
   const tokens = getTokensFor(chainKey, network);
   const token = tokens.find(t => t.symbol.toLowerCase() === (symbolFromId || '').toLowerCase());
   const [balance, setBalance] = useState<string>('—')
+  const [usdValue, setUsdValue] = useState<string>('0.00')
   const [loading, setLoading] = useState<boolean>(false)
 
   const tokenAddress = useMemo(() => token?.addressByNetwork?.[network] || '', [token, network])
@@ -37,7 +39,11 @@ export default function AssetPage() {
           rpcMap: IN_APP_RPC_MAP as any,
         })
         const bal = map[token.symbol]
-        if (bal !== undefined) setBalance(Number(bal).toFixed(4))
+        if (bal !== undefined) {
+          setBalance(Number(bal).toFixed(4))
+          const price = await getTokenPriceUSD(token.symbol)
+          if (price !== null) setUsdValue((Number(bal) * price).toFixed(2))
+        }
       } catch (e) {
         setBalance('0')
       } finally {
@@ -52,7 +58,7 @@ export default function AssetPage() {
     symbol: token.symbol,
     name: token.name,
     balance: loading ? '—' : balance,
-    usdValue: '0.00', // TODO: fetch fiat value
+    usdValue: loading ? '0.00' : usdValue,
     chain: chainKey,
     logo: `https://assets.parqet.com/logos/crypto/${token.logo || token.symbol}?format=png`,
   } : null;

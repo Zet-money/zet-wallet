@@ -96,7 +96,7 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
         <div className="grid grid-cols-2 gap-4 mb-6">
           <Button 
             onClick={() => setShowSend(true)}
-            className="h-16 flex flex-col items-center space-y-2"
+            className="h-16"
           >
             <Send className="w-6 h-6" />
             <span>Send</span>
@@ -104,7 +104,7 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
           <Button 
             variant="outline"
             onClick={() => setShowReceive(true)}
-            className="h-16 flex flex-col items-center space-y-2"
+            className="h-16"
           >
             <Download className="w-6 h-6" />
             <span>Receive</span>

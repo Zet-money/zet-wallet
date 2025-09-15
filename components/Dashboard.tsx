@@ -15,18 +15,8 @@ import { useNetwork } from '@/contexts/NetworkContext';
 import { getTokensFor } from '@/lib/tokens';
 import { fetchBalancesForChain } from '@/lib/balances';
 import { IN_APP_RPC_MAP } from '@/lib/rpc';
-import SendFlow from './SendFlow';
+import { getTokenPriceUSD } from '@/lib/prices';
 import ReceiveFlow from './ReceiveFlow';
-
-interface Asset {
-  id: string;
-  symbol: string;
-  name: string;
-  balance: string;
-  usdValue: string;
-  chain: string;
-  logo: string;
-}
 
 const chains = [
   { value: 'ethereum', label: 'Ethereum', icon: 'https://assets.parqet.com/logos/crypto/ETH?format=png' },
@@ -84,6 +74,7 @@ export default function Dashboard() {
 
   const [balances, setBalances] = useState<Record<string, string>>({})
   const [loadingBalances, setLoadingBalances] = useState(false)
+  const [prices, setPrices] = useState<Record<string, number>>({})
 
   useEffect(() => {
     const load = async () => {
@@ -108,6 +99,16 @@ export default function Dashboard() {
         })
         console.log('balances', map)
         setBalances(map)
+
+        // Load USD prices for visible symbols
+        const uniqueSymbols = Array.from(new Set(baseTokens.map(t => t.symbol)))
+        const entries = await Promise.all(uniqueSymbols.map(async (sym) => {
+          const price = await getTokenPriceUSD(sym)
+          return [sym, price ?? 0]
+        }))
+        const priceMap: Record<string, number> = {}
+        for (const [sym, p] of entries) priceMap[sym as string] = p as number
+        setPrices(priceMap)
       } catch (e) {
         console.error('error loading balances', e)
       } finally {
@@ -288,7 +289,19 @@ export default function Dashboard() {
                           : asset.balance)
                       )}
                     </p>
-                    <p className="text-xs sm:text-sm text-muted-foreground">${asset.usdValue}</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">
+                      {loadingBalances ? (
+                        <span className="inline-block h-3 w-12 bg-muted animate-pulse rounded" />
+                      ) : (
+                        (() => {
+                          const bal = balances[asset.symbol]
+                          const price = prices[asset.symbol]
+                          if (bal === undefined || price === undefined) return '$0.00'
+                          const usd = Number(bal) * price
+                          return `$${usd.toFixed(2)}`
+                        })()
+                      )}
+                    </p>
                   </div>
                 </div>
               </CardContent>
