@@ -8,6 +8,10 @@ export type TokenInfo = {
 
 // Basic curated set per chain; extend as needed.
 export const EVM_TOKENS: Record<string, TokenInfo[]> = {
+  zetachain: [
+    { symbol: 'ZETA', name: 'ZetaChain', logo: 'ZETA', addressByNetwork: {} },
+    { symbol: 'USDC', name: 'USD Coin', logo: 'USDC', addressByNetwork: { mainnet: '', testnet: '' } },
+  ],
   ethereum: [
     { symbol: 'ETH', name: 'Ether', logo: 'ETH', addressByNetwork: {} },
     { symbol: 'USDC', name: 'USD Coin', logo: 'USDC', addressByNetwork: { mainnet: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', testnet: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238' } }, // https://developers.circle.com/stablecoins/usdc-contract-addresses

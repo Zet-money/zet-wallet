@@ -26,6 +26,7 @@ const chains = [
   { value: 'arbitrum', label: 'Arbitrum', icon: 'https://assets.parqet.com/logos/crypto/ARB?format=png' },
   { value: 'optimism', label: 'Optimism', icon: 'https://assets.parqet.com/logos/crypto/OP?format=png' },
   { value: 'base', label: 'Base', icon: 'https://assets.parqet.com/logos/crypto/BASE?format=png' },
+  { value: 'zetachain', label: 'ZetaChain', icon: 'https://assets.parqet.com/logos/crypto/ZETA?format=png' },
 ];
 
 export default function Dashboard() {

@@ -9,6 +9,7 @@ export type SupportedEvm =
   | 'arbitrum'
   | 'optimism'
   | 'base'
+  | 'zetachain'
 
 const chainToEnvKey: Record<SupportedEvm, string> = {
   ethereum: 'NEXT_PUBLIC_RPC_ETHEREUM',
@@ -18,6 +19,7 @@ const chainToEnvKey: Record<SupportedEvm, string> = {
   arbitrum: 'NEXT_PUBLIC_RPC_ARBITRUM',
   optimism: 'NEXT_PUBLIC_RPC_OPTIMISM',
   base: 'NEXT_PUBLIC_RPC_BASE',
+  zetachain: 'NEXT_PUBLIC_RPC_ZETACHAIN',
 }
 
 export type RpcMap = Partial<Record<SupportedEvm, { mainnet?: string; testnet?: string }>>

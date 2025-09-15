@@ -30,6 +30,11 @@ export const IN_APP_RPC_MAP: RpcMap = {
     mainnet: 'https://rpc.ankr.com/base/31b399592af9247199cfd9726af75d94e0a6a82b9bc3e651b93525fede17723b',
     testnet: 'https://rpc.ankr.com/base_sepolia/31b399592af9247199cfd9726af75d94e0a6a82b9bc3e651b93525fede17723b',
   },
+  zetachain: {
+    // ZetaChain public endpoints
+    mainnet: 'https://zetachain-evm.blockpi.network/v1/rpc/public',
+    testnet: 'https://zetachain-athens-evm.blockpi.network/v1/rpc/public',
+  },
 }
 
 
