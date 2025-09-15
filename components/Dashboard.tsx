@@ -11,6 +11,7 @@ import { useWallet } from '@/contexts/WalletContext';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import ThemeToggle from './ThemeToggle';
+import { useNetwork } from '@/contexts/NetworkContext';
 import SendFlow from './SendFlow';
 import ReceiveFlow from './ReceiveFlow';
 
@@ -83,6 +84,7 @@ const chains = [
 
 export default function Dashboard() {
   const { wallet } = useWallet();
+  const { network, setNetwork } = useNetwork();
   const router = useRouter();
   const [selectedChain, setSelectedChain] = useState('ethereum');
   const [searchQuery, setSearchQuery] = useState('');
@@ -141,7 +143,7 @@ export default function Dashboard() {
                 <span className="hidden sm:inline">Copy</span>
               </Button>
               
-              <Select defaultValue="mainnet">
+              <Select value={network} onValueChange={(v) => setNetwork(v as any)}>
                 <SelectTrigger className="w-20 sm:w-24">
                   <SelectValue />
                 </SelectTrigger>
@@ -150,12 +152,7 @@ export default function Dashboard() {
                   <SelectItem value="testnet">Testnet</SelectItem>
                 </SelectContent>
               </Select>
-              
               <ThemeToggle />
-              
-              <Button variant="ghost" size="sm" className="p-2">
-                <Settings className="w-4 h-4" />
-              </Button>
             </div>
           </div>
         </div>

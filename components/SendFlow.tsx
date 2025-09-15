@@ -9,6 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { X, ArrowRight, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { useNetwork } from '@/contexts/NetworkContext';
+import { depositToZeta } from '@/lib/zetachain';
+import type { SupportedEvm } from '@/lib/providers';
 
 interface SendFlowProps {
   asset: {
@@ -37,6 +40,8 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
   const [amount, setAmount] = useState('');
   const [destinationChain, setDestinationChain] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const { network } = useNetwork();
+  
 
   const handleSend = async () => {
     if (!recipientAddress.trim()) {
@@ -60,13 +65,22 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
     }
 
     setIsLoading(true);
-    
-    // Simulate transaction processing
-    setTimeout(() => {
-      setIsLoading(false);
-      toast.success('Transaction sent successfully!');
+    try {
+      // For now treat current asset.chain as origin; wire to Toolkit
+      await depositToZeta({
+        originChain: (asset.chain || 'ethereum').toLowerCase() as SupportedEvm,
+        amount,
+        receiver: recipientAddress,
+        mnemonicPhrase: '', // TODO: inject session mnemonic
+        network,
+      })
+      toast.success('Transaction submitted');
       onClose();
-    }, 2000);
+    } catch (e: any) {
+      toast.error(e?.message || 'Failed to send');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const maxAmount = parseFloat(asset.balance.replace(/,/g, ''));
