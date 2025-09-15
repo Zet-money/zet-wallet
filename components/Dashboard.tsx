@@ -42,11 +42,33 @@ export default function Dashboard() {
   const { wallet } = useWallet();
   const { network, setNetwork } = useNetwork();
   const router = useRouter();
-  const [selectedChain, setSelectedChain] = useState('ethereum');
+  const [selectedChain, setSelectedChain] = useState(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = window.localStorage.getItem('zet.chain')
+        const valid = saved && ['ethereum','polygon','bsc','avalanche','arbitrum','optimism','base'].includes(saved)
+        if (valid) return saved as string
+      } catch {}
+    }
+    return 'ethereum'
+  });
   const [searchQuery, setSearchQuery] = useState('');
   const [copied, setCopied] = useState(false);
   const [showSendModal, setShowSendModal] = useState(false);
   const [showReceiveModal, setShowReceiveModal] = useState(false);
+  const handleChainChange = (value: string) => {
+    setSelectedChain(value)
+    try {
+      if (typeof window !== 'undefined') window.localStorage.setItem('zet.chain', value)
+    } catch {}
+  }
+
+  // Persist selected chain on change
+  useEffect(() => {
+    try {
+      if (typeof window !== 'undefined') window.localStorage.setItem('zet.chain', selectedChain)
+    } catch {}
+  }, [selectedChain])
 
   const chainKey = selectedChain as any
   const baseTokens = getTokensFor(chainKey, network)
@@ -166,7 +188,7 @@ export default function Dashboard() {
       <div className="container mx-auto px-4 py-6 max-w-4xl">
         {/* Chain Selector */}
         <div className="mb-6">
-          <Select value={selectedChain} onValueChange={setSelectedChain}>
+          <Select value={selectedChain} onValueChange={handleChainChange}>
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Select a chain" />
             </SelectTrigger>
