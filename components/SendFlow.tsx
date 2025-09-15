@@ -73,8 +73,8 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
   const usdAmount = amount ? (parseFloat(amount) * parseFloat(asset.usdValue.replace(',', '')) / maxAmount : 0;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-      <Card className="w-full max-w-md max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-2 sm:p-4 z-50">
+      <Card className="w-full max-w-md max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
           <div>
             <CardTitle>Send {asset.symbol}</CardTitle>

@@ -73,8 +73,8 @@ export default function ReceiveFlow({ asset, onClose }: ReceiveFlowProps) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-      <Card className="w-full max-w-md">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-2 sm:p-4 z-50">
+      <Card className="w-full max-w-md max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
           <div>
             <CardTitle>Receive {asset.symbol}</CardTitle>
@@ -102,11 +102,11 @@ export default function ReceiveFlow({ asset, onClose }: ReceiveFlowProps) {
 
           {/* QR Code */}
           <div className="flex flex-col items-center space-y-4">
-            <div className="p-4 bg-white rounded-lg">
+            <div className="p-3 sm:p-4 bg-white rounded-lg">
               <QRCode
                 id="qr-code"
                 value={wallet.address}
-                size={200}
+                size={180}
                 style={{ height: 'auto', maxWidth: '100%', width: '100%' }}
               />
             </div>

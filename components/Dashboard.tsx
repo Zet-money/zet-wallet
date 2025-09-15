@@ -10,6 +10,7 @@ import { Search, Send, Download, Settings, Copy, Check } from 'lucide-react';
 import { useWallet } from '@/contexts/WalletContext';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
+import ThemeToggle from './ThemeToggle';
 
 interface Asset {
   id: string;
@@ -125,19 +126,19 @@ export default function Dashboard() {
               </div>
             </div>
             
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-1 sm:space-x-2">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={copyAddress}
-                className="flex items-center space-x-1"
+                className="flex items-center space-x-1 p-2"
               >
                 {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                 <span className="hidden sm:inline">Copy</span>
               </Button>
               
               <Select defaultValue="mainnet">
-                <SelectTrigger className="w-24">
+                <SelectTrigger className="w-20 sm:w-24">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -146,7 +147,9 @@ export default function Dashboard() {
                 </SelectContent>
               </Select>
               
-              <Button variant="ghost" size="sm">
+              <ThemeToggle />
+              
+              <Button variant="ghost" size="sm" className="p-2">
                 <Settings className="w-4 h-4" />
               </Button>
             </div>
@@ -176,12 +179,12 @@ export default function Dashboard() {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex space-x-4 mb-6">
-          <Button className="flex-1 flex items-center space-x-2">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-6">
+          <Button className="h-12 sm:h-10 flex items-center justify-center space-x-2">
             <Send className="w-4 h-4" />
             <span>Send</span>
           </Button>
-          <Button variant="outline" className="flex-1 flex items-center space-x-2">
+          <Button variant="outline" className="h-12 sm:h-10 flex items-center justify-center space-x-2">
             <Download className="w-4 h-4" />
             <span>Receive</span>
           </Button>
@@ -203,29 +206,29 @@ export default function Dashboard() {
           {filteredAssets.map((asset) => (
             <Card 
               key={asset.id} 
-              className="hover:shadow-md transition-shadow cursor-pointer"
+              className="hover:shadow-md transition-shadow cursor-pointer active:scale-[0.98]"
               onClick={() => router.push(`/asset/${asset.id}`)}
             >
-              <CardContent className="p-4">
+              <CardContent className="p-3 sm:p-4">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center text-lg">
+                  <div className="flex items-center space-x-3 min-w-0 flex-1">
+                    <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center text-lg flex-shrink-0">
                       {asset.logo}
                     </div>
-                    <div>
-                      <div className="flex items-center space-x-2">
-                        <h3 className="font-semibold">{asset.symbol}</h3>
-                        <Badge variant="secondary" className="text-xs">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center space-x-2 mb-1">
+                        <h3 className="font-semibold truncate">{asset.symbol}</h3>
+                        <Badge variant="secondary" className="text-xs flex-shrink-0">
                           {asset.chain}
                         </Badge>
                       </div>
-                      <p className="text-sm text-muted-foreground">{asset.name}</p>
+                      <p className="text-sm text-muted-foreground truncate">{asset.name}</p>
                     </div>
                   </div>
                   
-                  <div className="text-right">
-                    <p className="font-semibold">{asset.balance}</p>
-                    <p className="text-sm text-muted-foreground">${asset.usdValue}</p>
+                  <div className="text-right flex-shrink-0 ml-2">
+                    <p className="font-semibold text-sm sm:text-base">{asset.balance}</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">${asset.usdValue}</p>
                   </div>
                 </div>
               </CardContent>
