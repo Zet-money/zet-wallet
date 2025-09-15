@@ -42,16 +42,6 @@ export const EVM_TOKENS: Record<string, TokenInfo[]> = {
     { symbol: 'AVAX', name: 'Avalanche', logo: 'AVAX', addressByNetwork: {} },
     { symbol: 'USDC', name: 'USD Coin', logo: 'USDC', addressByNetwork: { mainnet: '0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E', testnet: '' } },
   ],
-  fantom: [
-    { symbol: 'FTM', name: 'Fantom', logo: 'FTM', addressByNetwork: {} },
-  ],
-  gnosis: [
-    { symbol: 'xDAI', name: 'Gnosis', logo: 'XDAI', addressByNetwork: {} },
-  ],
-  celo: [
-    { symbol: 'CELO', name: 'Celo', logo: 'CELO', addressByNetwork: {} },
-    { symbol: 'cUSD', name: 'Celo Dollar', logo: 'CUSD', addressByNetwork: { mainnet: '0x765DE816845861e75A25fCA122bb6898B8B1282a', testnet: '' } },
-  ],
 }
 
 export function getTokensFor(chain: string, network: Network): TokenInfo[] {

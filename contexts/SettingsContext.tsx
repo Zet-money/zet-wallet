@@ -34,18 +34,6 @@ export const evmNameToKey: Record<string, SupportedEvm> = {
   arbitrum: 'arbitrum',
   optimism: 'optimism',
   base: 'base',
-  fantom: 'fantom',
-  gnosis: 'gnosis',
-  celo: 'celo',
-  moonbeam: 'moonbeam',
-  moonriver: 'moonriver',
-  aurora: 'aurora',
-  linea: 'linea',
-  mantle: 'mantle',
-  scroll: 'scroll',
-  zksync: 'zksync',
-  blast: 'blast',
-  zora: 'zora',
 }
 
 

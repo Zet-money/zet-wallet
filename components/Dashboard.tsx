@@ -34,18 +34,6 @@ const chains = [
   { value: 'arbitrum', label: 'Arbitrum', icon: 'https://assets.parqet.com/logos/crypto/ARB?format=png' },
   { value: 'optimism', label: 'Optimism', icon: 'https://assets.parqet.com/logos/crypto/OP?format=png' },
   { value: 'base', label: 'Base', icon: 'https://assets.parqet.com/logos/crypto/BASE?format=png' },
-  { value: 'fantom', label: 'Fantom', icon: 'https://assets.parqet.com/logos/crypto/FTM?format=png' },
-  { value: 'gnosis', label: 'Gnosis', icon: 'https://assets.parqet.com/logos/crypto/XDAI?format=png' },
-  { value: 'celo', label: 'Celo', icon: 'https://assets.parqet.com/logos/crypto/CELO?format=png' },
-  { value: 'moonbeam', label: 'Moonbeam', icon: 'https://assets.parqet.com/logos/crypto/GLMR?format=png' },
-  { value: 'moonriver', label: 'Moonriver', icon: 'https://assets.parqet.com/logos/crypto/MOVR?format=png' },
-  { value: 'aurora', label: 'Aurora', icon: 'https://assets.parqet.com/logos/crypto/AURORA?format=png' },
-  { value: 'linea', label: 'Linea', icon: 'https://assets.parqet.com/logos/crypto/LINEA?format=png' },
-  { value: 'mantle', label: 'Mantle', icon: 'https://assets.parqet.com/logos/crypto/MNT?format=png' },
-  { value: 'scroll', label: 'Scroll', icon: 'https://assets.parqet.com/logos/crypto/SCROLL?format=png' },
-  { value: 'zksync', label: 'zkSync', icon: 'https://assets.parqet.com/logos/crypto/ZKSYNC?format=png' },
-  { value: 'blast', label: 'Blast', icon: 'https://assets.parqet.com/logos/crypto/BLAST?format=png' },
-  { value: 'zora', label: 'Zora', icon: 'https://assets.parqet.com/logos/crypto/ZORA?format=png' },
 ];
 
 export default function Dashboard() {

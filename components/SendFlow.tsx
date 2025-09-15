@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { X, ArrowRight, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNetwork } from '@/contexts/NetworkContext';
-import { depositToZeta } from '@/lib/zetachain';
+// Call server API; avoid importing server-only toolkit client-side
 import type { SupportedEvm } from '@/lib/providers';
 
 interface SendFlowProps {
@@ -67,13 +67,19 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
     setIsLoading(true);
     try {
       // For now treat current asset.chain as origin; wire to Toolkit
-      await depositToZeta({
-        originChain: (asset.chain || 'ethereum').toLowerCase() as SupportedEvm,
-        amount,
-        receiver: recipientAddress,
-        mnemonicPhrase: '', // TODO: inject session mnemonic
-        network,
+      const res = await fetch('/api/evm/deposit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          originChain: (asset.chain || 'ethereum').toLowerCase(),
+          amount,
+          receiver: recipientAddress,
+          mnemonicPhrase: '', // TODO: inject session mnemonic
+          network,
+        }),
       })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to submit tx')
       toast.success('Transaction submitted');
       onClose();
     } catch (e: any) {

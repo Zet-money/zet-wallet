@@ -1,4 +1,5 @@
-import { evmDeposit, evmDepositAndCall } from '@zetachain/toolkit'
+import 'server-only'
+import { evmDeposit, evmDepositAndCall } from '@zetachain/toolkit/chains'
 import { ContractTransactionResponse } from 'ethers'
 import { getEvmSignerFromPhrase, type SupportedEvm, type Network, type RpcMap } from './providers'
 
@@ -25,19 +26,29 @@ export async function depositToZeta({ originChain, amount, receiver, token, mnem
       amount,
       receiver,
       token: typeof token === 'string' ? token : token?.address,
+      revertOptions: {
+        callOnRevert: false,
+        revertMessage: 'Zet Wallet: revert',
+      },
     },
     { signer }
   )
   return tx
 }
 
-export async function depositAndCall({ originChain, amount, receiver, token, mnemonicPhrase, network, rpc }: EvmDepositParams & { function?: string; types?: string[]; values?: (string|bigint|boolean)[] }): Promise<ContractTransactionResponse> {
+export async function depositAndCall({ originChain, amount, receiver, token, mnemonicPhrase, network, rpc, types = [], values = [] }: EvmDepositParams & { function?: string; types?: string[]; values?: (string|bigint|boolean)[] }): Promise<ContractTransactionResponse> {
   const signer = getEvmSignerFromPhrase(mnemonicPhrase, originChain, network, rpc)
   const tx = await evmDepositAndCall(
     {
       amount,
       receiver,
       token: typeof token === 'string' ? token : token?.address,
+      types,
+      values,
+      revertOptions: {
+        callOnRevert: false,
+        revertMessage: 'Zet Wallet: revert',
+      },
     },
     { signer }
   )
