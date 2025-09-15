@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -13,6 +13,7 @@ import { useRouter } from 'next/navigation';
 import ThemeToggle from './ThemeToggle';
 import { useNetwork } from '@/contexts/NetworkContext';
 import { getTokensFor } from '@/lib/tokens';
+import { fetchBalancesForChain } from '@/lib/balances';
 import SendFlow from './SendFlow';
 import ReceiveFlow from './ReceiveFlow';
 
@@ -47,15 +48,45 @@ export default function Dashboard() {
   const [showReceiveModal, setShowReceiveModal] = useState(false);
 
   const chainKey = selectedChain as any
-  const networkTokens = getTokensFor(chainKey, network).map((t, idx) => ({
+  const baseTokens = getTokensFor(chainKey, network)
+  const networkTokens = baseTokens.map((t, idx) => ({
     id: `${chainKey}-${t.symbol}-${idx}`,
     symbol: t.symbol,
     name: t.name,
-    balance: '0.00',
+    balance: '—',
     usdValue: '0.00',
     chain: chains.find(c => c.value === selectedChain)?.label || 'Ethereum',
     logo: `https://assets.parqet.com/logos/crypto/${t.logo || t.symbol}?format=png`,
   }))
+
+  const [balances, setBalances] = useState<Record<string, string>>({})
+  const [loadingBalances, setLoadingBalances] = useState(false)
+
+  useEffect(() => {
+    const load = async () => {
+      if (!wallet?.address) return
+      setLoadingBalances(true)
+      try {
+        const tokensForFetch = baseTokens.map((t) => ({
+          symbol: t.symbol,
+          address: t.addressByNetwork?.[network] || null,
+        }))
+        const map = await fetchBalancesForChain({
+          chain: chainKey,
+          network,
+          address: wallet.address,
+          tokens: tokensForFetch,
+        })
+        setBalances(map)
+      } catch (e) {
+        // noop
+      } finally {
+        setLoadingBalances(false)
+      }
+    }
+    load()
+    // reload when chain/network/wallet changes
+  }, [chainKey, network, wallet?.address])
 
   const filteredAssets = networkTokens.filter(asset => 
     asset.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -218,7 +249,13 @@ export default function Dashboard() {
                   </div>
                   
                   <div className="text-right flex-shrink-0 ml-2">
-                    <p className="font-semibold text-sm sm:text-base">{asset.balance}</p>
+                    <p className="font-semibold text-sm sm:text-base">
+                      {loadingBalances ? (
+                        <span className="inline-block h-4 w-16 bg-muted animate-pulse rounded" />
+                      ) : (
+                        balances[asset.symbol]?.toString?.() ?? asset.balance
+                      )}
+                    </p>
                     <p className="text-xs sm:text-sm text-muted-foreground">${asset.usdValue}</p>
                   </div>
                 </div>
