@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import ThemeToggle from './ThemeToggle';
 import { useNetwork } from '@/contexts/NetworkContext';
+import { getTokensFor } from '@/lib/tokens';
 import SendFlow from './SendFlow';
 import ReceiveFlow from './ReceiveFlow';
 
@@ -92,7 +93,18 @@ export default function Dashboard() {
   const [showSendModal, setShowSendModal] = useState(false);
   const [showReceiveModal, setShowReceiveModal] = useState(false);
 
-  const filteredAssets = mockAssets.filter(asset => 
+  const chainKey = selectedChain as any
+  const networkTokens = getTokensFor(chainKey, network).map((t, idx) => ({
+    id: `${chainKey}-${t.symbol}-${idx}`,
+    symbol: t.symbol,
+    name: t.name,
+    balance: '0.00',
+    usdValue: '0.00',
+    chain: chains.find(c => c.value === selectedChain)?.label || 'Ethereum',
+    logo: `https://assets.parqet.com/logos/crypto/${t.logo || t.symbol}?format=png`,
+  }))
+
+  const filteredAssets = networkTokens.filter(asset => 
     asset.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
     asset.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
