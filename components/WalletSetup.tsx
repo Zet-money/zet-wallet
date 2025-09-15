@@ -11,7 +11,7 @@ import { useWallet } from '@/contexts/WalletContext';
 import { toast } from 'sonner';
 
 export default function WalletSetup() {
-  const { createWallet, importWallet, wallet } = useWallet();
+  const { createWallet, importWallet, confirmMnemonicSaved, wallet } = useWallet();
   const [showMnemonic, setShowMnemonic] = useState(false);
   const [importMnemonic, setImportMnemonic] = useState('');
   const [copied, setCopied] = useState(false);
@@ -97,7 +97,7 @@ export default function WalletSetup() {
               </p>
             </div>
             
-            <Button onClick={() => window.location.reload()} className="w-full">
+            <Button onClick={confirmMnemonicSaved} className="w-full">
               I've saved my recovery phrase
             </Button>
           </CardContent>

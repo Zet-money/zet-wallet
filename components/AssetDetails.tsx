@@ -34,7 +34,7 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-sm border-b">
-        <div className="container mx-auto px-4 py-4">
+        <div className="container mx-auto px-4 py-4 max-w-4xl">
           <div className="flex items-center space-x-4">
             <Button
               variant="ghost"
@@ -58,7 +58,7 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
       </div>
 
       {/* Main Content */}
-      <div className="container mx-auto px-4 py-6">
+      <div className="container mx-auto px-4 py-6 max-w-4xl">
         {/* Balance Card */}
         <Card className="mb-6">
           <CardContent className="p-6">

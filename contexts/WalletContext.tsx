@@ -13,6 +13,7 @@ interface WalletContextType {
   isWalletInitialized: boolean;
   createWallet: () => void;
   importWallet: (mnemonic: string) => void;
+  confirmMnemonicSaved: () => void;
   clearWallet: () => void;
 }
 
@@ -277,7 +278,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       isImported: false,
     };
     setWallet(newWallet);
-    setIsWalletInitialized(true);
+    // Don't set isWalletInitialized to true yet - wait for user to confirm they saved the mnemonic
   };
 
   const importWallet = (mnemonic: string) => {
@@ -288,6 +289,10 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       isImported: true,
     };
     setWallet(newWallet);
+    setIsWalletInitialized(true);
+  };
+
+  const confirmMnemonicSaved = () => {
     setIsWalletInitialized(true);
   };
 
@@ -303,6 +308,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         isWalletInitialized,
         createWallet,
         importWallet,
+        confirmMnemonicSaved,
         clearWallet,
       }}
     >

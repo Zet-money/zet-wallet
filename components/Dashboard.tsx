@@ -112,7 +112,7 @@ export default function Dashboard() {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-sm border-b">
-        <div className="container mx-auto px-4 py-4">
+        <div className="container mx-auto px-4 py-4 max-w-4xl">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
@@ -158,7 +158,7 @@ export default function Dashboard() {
       </div>
 
       {/* Main Content */}
-      <div className="container mx-auto px-4 py-6">
+      <div className="container mx-auto px-4 py-6 max-w-4xl">
         {/* Chain Selector */}
         <div className="mb-6">
           <Select value={selectedChain} onValueChange={setSelectedChain}>
