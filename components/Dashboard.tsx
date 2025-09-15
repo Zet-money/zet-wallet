@@ -6,11 +6,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Search, Send, Download, Settings, Copy, Check } from 'lucide-react';
+import { Search, Send, Download, Settings, Copy, Check, X } from 'lucide-react';
 import { useWallet } from '@/contexts/WalletContext';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import ThemeToggle from './ThemeToggle';
+import SendFlow from './SendFlow';
+import ReceiveFlow from './ReceiveFlow';
 
 interface Asset {
   id: string;
@@ -85,6 +87,8 @@ export default function Dashboard() {
   const [selectedChain, setSelectedChain] = useState('ethereum');
   const [searchQuery, setSearchQuery] = useState('');
   const [copied, setCopied] = useState(false);
+  const [showSendModal, setShowSendModal] = useState(false);
+  const [showReceiveModal, setShowReceiveModal] = useState(false);
 
   const filteredAssets = mockAssets.filter(asset => 
     asset.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -180,11 +184,18 @@ export default function Dashboard() {
 
         {/* Action Buttons */}
         <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-6">
-          <Button className="h-12 sm:h-10 flex items-center justify-center space-x-2">
+          <Button 
+            onClick={() => setShowSendModal(true)}
+            className="h-12 sm:h-10 flex items-center justify-center space-x-2"
+          >
             <Send className="w-4 h-4" />
             <span>Send</span>
           </Button>
-          <Button variant="outline" className="h-12 sm:h-10 flex items-center justify-center space-x-2">
+          <Button 
+            onClick={() => setShowReceiveModal(true)}
+            variant="outline" 
+            className="h-12 sm:h-10 flex items-center justify-center space-x-2"
+          >
             <Download className="w-4 h-4" />
             <span>Receive</span>
           </Button>
@@ -242,6 +253,68 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+
+      {/* Send Modal */}
+      {showSendModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-2 sm:p-4 z-50">
+          <Card className="w-full max-w-md">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+              <div>
+                <CardTitle>Send Tokens</CardTitle>
+                <CardDescription>Select an asset to send</CardDescription>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => setShowSendModal(false)}>
+                <X className="w-4 h-4" />
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {mockAssets.slice(0, 3).map((asset) => (
+                  <Card 
+                    key={asset.id} 
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => {
+                      setShowSendModal(false);
+                      router.push(`/asset/${asset.id}`);
+                    }}
+                  >
+                    <CardContent className="p-3">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center text-sm">
+                          {asset.logo}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2">
+                            <span className="font-semibold">{asset.symbol}</span>
+                            <Badge variant="secondary" className="text-xs">{asset.chain}</Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground">{asset.balance} {asset.symbol}</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Receive Modal */}
+      {showReceiveModal && (
+        <ReceiveFlow 
+          asset={{
+            id: '1',
+            symbol: 'ETH',
+            name: 'Ethereum',
+            balance: '2.45',
+            usdValue: '4,890.50',
+            chain: 'Ethereum',
+            logo: '🔷'
+          }}
+          onClose={() => setShowReceiveModal(false)} 
+        />
+      )}
     </div>
   );
 }

@@ -11,6 +11,7 @@ export interface Wallet {
 interface WalletContextType {
   wallet: Wallet | null;
   isWalletInitialized: boolean;
+  isLoading: boolean;
   createWallet: () => void;
   importWallet: (mnemonic: string) => void;
   confirmMnemonicSaved: () => void;
@@ -22,6 +23,52 @@ const WalletContext = createContext<WalletContextType | undefined>(undefined);
 export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [isWalletInitialized, setIsWalletInitialized] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Session management functions
+  const saveSession = (walletData: Wallet) => {
+    const sessionData = {
+      wallet: walletData,
+      timestamp: Date.now(),
+      sessionId: `zet_session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    };
+    localStorage.setItem('zet_wallet_session', JSON.stringify(sessionData));
+  };
+
+  const loadSession = (): { wallet: Wallet; sessionId: string } | null => {
+    try {
+      const sessionData = localStorage.getItem('zet_wallet_session');
+      if (sessionData) {
+        const parsed = JSON.parse(sessionData);
+        // Check if session is not older than 30 days
+        const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
+        if (parsed.timestamp > thirtyDaysAgo) {
+          return { wallet: parsed.wallet, sessionId: parsed.sessionId };
+        } else {
+          // Session expired, clear it
+          localStorage.removeItem('zet_wallet_session');
+        }
+      }
+    } catch (error) {
+      console.error('Error loading session:', error);
+      localStorage.removeItem('zet_wallet_session');
+    }
+    return null;
+  };
+
+  const clearSession = () => {
+    localStorage.removeItem('zet_wallet_session');
+  };
+
+  // Initialize wallet from session on mount
+  useEffect(() => {
+    const session = loadSession();
+    if (session) {
+      setWallet(session.wallet);
+      setIsWalletInitialized(true);
+    }
+    setIsLoading(false);
+  }, []);
 
   // Generate a 12-word mnemonic phrase
   const generateMnemonic = (): string => {
@@ -289,16 +336,21 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       isImported: true,
     };
     setWallet(newWallet);
+    saveSession(newWallet);
     setIsWalletInitialized(true);
   };
 
   const confirmMnemonicSaved = () => {
+    if (wallet) {
+      saveSession(wallet);
+    }
     setIsWalletInitialized(true);
   };
 
   const clearWallet = () => {
     setWallet(null);
     setIsWalletInitialized(false);
+    clearSession();
   };
 
   return (
@@ -306,6 +358,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       value={{
         wallet,
         isWalletInitialized,
+        isLoading,
         createWallet,
         importWallet,
         confirmMnemonicSaved,
