@@ -1,8 +1,11 @@
-import type { Metadata } from "next";
+"use client";
+
 import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/sonner";
 import { NetworkProvider } from "@/contexts/NetworkContext";
+import { registerServiceWorker, setupInstallPrompt } from "@/lib/pwa";
+import { useEffect } from "react";
 import { WalletProvider } from "@/contexts/WalletContext";
 import "./globals.css";
 
@@ -16,18 +19,23 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: "Zet Wallet",
-  description: "The Chainless Crypto Wallet: Send, Receive, and Store Crypto Across All Chains",
-};
-
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  useEffect(() => {
+    registerServiceWorker()
+    setupInstallPrompt()
+  }, [])
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <link rel="apple-touch-icon" href="/favicon.ico" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="Zet Wallet" />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >

@@ -5,6 +5,7 @@ import { WalletProvider, useWallet } from '@/contexts/WalletContext';
 import SplashScreen from '@/components/SplashScreen';
 import WalletSetup from '@/components/WalletSetup';
 import Dashboard from '@/components/Dashboard';
+import PwaInstallBanner from '@/components/PwaInstallBanner';
 
 function AppContent() {
   const { isWalletInitialized, isLoading } = useWallet();
@@ -20,7 +21,12 @@ function AppContent() {
 
   // Show splash screen first
   if (showSplash) {
-    return <SplashScreen onComplete={() => setShowSplash(false)} />;
+    return (
+      <>
+        <SplashScreen onComplete={() => setShowSplash(false)} />
+        <PwaInstallBanner />
+      </>
+    );
   }
 
   // Show loading while checking session
@@ -33,17 +39,28 @@ function AppContent() {
           </div>
           <p className="text-muted-foreground">Loading wallet...</p>
         </div>
+        <PwaInstallBanner />
       </div>
     );
   }
 
   // Show wallet setup if no session found
   if (!isWalletInitialized) {
-    return <WalletSetup />;
+    return (
+      <>
+        <WalletSetup />
+        <PwaInstallBanner />
+      </>
+    );
   }
 
   // Show dashboard if wallet is initialized
-  return <Dashboard />;
+  return (
+    <>
+      <Dashboard />
+      <PwaInstallBanner />
+    </>
+  );
 }
 
 export default function Home() {
