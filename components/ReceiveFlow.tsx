@@ -26,6 +26,8 @@ export default function ReceiveFlow({ asset, onClose }: ReceiveFlowProps) {
   const { wallet } = useWallet();
   const [copied, setCopied] = useState(false);
   const [copiedAddress, setCopiedAddress] = useState(false);
+  const isSolana = (asset.chain || '').toLowerCase() === 'solana';
+  const displayAddress = isSolana ? (wallet?.solanaAddress || '') : (wallet?.address || '');
 
   const copyToClipboard = async (text: string, type: 'address' | 'qr') => {
     try {
@@ -116,7 +118,7 @@ export default function ReceiveFlow({ asset, onClose }: ReceiveFlowProps) {
             <div className="p-3 sm:p-4 bg-white rounded-lg">
               <QRCode
                 id="qr-code"
-                value={wallet.address}
+                value={displayAddress}
                 size={180}
                 style={{ height: 'auto', maxWidth: '100%', width: '100%' }}
               />
@@ -126,7 +128,7 @@ export default function ReceiveFlow({ asset, onClose }: ReceiveFlowProps) {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => copyToClipboard(wallet.address, 'qr')}
+                onClick={() => copyToClipboard(displayAddress, 'qr')}
                 className="flex items-center space-x-2"
               >
                 {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
@@ -152,7 +154,7 @@ export default function ReceiveFlow({ asset, onClose }: ReceiveFlowProps) {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => copyToClipboard(wallet.address, 'address')}
+                onClick={() => copyToClipboard(displayAddress, 'address')}
                 className="flex items-center space-x-1"
               >
                 {copiedAddress ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
@@ -161,7 +163,7 @@ export default function ReceiveFlow({ asset, onClose }: ReceiveFlowProps) {
             </div>
             
             <div className="p-3 bg-muted rounded-lg">
-              <p className="text-sm font-mono break-all">{wallet.address}</p>
+              <p className="text-sm font-mono break-all">{displayAddress}</p>
             </div>
           </div>
 
