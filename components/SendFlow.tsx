@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -79,7 +79,60 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
   const [blockNumber, setBlockNumber] = useState<number | undefined>(undefined);
   const [cctxs, setCctxs] = useState<any[]>([]);
   const [cctxProgress, setCctxProgress] = useState<CctxProgress | null>(null);
+  const [transactionDuration, setTransactionDuration] = useState<number>(0);
+  const [isTimerRunning, setIsTimerRunning] = useState<boolean>(false);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const startTimeRef = useRef<number | null>(null);
   const { network } = useNetwork();
+
+  // Timer effect for tracking transaction duration
+  useEffect(() => {
+    if (isTimerRunning && startTimeRef.current) {
+      timerRef.current = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - startTimeRef.current!) / 1000);
+        setTransactionDuration(elapsed);
+        console.log('[UI][TIMER] Transaction duration updated', { elapsed, txPhase })
+      }, 1000);
+    } else {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    }
+
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, [isTimerRunning, txPhase]);
+
+  const startTimer = () => {
+    console.log('[UI][TIMER] Starting transaction timer')
+    startTimeRef.current = Date.now();
+    setTransactionDuration(0);
+    setIsTimerRunning(true);
+  };
+
+  const stopTimer = () => {
+    console.log('[UI][TIMER] Stopping transaction timer', { 
+      finalDuration: transactionDuration,
+      txPhase 
+    })
+    setIsTimerRunning(false);
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+  };
+
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+  };
+
   const explorerFor = (chain: string) => {
     const net = network === 'mainnet'
     switch (chain.toLowerCase()) {
@@ -246,6 +299,7 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
       });
       setTxHash(tx.hash);
       setTxPhase('pending');
+      startTimer(); // Start the transaction timer
 
       // First wait for origin chain confirmation with live polling updates
       try {
@@ -264,6 +318,7 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
             } else if (s.status === 'failed') {
               setTxPhase('failed')
               setConfirmations(0)
+              stopTimer(); // Stop timer on failure
               break
             } else {
               setTxPhase('pending')
@@ -287,6 +342,7 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
             }
             if (status.status === 'failed') {
               setTxPhase('failed')
+              stopTimer(); // Stop timer on failure
               break
             }
             setTxPhase('pending')
@@ -378,12 +434,15 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
             
             if (cctxResult.status === 'completed') {
               console.log('[UI][CCTX] Showing success toast')
+              stopTimer(); // Stop timer on completion
               toast.success('Cross-chain transfer completed!', { description: `Successfully transferred to ${destinationChain}`, duration: 10000 });
             } else if (cctxResult.status === 'failed') {
               console.log('[UI][CCTX] Showing failure toast')
+              stopTimer(); // Stop timer on failure
               toast.error('Cross-chain transfer failed', { description: 'Transfer failed during cross-chain processing', duration: 10000 });
             } else if (cctxResult.status === 'timeout') {
               console.log('[UI][CCTX] Showing timeout toast')
+              stopTimer(); // Stop timer on timeout
               toast.warning('Cross-chain transfer timeout', { description: 'Transfer is taking longer than expected. Please check the blockchain explorer.', duration: 10000 });
             }
           } catch (cctxError) {
@@ -397,11 +456,13 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
             setTxPhase('pending');
           }
         } else if (txPhase === 'failed') {
+          stopTimer(); // Stop timer on origin chain failure
           toast.error('Transaction failed on origin chain', {
             description: `Transaction failed on origin chain`,
             duration: 10000
           });
         } else if (txPhase === 'timeout') {
+          stopTimer(); // Stop timer on origin chain timeout
           toast.warning('Transaction timeout on origin chain', {
             description: 'Transaction is taking longer than expected. Please check the blockchain explorer.',
             duration: 10000
@@ -410,6 +471,7 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
       } catch (error) {
         console.error('Error tracking transaction:', error);
         setTxPhase('failed');
+        stopTimer(); // Stop timer on error
         toast.error('Error tracking transaction', {
           description: 'Unable to track transaction status. Please check the blockchain explorer.',
           duration: 10000
@@ -417,6 +479,7 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
       }
     } catch (e: any) {
       console.error('Transfer error:', e);
+      stopTimer(); // Stop timer on transfer error
       toast.error(e?.message || 'Failed to send transfer');
     } finally {
       setIsLoading(false);
@@ -466,6 +529,21 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
                           txPhase === 'timeout' ? 'Timeout' : 'Unknown'}
                 </Badge>
               </div>
+
+              {/* Transaction Duration Timer */}
+              {(txPhase === 'pending' || txPhase === 'confirmed' || txPhase === 'completed' || txPhase === 'failed' || txPhase === 'timeout') && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Duration</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-mono">
+                      {formatDuration(transactionDuration)}
+                    </span>
+                    {isTimerRunning && (
+                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {(txPhase === 'confirmed' || txPhase === 'completed') && (
                 <div className="space-y-2 text-sm">
@@ -520,6 +598,8 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
                     progress={cctxProgress}
                     originChain={(asset.chain || 'ethereum').toLowerCase()}
                     targetChain={destinationChain}
+                    duration={transactionDuration}
+                    isTimerRunning={isTimerRunning}
                     onViewExplorer={(hash, chain) => {
                       console.log('[UI][CCTX][EXPLORER] Explorer link clicked', { hash, chain })
                       const explorerUrl = explorerFor(chain)

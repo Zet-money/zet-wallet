@@ -11,6 +11,8 @@ interface CctxProgressProps {
   progress: CctxProgress
   originChain: string
   targetChain: string
+  duration?: number
+  isTimerRunning?: boolean
   onViewExplorer?: (hash: string, chain: string) => void
 }
 
@@ -56,6 +58,8 @@ export default function CctxProgressComponent({
   progress, 
   originChain, 
   targetChain, 
+  duration = 0,
+  isTimerRunning = false,
   onViewExplorer 
 }: CctxProgressProps) {
   console.log('[UI][CCTX][PROGRESS] CctxProgressComponent rendered', {
@@ -179,6 +183,12 @@ export default function CctxProgressComponent({
     return formatted
   }
 
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+  }
+
   return (
     <Card className="w-full">
       <CardHeader className="pb-3">
@@ -215,6 +225,19 @@ export default function CctxProgressComponent({
             <div className="flex items-center gap-2">
               <span className="text-lg font-bold">{progress.confirmations}</span>
               <Loader2 className="w-4 h-4 animate-spin" />
+            </div>
+          </div>
+        )}
+
+        {/* Transaction Duration */}
+        {duration > 0 && (
+          <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+            <span className="text-sm font-medium">Transaction Duration</span>
+            <div className="flex items-center gap-2">
+              <span className="text-lg font-bold font-mono">{formatDuration(duration)}</span>
+              {isTimerRunning && (
+                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+              )}
             </div>
           </div>
         )}
