@@ -57,6 +57,8 @@ function logoSymbolForChain(key: string) {
     case 'arbitrum': return 'ARB'
     case 'optimism': return 'OP'
     case 'base': return 'BASE'
+    case 'solana': return 'SOL'
+    case 'zetachain': return 'ZETA'
     default: return 'ETH'
   }
 }
@@ -429,7 +431,7 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
                   placeholder="Enter wallet address"
                   value={recipientAddress}
                   onChange={(e) => setRecipientAddress(e.target.value)}
-                  className="font-mono"
+                  className="font-mono text-sm placeholder:text-sm"
                 />
               </div>
 
