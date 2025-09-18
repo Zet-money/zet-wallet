@@ -225,6 +225,7 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
           const timeoutMs = 120000
           while (Date.now() - start < timeoutMs) {
             const s = await getSolTxStatus({ signature: tx.hash, network: network as any })
+            console.log('[UI][SOL] status', s)
             if (s.status === 'finalized') {
               setTxPhase('confirmed')
               setConfirmations(1)
@@ -244,6 +245,7 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
           const timeoutMs = 120000
           while (Date.now() - start < timeoutMs) {
             const status = await getTxStatus({ originChain, hash: tx.hash, network })
+            console.log('[UI][EVM] status', status)
             setConfirmations(status.confirmations)
             if (status.blockNumber) setBlockNumber(status.blockNumber)
             if (status.gasUsed) setGasUsed(status.gasUsed)

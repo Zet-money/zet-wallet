@@ -50,6 +50,13 @@ export type ZetProtocolTransferParams = {
 export async function smartCrossChainTransfer(params: ZetProtocolTransferParams): Promise<{ hash: string }> {
   const { originChain, targetChain, amount, tokenSymbol, sourceTokenAddress, targetTokenAddress, recipient, mnemonicPhrase, network, rpc } = params
   if ((originChain as any) === 'solana') {
+    console.log('[ZETA][SOL] Starting solanaDepositAndCall', {
+      amount,
+      tokenSymbol,
+      targetZrc20: targetTokenAddress,
+      recipient,
+      network
+    })
     // Build Solana signer from mnemonic via helper
     const { keypair: signer } = await solanaMnemonicToKeypairForRetrieval(mnemonicPhrase)
 
@@ -76,6 +83,7 @@ export async function smartCrossChainTransfer(params: ZetProtocolTransferParams)
       chainId: network === 'mainnet' ? 'Mainnet' : 'Devnet',
       signer,
     } as any))
+    console.log('[ZETA][SOL] Submitted solanaDepositAndCall signature', signature)
     return { hash: signature }
   }
   
@@ -185,17 +193,25 @@ export async function getTxStatus(params: {
   
   try {
     const provider = new JsonRpcProvider(rpcUrl[network])
+    console.log('[ZETA][EVM] Checking tx status via RPC', { originChain, network, rpc: rpcUrl[network], hash })
     
     // First check if transaction exists
     const tx = await provider.getTransaction(hash)
-    if (!tx) return { status: 'pending', confirmations: 0 }
+    if (!tx) {
+      console.log('[ZETA][EVM] Tx not found yet')
+      return { status: 'pending', confirmations: 0 }
+    }
     
     // Check if transaction is mined
     const receipt = await provider.getTransactionReceipt(hash)
-    if (!receipt) return { status: 'pending', confirmations: 0 }
+    if (!receipt) {
+      console.log('[ZETA][EVM] Receipt not found yet')
+      return { status: 'pending', confirmations: 0 }
+    }
     
     // Transaction is mined, check status
     if (receipt.status === 0) {
+      console.log('[ZETA][EVM] Tx failed')
       return { 
         status: 'failed', 
         confirmations: 0, 
@@ -208,12 +224,14 @@ export async function getTxStatus(params: {
     const latestBlock = await provider.getBlockNumber()
     const confirmations = Math.max(0, latestBlock - Number(receipt.blockNumber) + 1)
     
-    return { 
+    const res: { status: 'confirmed'; confirmations: number; blockNumber: number; gasUsed: string } = { 
       status: 'confirmed', 
       confirmations, 
       blockNumber: Number(receipt.blockNumber),
       gasUsed: receipt.gasUsed.toString()
     }
+    console.log('[ZETA][EVM] Tx confirmed', res)
+    return res
   } catch (error) {
     console.error('Error checking transaction status:', error)
     return { status: 'pending', confirmations: 0 }
@@ -297,6 +315,9 @@ export async function trackCrossChainTransaction(params: {
     const emitter = {
       emit: (event: string, payload: any) => {
         try {
+          if (event && payload?.text) {
+            console.log('[ZETA][CCTX][EMIT]', event, payload.text)
+          }
           if (onUpdate) {
             const statusText = typeof payload?.text === 'string' ? payload.text : undefined
             onUpdate({ cctxs: state.cctxs, statusText })
@@ -306,6 +327,7 @@ export async function trackCrossChainTransaction(params: {
     } as any
 
     const resolve = (cctxs: any) => {
+      console.log('[ZETA][CCTX] Completed with success')
       if (done) return
       done = true
       if (intervalId) clearInterval(intervalId)
@@ -313,6 +335,7 @@ export async function trackCrossChainTransaction(params: {
       outerResolve({ status: 'completed', cctxs })
     }
     const reject = (err: Error) => {
+      console.error('[ZETA][CCTX] Failed', err?.message)
       if (done) return
       done = true
       if (intervalId) clearInterval(intervalId)
@@ -321,6 +344,7 @@ export async function trackCrossChainTransaction(params: {
     }
 
     // Kickoff immediate poll
+    console.log('[ZETA][CCTX] Start polling', { apiUrl, tss, hash, timeoutSeconds })
     pollTransactions({
       api: apiUrl,
       hash,
@@ -340,6 +364,7 @@ export async function trackCrossChainTransaction(params: {
       if (done) return
       // increment poll count for elapsed time calculation inside toolkit
       state.pollCount += 1
+      console.log('[ZETA][CCTX] Tick', { pollCount: state.pollCount })
       pollTransactions({
         api: apiUrl,
         hash,
@@ -358,6 +383,7 @@ export async function trackCrossChainTransaction(params: {
     // Absolute timeout
     timeoutId = setTimeout(() => {
       if (done) return
+      console.warn('[ZETA][CCTX] Timeout reached')
       done = true
       if (intervalId) clearInterval(intervalId)
       outerResolve({ status: 'timeout', cctxs: state.cctxs })
