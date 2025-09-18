@@ -7,11 +7,9 @@ import {
   TransferType,
   detectTransferType
 } from './zetprotocol'
-import { Keypair } from '@solana/web3.js'
-import { derivePath } from 'ed25519-hd-key'
-import * as bip39 from 'bip39'
 import { solanaDepositAndCall } from '@zetachain/toolkit/chains'
 import { ZETPROTOCOL_ADDRESS } from './zetprotocol'
+import { solanaMnemonicToKeypairForRetrieval } from './solana'
 import { JsonRpcProvider } from 'ethers'
 import { pollTransactions } from '@zetachain/toolkit/utils'
 
@@ -52,10 +50,8 @@ export type ZetProtocolTransferParams = {
 export async function smartCrossChainTransfer(params: ZetProtocolTransferParams): Promise<{ hash: string }> {
   const { originChain, targetChain, amount, tokenSymbol, sourceTokenAddress, targetTokenAddress, recipient, mnemonicPhrase, network, rpc } = params
   if ((originChain as any) === 'solana') {
-    // Build Solana signer from mnemonic
-    const seed = bip39.mnemonicToSeedSync(mnemonicPhrase, '')
-    const derivedSeed = derivePath("m/44'/501'/0'/0'", seed.toString('hex')).key
-    const signer = Keypair.fromSeed(derivedSeed)
+    // Build Solana signer from mnemonic via helper
+    const { keypair: signer } = await solanaMnemonicToKeypairForRetrieval(mnemonicPhrase)
 
     const types = ['address', 'bytes', 'bool']
     const recipientBytes = recipient.startsWith('0x') ? recipient : `0x${recipient}`
