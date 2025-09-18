@@ -282,6 +282,8 @@ export async function trackCrossChainTransaction(params: {
   error?: string
 }> {
   const { hash, network, timeoutSeconds = 300, onUpdate } = params
+  console.log('[ZETA][CCTX] Tracking cross-chain transaction', { hash, network, timeoutSeconds })
+  
 
   // Endpoints
   const apiUrl = network === 'mainnet'
@@ -389,5 +391,72 @@ export async function trackCrossChainTransaction(params: {
       outerResolve({ status: 'timeout', cctxs: state.cctxs })
     }, timeoutSeconds * 1000)
   })
+}
+
+// Custom lightweight tracker using Zeta RPC finalized height as confirmations
+async function fetchFromApi<T>(api: string, endpoint: string): Promise<T> {
+  const res = await fetch(`${api}${endpoint}`, { cache: 'no-store' })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return (await res.json()) as T
+}
+
+type TssResponse = { TSS: { finalizedZetaHeight: string } }
+type CrossChainTxResponse = { CrossChainTx: any }
+
+async function getFinalizedHeight(api: string): Promise<number | null> {
+  try {
+    const data = await fetchFromApi<TssResponse>(api, `/zeta-chain/observer/TSS`)
+    return Number(data.TSS.finalizedZetaHeight || 0)
+  } catch {
+    return null
+  }
+}
+
+async function getCctx(api: string, hash: string): Promise<any | null> {
+  try {
+    const data = await fetchFromApi<CrossChainTxResponse>(api, `/zeta-chain/crosschain/cctx/${hash}`)
+    return data.CrossChainTx
+  } catch {
+    return null
+  }
+}
+
+export async function trackCrossChainConfirmations(params: {
+  hash: string
+  network: Network
+  minConfirmations?: number
+  timeoutSeconds?: number
+  onProgress?: (p: { confirmations: number; status?: string }) => void
+}): Promise<{ status: 'completed' | 'failed' | 'timeout'; confirmations: number; cctx?: any }> {
+  const { hash, network, minConfirmations = 20, timeoutSeconds = 300, onProgress } = params
+  const apiUrl = network === 'mainnet' ? 'https://api.zetachain.network' : 'https://api.athens.zetachain.network'
+  const start = Date.now()
+  console.log('[ZETA][CCTX][CONF] Start', { hash, minConfirmations, timeoutSeconds })
+
+  while (Date.now() - start < timeoutSeconds * 1000) {
+    const [finalized, cctx] = await Promise.all([
+      getFinalizedHeight(apiUrl),
+      getCctx(apiUrl, hash),
+    ])
+    if (!cctx || finalized == null) {
+      await new Promise(r => setTimeout(r, 3000))
+      continue
+    }
+    const inboundHeight = Number(cctx?.inbound_params?.finalized_zeta_height || 0)
+    const confirmations = Math.max(0, finalized - inboundHeight)
+    const status: string | undefined = cctx?.cctx_status?.status
+    if (onProgress) onProgress({ confirmations, status })
+    console.log('[ZETA][CCTX][CONF] tick', { finalized, inboundHeight, confirmations, status })
+
+    if (status === 'Aborted' || status === 'Reverted') {
+      return { status: 'failed', confirmations, cctx }
+    }
+    if (status === 'OutboundMined' || confirmations >= minConfirmations) {
+      return { status: 'completed', confirmations, cctx }
+    }
+    await new Promise(r => setTimeout(r, 3000))
+  }
+  console.warn('[ZETA][CCTX][CONF] timeout')
+  return { status: 'timeout', confirmations: 0 }
 }
 

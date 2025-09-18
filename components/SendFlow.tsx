@@ -13,7 +13,7 @@ import { useNetwork } from '@/contexts/NetworkContext';
 // Call server API; avoid importing server-only toolkit client-side
 import type { SupportedEvm } from '@/lib/providers';
 import { EVM_TOKENS, getTokensFor, type Network as TokenNetwork, type TokenInfo } from '@/lib/tokens';
-import { smartCrossChainTransfer, getTxStatus, waitForTxConfirmation, trackCrossChainTransaction } from '@/lib/zetachain';
+import { smartCrossChainTransfer, getTxStatus, waitForTxConfirmation, trackCrossChainTransaction, trackCrossChainConfirmations } from '@/lib/zetachain';
 import { waitForSolTxConfirmation, getSolTxStatus } from '@/lib/solana';
 import { getZrcAddressFor } from '@/lib/zrc';
 
@@ -271,22 +271,22 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
           if (!isSolanaOrigin) {
             // Track only for EVM origins for now
             try {
-              const cctxResult = await trackCrossChainTransaction({
+              const cctxResult = await trackCrossChainConfirmations({
                 hash: tx.hash,
                 network,
+                minConfirmations: 20,
                 timeoutSeconds: 300,
-                onUpdate: ({ statusText }) => {
-                  if (statusText) {
-                    setTxPhase('pending')
-                  }
+                onProgress: ({ confirmations, status }) => {
+                  setTxPhase(status === 'OutboundMined' ? 'completed' : 'pending')
+                  setConfirmations(confirmations)
                 }
-              });
+              })
               setTxPhase(cctxResult.status as any);
-              setCctxs(cctxResult.cctxs || []);
+              setCctxs(cctxResult.cctx ? [cctxResult.cctx] : []);
               if (cctxResult.status === 'completed') {
                 toast.success('Cross-chain transfer completed!', { description: `Successfully transferred to ${destinationChain}`, duration: 10000 });
               } else if (cctxResult.status === 'failed') {
-                toast.error('Cross-chain transfer failed', { description: cctxResult.error || 'Transfer failed during cross-chain processing', duration: 10000 });
+                toast.error('Cross-chain transfer failed', { description: 'Transfer failed during cross-chain processing', duration: 10000 });
               } else if (cctxResult.status === 'timeout') {
                 toast.warning('Cross-chain transfer timeout', { description: 'Transfer is taking longer than expected. Please check the blockchain explorer.', duration: 10000 });
               }
