@@ -300,6 +300,20 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
             duration: 5000
           });
 
+          // Immediately show CCTX tracker UI with pending state
+          console.log('[UI][CCTX] Setting up pending CCTX progress state')
+          setCctxProgress({
+            status: 'pending',
+            confirmations: 0,
+            statusText: 'Waiting for cross-chain transaction to be detected...',
+            amount: amount,
+            asset: destinationToken,
+            sender: '', // Will be filled when CCTX data is available
+            receiver: recipientAddress,
+            targetChainId: destinationChain
+          })
+          setTxPhase('pending')
+
           // Track cross-chain transaction for both EVM and Solana origins
           try {
             console.log('[UI][CCTX] Starting trackCrossChainTransaction', { 

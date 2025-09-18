@@ -201,28 +201,36 @@ export default function CctxProgressComponent({
         </div>
 
         {/* Addresses */}
-        {progress.sender && (
-          <div className="space-y-2">
-            <span className="text-sm text-muted-foreground">From:</span>
+        <div className="space-y-2">
+          <span className="text-sm text-muted-foreground">From:</span>
+          {progress.sender ? (
             <p className="font-mono text-xs break-all bg-muted p-2 rounded">
               {progress.sender}
             </p>
-          </div>
-        )}
+          ) : (
+            <div className="bg-muted p-2 rounded animate-pulse">
+              <div className="h-4 bg-gray-300 rounded w-3/4"></div>
+            </div>
+          )}
+        </div>
 
-        {progress.receiver && (
-          <div className="space-y-2">
-            <span className="text-sm text-muted-foreground">To:</span>
+        <div className="space-y-2">
+          <span className="text-sm text-muted-foreground">To:</span>
+          {progress.receiver ? (
             <p className="font-mono text-xs break-all bg-muted p-2 rounded">
               {progress.receiver}
             </p>
-          </div>
-        )}
+          ) : (
+            <div className="bg-muted p-2 rounded animate-pulse">
+              <div className="h-4 bg-gray-300 rounded w-3/4"></div>
+            </div>
+          )}
+        </div>
 
         {/* Outbound Transaction Hash */}
-        {progress.outboundHash && (
-          <div className="space-y-2">
-            <span className="text-sm text-muted-foreground">Outbound Transaction:</span>
+        <div className="space-y-2">
+          <span className="text-sm text-muted-foreground">Outbound Transaction:</span>
+          {progress.outboundHash ? (
             <div className="flex items-center gap-2">
               <p className="font-mono text-xs break-all bg-muted p-2 rounded flex-1">
                 {progress.outboundHash}
@@ -238,22 +246,36 @@ export default function CctxProgressComponent({
                 </Button>
               )}
             </div>
-          </div>
-        )}
+          ) : (
+            <div className="bg-muted p-2 rounded animate-pulse">
+              <div className="h-4 bg-gray-300 rounded w-full"></div>
+            </div>
+          )}
+        </div>
 
         {/* Gas Information */}
-        {(progress.gasUsed || progress.gasLimit) && (
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <span className="text-muted-foreground">Gas Used:</span>
+        <div className="grid grid-cols-2 gap-4 text-sm">
+          <div>
+            <span className="text-muted-foreground">Gas Used:</span>
+            {progress.gasUsed ? (
               <p className="font-mono">{formatGas(progress.gasUsed)}</p>
-            </div>
-            <div>
-              <span className="text-muted-foreground">Gas Limit:</span>
-              <p className="font-mono">{formatGas(progress.gasLimit)}</p>
-            </div>
+            ) : (
+              <div className="bg-muted p-2 rounded animate-pulse mt-1">
+                <div className="h-4 bg-gray-300 rounded w-1/2"></div>
+              </div>
+            )}
           </div>
-        )}
+          <div>
+            <span className="text-muted-foreground">Gas Limit:</span>
+            {progress.gasLimit ? (
+              <p className="font-mono">{formatGas(progress.gasLimit)}</p>
+            ) : (
+              <div className="bg-muted p-2 rounded animate-pulse mt-1">
+                <div className="h-4 bg-gray-300 rounded w-1/2"></div>
+              </div>
+            )}
+          </div>
+        </div>
 
         {/* Error Message */}
         {progress.errorMessage && (
@@ -271,22 +293,28 @@ export default function CctxProgressComponent({
         )}
 
         {/* Height Information */}
-        {(progress.inboundHeight || progress.finalizedHeight) && (
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            {progress.inboundHeight && (
-              <div>
-                <span className="text-muted-foreground">Inbound Height:</span>
-                <p className="font-mono">{progress.inboundHeight.toLocaleString()}</p>
-              </div>
-            )}
-            {progress.finalizedHeight && (
-              <div>
-                <span className="text-muted-foreground">Finalized Height:</span>
-                <p className="font-mono">{progress.finalizedHeight.toLocaleString()}</p>
+        <div className="grid grid-cols-2 gap-4 text-sm">
+          <div>
+            <span className="text-muted-foreground">Inbound Height:</span>
+            {progress.inboundHeight ? (
+              <p className="font-mono">{progress.inboundHeight.toLocaleString()}</p>
+            ) : (
+              <div className="bg-muted p-2 rounded animate-pulse mt-1">
+                <div className="h-4 bg-gray-300 rounded w-1/2"></div>
               </div>
             )}
           </div>
-        )}
+          <div>
+            <span className="text-muted-foreground">Finalized Height:</span>
+            {progress.finalizedHeight ? (
+              <p className="font-mono">{progress.finalizedHeight.toLocaleString()}</p>
+            ) : (
+              <div className="bg-muted p-2 rounded animate-pulse mt-1">
+                <div className="h-4 bg-gray-300 rounded w-1/2"></div>
+              </div>
+            )}
+          </div>
+        </div>
       </CardContent>
     </Card>
   )
