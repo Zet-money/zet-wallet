@@ -1,6 +1,6 @@
 import { getTokensFor, type Network as TokenNetwork, type TokenInfo } from './tokens'
 
-export type SupportedEvm = 'ethereum' | 'polygon' | 'base' | 'arbitrum' | 'avalanche' | 'bsc' | 'optimism' | 'zetachain'
+export type SupportedEvm = 'ethereum' | 'polygon' | 'base' | 'arbitrum' | 'avalanche' | 'bsc' | 'optimism' | 'zetachain' | 'solana'
 
 const MAINNET_SUFFIX: Record<Exclude<SupportedEvm, 'zetachain'>, string> = {
   ethereum: 'ETH',
@@ -10,6 +10,7 @@ const MAINNET_SUFFIX: Record<Exclude<SupportedEvm, 'zetachain'>, string> = {
   avalanche: 'AVAX',
   bsc: 'BSC',
   optimism: 'OP',
+  solana: 'SOL',
 }
 
 const TESTNET_SUFFIX: Record<Exclude<SupportedEvm, 'zetachain'>, string> = {
@@ -20,6 +21,7 @@ const TESTNET_SUFFIX: Record<Exclude<SupportedEvm, 'zetachain'>, string> = {
   avalanche: 'FUJI',
   bsc: 'BSC',
   optimism: 'OP',
+  solana: 'SOL',
 }
 
 export function getZrcSymbolFor(targetChain: SupportedEvm, tokenSymbol: string, network: TokenNetwork): string | undefined {
