@@ -14,7 +14,7 @@ import { useNetwork } from '@/contexts/NetworkContext';
 import type { SupportedEvm } from '@/lib/providers';
 import { EVM_TOKENS, getTokensFor, type Network as TokenNetwork, type TokenInfo } from '@/lib/tokens';
 import { smartCrossChainTransfer, getTxStatus, waitForTxConfirmation, trackCrossChainTransaction } from '@/lib/zetachain';
-import { waitForSolTxConfirmation } from '@/lib/solana';
+import { waitForSolTxConfirmation, getSolTxStatus } from '@/lib/solana';
 import { getZrcAddressFor } from '@/lib/zrc';
 
 interface SendFlowProps {
@@ -218,33 +218,49 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
       setTxHash(tx.hash);
       setTxPhase('pending');
 
-      // First wait for origin chain confirmation
+      // First wait for origin chain confirmation with live polling updates
       try {
-        const originResult = isSolanaOrigin
-          ? await (async () => {
-              const sol = await waitForSolTxConfirmation({ signature: tx.hash, network })
-              if (sol.status === 'finalized') {
-                return { status: 'confirmed', confirmations: 1 }
-              }
-              if (sol.status === 'failed') {
-                return { status: 'failed', confirmations: 0 }
-              }
-              return { status: 'timeout', confirmations: 0 }
-            })()
-          : await waitForTxConfirmation({
-              originChain,
-              hash: tx.hash,
-              network,
-              requiredConfirmations: 1,
-              timeoutMs: 120000 // 2 minutes for origin chain
-            });
+        if (isSolanaOrigin) {
+          const start = Date.now()
+          const timeoutMs = 120000
+          while (Date.now() - start < timeoutMs) {
+            const s = await getSolTxStatus({ signature: tx.hash, network: network as any })
+            if (s.status === 'finalized') {
+              setTxPhase('confirmed')
+              setConfirmations(1)
+              break
+            } else if (s.status === 'failed') {
+              setTxPhase('failed')
+              setConfirmations(0)
+              break
+            } else {
+              setTxPhase('pending')
+              setConfirmations(0)
+            }
+            await new Promise(r => setTimeout(r, 2000))
+          }
+        } else {
+          const start = Date.now()
+          const timeoutMs = 120000
+          while (Date.now() - start < timeoutMs) {
+            const status = await getTxStatus({ originChain, hash: tx.hash, network })
+            setConfirmations(status.confirmations)
+            if (status.blockNumber) setBlockNumber(status.blockNumber)
+            if (status.gasUsed) setGasUsed(status.gasUsed)
+            if (status.status === 'confirmed') {
+              setTxPhase('confirmed')
+              break
+            }
+            if (status.status === 'failed') {
+              setTxPhase('failed')
+              break
+            }
+            setTxPhase('pending')
+            await new Promise(r => setTimeout(r, 2000))
+          }
+        }
 
-        setTxPhase(originResult.status as any);
-        setConfirmations(originResult.confirmations);
-        if ('gasUsed' in originResult) setGasUsed((originResult as any).gasUsed);
-        if ('blockNumber' in originResult) setBlockNumber((originResult as any).blockNumber);
-
-        if (originResult.status === 'confirmed') {
+        if (txPhase === 'confirmed') {
           toast.success('Transaction confirmed on origin chain!', {
             description: `Now tracking cross-chain completion...`,
             duration: 5000
@@ -258,7 +274,7 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
                 network,
                 timeoutSeconds: 300
               });
-              setTxPhase(cctxResult.status);
+              setTxPhase(cctxResult.status as any);
               setCctxs(cctxResult.cctxs || []);
               if (cctxResult.status === 'completed') {
                 toast.success('Cross-chain transfer completed!', { description: `Successfully transferred to ${destinationChain}`, duration: 10000 });
@@ -272,12 +288,12 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
               setTxPhase('pending');
             }
           }
-        } else if (originResult.status === 'failed') {
+        } else if (txPhase === 'failed') {
           toast.error('Transaction failed on origin chain', {
             description: `Transaction failed on origin chain`,
             duration: 10000
           });
-        } else if (originResult.status === 'timeout') {
+        } else if (txPhase === 'timeout') {
           toast.warning('Transaction timeout on origin chain', {
             description: 'Transaction is taking longer than expected. Please check the blockchain explorer.',
             duration: 10000
