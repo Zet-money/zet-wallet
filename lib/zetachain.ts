@@ -73,7 +73,7 @@ export async function smartCrossChainTransfer(params: ZetProtocolTransferParams)
         onRevertGasLimit: '500000',
       }
     }, ({
-      chainId: network === 'mainnet' ? 'Mainnet' : 'Testnet',
+      chainId: network === 'mainnet' ? 'Mainnet' : 'Devnet',
       signer,
     } as any))
     return { hash: signature }
@@ -259,65 +259,96 @@ export async function trackCrossChainTransaction(params: {
   timeoutSeconds?: number
 }): Promise<{ 
   status: 'completed' | 'failed' | 'timeout' | 'pending'
-  cctxs?: any[]
+  cctxs?: any
   error?: string
 }> {
   const { hash, network, timeoutSeconds = 300 } = params
-  
-  try {
-    // Use ZetaChain's API endpoint based on network
-    const apiUrl = network === 'mainnet' 
-      ? 'https://api.zetachain.network' 
-      : 'https://api.athens.zetachain.network'
-    
-    const tss = network === 'mainnet' 
-      ? 'https://tss.zetachain.network' 
-      : 'https://tss.athens.zetachain.network'
-    
-    // Create initial state for polling
-    const initialState = {
-      cctxs: [] as any,
-      pendingNonces: [] as any,
-      pollCount: 0,
-      spinners: {}
+
+  // Endpoints
+  const apiUrl = network === 'mainnet'
+    ? 'https://api.zetachain.network'
+    : 'https://api.athens.zetachain.network'
+  const tss = network === 'mainnet'
+    ? 'https://tss.zetachain.network'
+    : 'https://tss.athens.zetachain.network'
+
+  // Toolkit transaction state shape
+  type TransactionState = {
+    cctxs: Record<string, any[]>
+    pendingNonces: any[]
+    pollCount: number
+    spinners: Record<string, boolean>
+  }
+
+  const state: TransactionState = {
+    cctxs: {},
+    pendingNonces: [],
+    pollCount: 0,
+    spinners: {},
+  }
+
+  return await new Promise((outerResolve) => {
+    let done = false
+    let intervalId: NodeJS.Timeout | undefined
+    let timeoutId: NodeJS.Timeout | undefined
+
+    const resolve = (cctxs: any) => {
+      if (done) return
+      done = true
+      if (intervalId) clearInterval(intervalId)
+      if (timeoutId) clearTimeout(timeoutId)
+      outerResolve({ status: 'completed', cctxs })
     }
-    
-    // Track the cross-chain transaction using pollTransactions
-    const result = await new Promise<any>((resolve, reject) => {
+    const reject = (err: Error) => {
+      if (done) return
+      done = true
+      if (intervalId) clearInterval(intervalId)
+      if (timeoutId) clearTimeout(timeoutId)
+      outerResolve({ status: 'failed', error: err.message })
+    }
+
+    // Kickoff immediate poll
+    pollTransactions({
+      api: apiUrl,
+      hash,
+      tss,
+      state,
+      emitter: null,
+      json: true,
+      timeoutSeconds,
+      resolve,
+      reject,
+      intervalId,
+      timeoutId,
+    })
+
+    // Interval poll every 3s
+    intervalId = setInterval(() => {
+      if (done) return
+      // increment poll count for elapsed time calculation inside toolkit
+      state.pollCount += 1
       pollTransactions({
         api: apiUrl,
         hash,
         tss,
-        state: initialState,
+        state,
         emitter: null,
         json: true,
         timeoutSeconds,
         resolve,
-        reject
+        reject,
+        intervalId,
+        timeoutId,
       })
-    })
-    
-    if (result && result.length > 0) {
-      // Check if all CCTXs are completed
-      const allCompleted = result.every((cctx: any) => cctx.status === 'completed')
-      const anyFailed = result.some((cctx: any) => cctx.status === 'failed')
-      
-      if (allCompleted) {
-        return { status: 'completed', cctxs: result }
-      } else if (anyFailed) {
-        return { status: 'failed', cctxs: result }
-      } else {
-        return { status: 'pending', cctxs: result }
-      }
-    }
-    
-    return { status: 'timeout' }
-  } catch (error) {
-    console.error('Error tracking cross-chain transaction:', error)
-    return { 
-      status: 'failed', 
-      error: error instanceof Error ? error.message : 'Unknown error'
-    }
-  }
+    }, 3000)
+
+    // Absolute timeout
+    timeoutId = setTimeout(() => {
+      if (done) return
+      done = true
+      if (intervalId) clearInterval(intervalId)
+      outerResolve({ status: 'timeout', cctxs: state.cctxs })
+    }, timeoutSeconds * 1000)
+  })
 }
 
