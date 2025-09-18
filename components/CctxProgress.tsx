@@ -243,14 +243,12 @@ export default function CctxProgressComponent({
         )}
 
         {/* Transaction Details */}
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          <div>
-            <span className="text-muted-foreground">Amount:</span>
-            <p className="font-mono">{formatAmount(progress.amount, progress.asset)}</p>
-          </div>
-          <div>
-            <span className="text-muted-foreground">Target Chain:</span>
-            <p className="font-medium">{getTargetChainName()}</p>
+        <div className="space-y-3">
+          <div className="text-center p-3 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-lg">
+            <div className="text-sm text-muted-foreground mb-1">Transfer Details</div>
+            <div className="text-lg font-bold">
+              {progress.amount} {progress.asset} {getTargetChainName().toLowerCase()}
+            </div>
           </div>
         </div>
 

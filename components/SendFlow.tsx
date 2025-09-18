@@ -81,6 +81,9 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
   const [cctxProgress, setCctxProgress] = useState<CctxProgress | null>(null);
   const [transactionDuration, setTransactionDuration] = useState<number>(0);
   const [isTimerRunning, setIsTimerRunning] = useState<boolean>(false);
+  const [transactionAmount, setTransactionAmount] = useState<string>('');
+  const [transactionToken, setTransactionToken] = useState<string>('');
+  const [transactionTargetChain, setTransactionTargetChain] = useState<string>('');
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const startTimeRef = useRef<number | null>(null);
   const { network } = useNetwork();
@@ -299,6 +302,9 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
       });
       setTxHash(tx.hash);
       setTxPhase('pending');
+      setTransactionAmount(amount);
+      setTransactionToken(destinationToken);
+      setTransactionTargetChain(destinationChain);
       startTimer(); // Start the transaction timer
 
       // First wait for origin chain confirmation with live polling updates
@@ -358,20 +364,20 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
 
           // Immediately show CCTX tracker UI with pending state
           console.log('[UI][CCTX] Setting up pending CCTX progress state', {
-            amount,
-            destinationToken,
-            destinationChain,
+            transactionAmount,
+            transactionToken,
+            transactionTargetChain,
             recipientAddress
           })
           setCctxProgress({
             status: 'pending',
             confirmations: 0,
             statusText: 'Waiting for cross-chain transaction to be detected...',
-            amount: amount,
-            asset: destinationToken,
+            amount: transactionAmount,
+            asset: transactionToken,
             sender: '', // Will be filled when CCTX data is available
             receiver: recipientAddress,
-            targetChainId: destinationChain
+            targetChainId: transactionTargetChain
           })
           setTxPhase('pending')
 
@@ -404,7 +410,14 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
                     statusText: progress.statusText,
                     outboundHash: progress.outboundHash
                   })
-                  setCctxProgress(progress)
+                  // Always use stored transaction details instead of CCTX data
+                  const updatedProgress = {
+                    ...progress,
+                    amount: transactionAmount,
+                    asset: transactionToken,
+                    targetChainId: transactionTargetChain
+                  }
+                  setCctxProgress(updatedProgress)
                   setTxPhase(progress.status === 'completed' ? 'completed' : progress.status === 'failed' ? 'failed' : 'pending')
                   setConfirmations(progress.confirmations)
                 }
@@ -425,7 +438,14 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
             setTxPhase(cctxResult.status as any);
             if (cctxResult.progress) {
               console.log('[UI][CCTX] Setting final progress state', cctxResult.progress)
-              setCctxProgress(cctxResult.progress)
+              // Always use stored transaction details instead of CCTX data
+              const finalProgress = {
+                ...cctxResult.progress,
+                amount: transactionAmount,
+                asset: transactionToken,
+                targetChainId: transactionTargetChain
+              }
+              setCctxProgress(finalProgress)
             }
             if (cctxResult.cctx) {
               console.log('[UI][CCTX] Setting final CCTX state', { cctx: cctxResult.cctx })
@@ -529,6 +549,18 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
                           txPhase === 'timeout' ? 'Timeout' : 'Unknown'}
                 </Badge>
               </div>
+
+              {/* Transaction Details */}
+              {(txPhase === 'pending' || txPhase === 'confirmed' || txPhase === 'completed' || txPhase === 'failed' || txPhase === 'timeout') && transactionAmount && transactionToken && transactionTargetChain && (
+                <div className="p-3 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-lg">
+                  <div className="text-center">
+                    <div className="text-sm text-muted-foreground mb-1">Transfer Details</div>
+                    <div className="text-lg font-bold">
+                      {transactionAmount} {transactionToken} {transactionTargetChain.toLowerCase()}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Transaction Duration Timer */}
               {(txPhase === 'pending' || txPhase === 'confirmed' || txPhase === 'completed' || txPhase === 'failed' || txPhase === 'timeout') && (
