@@ -7,6 +7,7 @@ import {
   TransferType,
   detectTransferType
 } from './zetprotocol'
+import { performSolanaDepositAndCall } from './solanaTransfer'
 import { JsonRpcProvider } from 'ethers'
 import { pollTransactions } from '@zetachain/toolkit/utils'
 
@@ -46,6 +47,17 @@ export type ZetProtocolTransferParams = {
  */
 export async function smartCrossChainTransfer(params: ZetProtocolTransferParams): Promise<{ hash: string }> {
   const { originChain, targetChain, amount, tokenSymbol, sourceTokenAddress, targetTokenAddress, recipient, mnemonicPhrase, network, rpc } = params
+  if ((originChain as any) === 'solana') {
+    const tx = await performSolanaDepositAndCall({
+      amount,
+      sourceTokenSymbol: tokenSymbol,
+      recipientOnZeta: recipient,
+      targetZrc20: targetTokenAddress,
+      mnemonicPhrase,
+      network,
+    } as any)
+    return { hash: tx.hash }
+  }
   
   // Detect transfer type
   const transferType = await detectTransferType(tokenSymbol, originChain, targetChain)

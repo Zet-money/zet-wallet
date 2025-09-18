@@ -140,6 +140,7 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
     try {
       // Determine transfer type and target token
       const originChain = (asset.chain || 'ethereum').toLowerCase() as SupportedEvm;
+      const isSolanaOrigin = (asset.chain || '').toLowerCase() === 'solana'
       const targetChain = destinationChain as SupportedEvm;
 
       // Resolve token addresses from tokens.ts
@@ -148,7 +149,10 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
       // Source token: ERC-20 on origin chain (or zero address for native tokens)
       const originTokens = getTokensFor(originChain, networkKey);
       const originTokenInfo = originTokens.find(t => t.symbol.toUpperCase() === asset.symbol.toUpperCase());
-      const sourceTokenAddress = originTokenInfo?.addressByNetwork?.[networkKey] || '0x0000000000000000000000000000000000000000'; // Zero address for native tokens
+      // For Solana origin, sourceTokenAddress is not used; set dummy
+      const sourceTokenAddress = isSolanaOrigin
+        ? '0x0000000000000000000000000000000000000000'
+        : (originTokenInfo?.addressByNetwork?.[networkKey] || '0x0000000000000000000000000000000000000000');
 
       // Target token: ZRC-20 on ZetaChain representing the destination asset/chain
       console.log('Resolving target token:', { targetChain, destinationToken, networkKey })
