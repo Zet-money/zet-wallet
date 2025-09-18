@@ -39,7 +39,7 @@ export default function Dashboard() {
     if (typeof window !== 'undefined') {
       try {
         const saved = window.localStorage.getItem('zet.chain')
-        const valid = saved && ['ethereum','polygon','bsc','avalanche','arbitrum','optimism','base'].includes(saved)
+        const valid = saved && ['ethereum','polygon','bsc','avalanche','arbitrum','optimism','base','zetachain','solana'].includes(saved)
         if (valid) return saved as string
       } catch {}
     }
@@ -349,9 +349,16 @@ export default function Dashboard() {
                       {loadingBalances ? (
                         <span className="inline-block h-4 w-16 bg-muted animate-pulse rounded" />
                       ) : (
-                        (balances[asset.symbol] !== undefined
-                          ? parseFloat(balances[asset.symbol]).toPrecision(6)
-                          : asset.balance)
+                        (() => {
+                          const v = balances[asset.symbol]
+                          if (v === undefined) return asset.balance
+                          const num = Number(v)
+                          if (!Number.isFinite(num)) return v
+                          const s = num.toString()
+                          const [int, dec = ''] = s.split('.')
+                          if (dec.length <= 6) return s
+                          return `${int}.${dec.slice(0, 6)}`
+                        })()
                       )}
                     </p>
                     <p className="text-xs sm:text-sm text-muted-foreground">

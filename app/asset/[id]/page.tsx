@@ -9,6 +9,7 @@ import { useWallet } from '@/contexts/WalletContext';
 import { fetchBalancesForChain } from '@/lib/balances';
 import { IN_APP_RPC_MAP } from '@/lib/rpc';
 import { getTokenPriceUSD } from '@/lib/prices';
+import { fetchSolBalance, fetchSplBalance } from '@/lib/solana';
 
 export default function AssetPage() {
   const params = useParams();
@@ -28,19 +29,44 @@ export default function AssetPage() {
 
   useEffect(() => {
     const run = async () => {
-      if (!wallet?.address || !token) return
+      if (!token) return
       setLoading(true)
       try {
-        const map = await fetchBalancesForChain({
-          chain: chainKey,
-          network,
-          address: wallet.address,
-          tokens: [{ symbol: token.symbol, address: tokenAddress || undefined }],
-          rpcMap: IN_APP_RPC_MAP as any,
-        })
-        const bal = map[token.symbol]
+        let bal: string | undefined
+        if (chainKey === 'solana') {
+          const owner = wallet?.solanaAddress
+          if (!owner) throw new Error('Solana wallet not initialized')
+          if (token.symbol === 'SOL') {
+            const n = await fetchSolBalance(owner, network as any)
+            bal = n.toString()
+          } else if (tokenAddress) {
+            const n = await fetchSplBalance(owner, tokenAddress, network as any)
+            bal = n.toString()
+          } else {
+            bal = '0'
+          }
+        } else {
+          if (!wallet?.address) return
+          const map = await fetchBalancesForChain({
+            chain: chainKey,
+            network,
+            address: wallet.address,
+            tokens: [{ symbol: token.symbol, address: tokenAddress || undefined }],
+            rpcMap: IN_APP_RPC_MAP as any,
+          })
+          bal = map[token.symbol]
+        }
         if (bal !== undefined) {
-          setBalance(Number(bal).toFixed(4))
+          const asStr = (() => {
+            const num = Number(bal)
+            if (!Number.isFinite(num)) return bal as string
+            // Show up to 8 significant digits without rounding away small values
+            const s = num.toString()
+            const [int, dec = ''] = s.split('.')
+            if (dec.length <= 6) return s
+            return `${int}.${dec.slice(0, 6)}`
+          })()
+          setBalance(asStr)
           const price = await getTokenPriceUSD(token.symbol)
           if (price !== null) setUsdValue((Number(bal) * price).toFixed(2))
         }
