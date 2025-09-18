@@ -13,7 +13,8 @@ import { useNetwork } from '@/contexts/NetworkContext';
 // Call server API; avoid importing server-only toolkit client-side
 import type { SupportedEvm } from '@/lib/providers';
 import { EVM_TOKENS, getTokensFor, type Network as TokenNetwork, type TokenInfo } from '@/lib/tokens';
-import { smartCrossChainTransfer, getTxStatus, waitForTxConfirmation, trackCrossChainTransaction, trackCrossChainConfirmations, type CctxProgress } from '@/lib/zetachain';
+import { smartCrossChainTransfer, getTxStatus, waitForTxConfirmation, type CctxProgress } from '@/lib/zetachain';
+import { trackCrossChainConfirmations as trackCrossChainTransaction } from '@/lib/zetachain-server';
 import CctxProgressComponent from '@/components/CctxProgress';
 import { waitForSolTxConfirmation, getSolTxStatus } from '@/lib/solana';
 import { getZrcAddressFor } from '@/lib/zrc';
@@ -312,14 +313,13 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
               hash: tx.hash,
               network,
               timeoutSeconds: 300,
-              onUpdate: ({ cctxs, statusText, progress }) => {
-                console.log('[UI][CCTX] onUpdate callback triggered', {
+              onProgress: ({ confirmations, status, progress }) => {
+                console.log('[UI][CCTX] onProgress callback triggered', {
                   hasProgress: !!progress,
-                  hasCctxs: !!cctxs,
-                  statusText,
+                  confirmations,
+                  status,
                   progressStatus: progress?.status,
-                  progressConfirmations: progress?.confirmations,
-                  cctxsCount: cctxs?.length || 0
+                  progressConfirmations: progress?.confirmations
                 })
                 
                 if (progress) {
@@ -333,12 +333,8 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
                   setTxPhase(progress.status === 'completed' ? 'completed' : progress.status === 'failed' ? 'failed' : 'pending')
                   setConfirmations(progress.confirmations)
                 }
-                if (cctxs) {
-                  console.log('[UI][CCTX] Setting CCTXs state', { cctxsCount: cctxs.length, cctxs })
-                  setCctxs(cctxs)
-                }
-                if (statusText) {
-                  console.log('[UI][CCTX] Status update received:', statusText)
+                if (status) {
+                  console.log('[UI][CCTX] Status update received:', status)
                 }
               }
             })
@@ -346,8 +342,7 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
             console.log('[UI][CCTX] trackCrossChainTransaction completed', {
               status: cctxResult.status,
               hasProgress: !!cctxResult.progress,
-              hasCctxs: !!cctxResult.cctxs,
-              cctxsCount: cctxResult.cctxs?.length || 0,
+              hasCctx: !!cctxResult.cctx,
               progressStatus: cctxResult.progress?.status,
               progressConfirmations: cctxResult.progress?.confirmations
             })
@@ -357,9 +352,9 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
               console.log('[UI][CCTX] Setting final progress state', cctxResult.progress)
               setCctxProgress(cctxResult.progress)
             }
-            if (cctxResult.cctxs) {
-              console.log('[UI][CCTX] Setting final CCTXs state', { cctxsCount: cctxResult.cctxs.length })
-              setCctxs(cctxResult.cctxs);
+            if (cctxResult.cctx) {
+              console.log('[UI][CCTX] Setting final CCTX state', { cctx: cctxResult.cctx })
+              setCctxs([cctxResult.cctx]);
             }
             
             if (cctxResult.status === 'completed') {
