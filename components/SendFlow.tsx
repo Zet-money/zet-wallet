@@ -12,7 +12,9 @@ import { toast } from 'sonner';
 import { useNetwork } from '@/contexts/NetworkContext';
 // Call server API; avoid importing server-only toolkit client-side
 import type { SupportedEvm } from '@/lib/providers';
-import { EVM_TOKENS } from '@/lib/tokens';
+import { EVM_TOKENS, getTokensFor, type Network as TokenNetwork, type TokenInfo } from '@/lib/tokens';
+import { smartCrossChainTransfer, getTxStatus, waitForTxConfirmation, trackCrossChainTransaction } from '@/lib/zetachain';
+import { getZrcAddressFor } from '@/lib/zrc';
 
 interface SendFlowProps {
   asset: {
@@ -63,6 +65,12 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
   const [amount, setAmount] = useState('');
   const [destinationChain, setDestinationChain] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [txHash, setTxHash] = useState<string | null>(null);
+  const [txPhase, setTxPhase] = useState<'idle' | 'pending' | 'confirmed' | 'failed' | 'timeout' | 'completed'>('idle');
+  const [confirmations, setConfirmations] = useState<number>(0);
+  const [gasUsed, setGasUsed] = useState<string | undefined>(undefined);
+  const [blockNumber, setBlockNumber] = useState<number | undefined>(undefined);
+  const [cctxs, setCctxs] = useState<any[]>([]);
   const { network } = useNetwork();
   const destinationChains = useMemo(() => {
     // Use keys of EVM_TOKENS to represent supported EVM chains
@@ -96,24 +104,140 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
 
     setIsLoading(true);
     try {
-      // For now treat current asset.chain as origin; wire to Toolkit
-      const res = await fetch('/api/evm/deposit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          originChain: (asset.chain || 'ethereum').toLowerCase(),
-          amount,
-          receiver: recipientAddress,
-          mnemonicPhrase: '', // TODO: inject session mnemonic
-          network,
-        }),
+      // Determine transfer type and target token
+      const originChain = (asset.chain || 'ethereum').toLowerCase() as SupportedEvm;
+      const targetChain = destinationChain as SupportedEvm;
+
+      // Resolve token addresses from tokens.ts
+      const networkKey = (network === 'mainnet' ? 'mainnet' : 'testnet') as TokenNetwork;
+      
+      // Source token: ERC-20 on origin chain
+      const originTokens = getTokensFor(originChain, networkKey);
+      const originTokenInfo = originTokens.find(t => t.symbol.toUpperCase() === asset.symbol.toUpperCase());
+      const sourceTokenAddress = originTokenInfo?.addressByNetwork?.[networkKey];
+
+      // Target token: ZRC-20 on ZetaChain representing the destination asset/chain
+      const targetTokenAddress = getZrcAddressFor(targetChain, asset.symbol, networkKey)
+
+      if (!sourceTokenAddress || !targetTokenAddress) {
+        throw new Error(`Token address not available: source=${sourceTokenAddress}, target=${targetTokenAddress}`);
+      }
+      
+      // Load mnemonic from session (support nested wallet key)
+      const sessionRaw = typeof window !== 'undefined' ? localStorage.getItem('zet_wallet_session') : null;
+      const session = sessionRaw ? (() => { try { return JSON.parse(sessionRaw) } catch { return {} } })() : {} as any;
+      const sessionMnemonic: string | undefined =
+        session?.wallet?.mnemonicPhrase ||
+        session?.wallet?.mnemonic ||
+        session?.wallet?.seedPhrase;
+      if (!sessionMnemonic || typeof sessionMnemonic !== 'string' || sessionMnemonic.trim().length === 0) {
+        throw new Error('Wallet session not found. Please restore or create a wallet.');
+      }
+
+      console.log({
+        originChain,
+        targetChain,
+        amount,
+        tokenSymbol: asset.symbol,
+        sourceTokenAddress,
+        targetTokenAddress,
+        recipient: recipientAddress,
+        mnemonicPhrase: sessionMnemonic,
+        network,
       })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Failed to submit tx')
-      toast.success('Transaction submitted');
-      onClose();
+
+      const tx = await smartCrossChainTransfer({
+        originChain,
+        targetChain,
+        amount,
+        tokenSymbol: asset.symbol,
+        sourceTokenAddress,
+        targetTokenAddress,
+        recipient: recipientAddress,
+        mnemonicPhrase: sessionMnemonic,
+        network,
+      });
+      setTxHash(tx.hash);
+      setTxPhase('pending');
+
+      // First wait for origin chain confirmation
+      try {
+        const originResult = await waitForTxConfirmation({
+          originChain,
+          hash: tx.hash,
+          network,
+          requiredConfirmations: 1,
+          timeoutMs: 120000 // 2 minutes for origin chain
+        });
+        
+        setTxPhase(originResult.status);
+        setConfirmations(originResult.confirmations);
+        setGasUsed(originResult.gasUsed);
+        setBlockNumber(originResult.blockNumber);
+        
+        if (originResult.status === 'confirmed') {
+          toast.success('Transaction confirmed on origin chain!', {
+            description: `Now tracking cross-chain completion...`,
+            duration: 5000
+          });
+          
+          // Now track the cross-chain transaction using ZetaChain's tracking
+          try {
+            const cctxResult = await trackCrossChainTransaction({
+              hash: tx.hash,
+              network,
+              timeoutSeconds: 300 // 5 minutes for cross-chain completion
+            });
+            
+            setTxPhase(cctxResult.status);
+            setCctxs(cctxResult.cctxs || []);
+            
+            if (cctxResult.status === 'completed') {
+              toast.success('Cross-chain transfer completed!', {
+                description: `Successfully transferred to ${destinationChain}`,
+                duration: 10000
+              });
+            } else if (cctxResult.status === 'failed') {
+              toast.error('Cross-chain transfer failed', {
+                description: cctxResult.error || 'Transfer failed during cross-chain processing',
+                duration: 10000
+              });
+            } else if (cctxResult.status === 'timeout') {
+              toast.warning('Cross-chain transfer timeout', {
+                description: 'Transfer is taking longer than expected. Please check the blockchain explorer.',
+                duration: 10000
+              });
+            }
+          } catch (cctxError) {
+            console.error('Error tracking cross-chain transaction:', cctxError);
+            setTxPhase('pending');
+            toast.warning('Tracking cross-chain status...', {
+              description: 'Origin confirmed, monitoring cross-chain completion',
+              duration: 5000
+            });
+          }
+        } else if (originResult.status === 'failed') {
+          toast.error('Transaction failed on origin chain', {
+            description: `Transaction failed in block ${originResult.blockNumber}`,
+            duration: 10000
+          });
+        } else if (originResult.status === 'timeout') {
+          toast.warning('Transaction timeout on origin chain', {
+            description: 'Transaction is taking longer than expected. Please check the blockchain explorer.',
+            duration: 10000
+          });
+        }
+      } catch (error) {
+        console.error('Error tracking transaction:', error);
+        setTxPhase('failed');
+        toast.error('Error tracking transaction', {
+          description: 'Unable to track transaction status. Please check the blockchain explorer.',
+          duration: 10000
+        });
+      }
     } catch (e: any) {
-      toast.error(e?.message || 'Failed to send');
+      console.error('Transfer error:', e);
+      toast.error(e?.message || 'Failed to send transfer');
     } finally {
       setIsLoading(false);
     }
@@ -128,8 +252,10 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
       <Card className="w-full max-w-md max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
           <div>
-            <CardTitle>Send {asset.symbol}</CardTitle>
-            <CardDescription>Transfer {asset.symbol} to another wallet</CardDescription>
+            <CardTitle>{txHash ? 'Transaction Status' : `Send ${asset.symbol}`}</CardTitle>
+            <CardDescription>
+              {txHash ? 'Tracking your transaction. You can keep this open.' : `Transfer ${asset.symbol} to another wallet`}
+            </CardDescription>
           </div>
           <Button variant="ghost" size="sm" onClick={onClose}>
             <X className="w-4 h-4" />
@@ -137,8 +263,87 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
         </CardHeader>
         
         <CardContent className="space-y-6">
-          {/* Asset Info */}
-          <div className="flex items-center space-x-3 p-3 bg-muted rounded-lg">
+          {txHash ? (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <div className="text-sm font-medium">Transaction Hash</div>
+                <div className="text-xs break-all font-mono bg-muted p-2 rounded">{txHash}</div>
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Status</span>
+                <Badge variant={
+                  txPhase === 'completed' ? 'default' : 
+                  txPhase === 'confirmed' ? 'default' : 
+                  txPhase === 'failed' ? 'destructive' : 
+                  txPhase === 'timeout' ? 'destructive' : 
+                  'secondary'
+                }>
+                  {txPhase === 'pending' ? 'Pending' : 
+                   txPhase === 'confirmed' ? 'Origin Confirmed' : 
+                   txPhase === 'completed' ? 'Completed' : 
+                   txPhase === 'failed' ? 'Failed' : 
+                   txPhase === 'timeout' ? 'Timeout' : 'Unknown'}
+                </Badge>
+              </div>
+              
+              {(txPhase === 'confirmed' || txPhase === 'completed') && (
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Confirmations:</span>
+                    <span>{confirmations}</span>
+                  </div>
+                  {blockNumber && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Block Number:</span>
+                      <span>{blockNumber.toLocaleString()}</span>
+                    </div>
+                  )}
+                  {gasUsed && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Gas Used:</span>
+                      <span>{parseInt(gasUsed).toLocaleString()}</span>
+                    </div>
+                  )}
+                  {txPhase === 'completed' && cctxs.length > 0 && (
+                    <div className="mt-3 p-2 bg-green-50 dark:bg-green-900/20 rounded">
+                      <div className="text-xs font-medium text-green-800 dark:text-green-200">
+                        Cross-chain transfers completed: {cctxs.length}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {txPhase === 'pending' && (
+                <div className="space-y-2">
+                  <div className="text-sm">Confirmations: {confirmations}</div>
+                  <div className="text-xs text-muted-foreground">
+                    Waiting for origin chain confirmation. Cross-chain transfers typically take 1-3 minutes total.
+                  </div>
+                </div>
+              )}
+              
+              {txPhase === 'confirmed' && (
+                <div className="space-y-2">
+                  <div className="text-sm">Origin chain confirmed</div>
+                  <div className="text-xs text-muted-foreground">
+                    Now processing cross-chain transfer to {destinationChains.find(c => c.value === destinationChain)?.label}...
+                  </div>
+                </div>
+              )}
+              
+              {txPhase === 'timeout' && (
+                <div className="text-xs text-muted-foreground">
+                  Transaction is taking longer than expected. This can happen during network congestion. 
+                  Please check the blockchain explorer for the latest status.
+                </div>
+              )}
+            </div>
+          ) : (
+            <>
+              {/* Asset Info */}
+              <div className="flex items-center space-x-3 p-3 bg-muted rounded-lg">
             <div className="w-10 h-10 bg-background rounded-full flex items-center justify-center overflow-hidden">
               <img 
                 src={asset.logo} 
@@ -149,7 +354,7 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
                   e.currentTarget.nextElementSibling?.classList.remove('hidden');
                 }}
               />
-              <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center text-xs font-semibold hidden">
+              <div className="w-8 h-8 bg-muted rounded-full items-center justify-center text-xs font-semibold hidden">
                 {asset.symbol}
               </div>
             </div>
@@ -274,26 +479,30 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
           {/* Action Buttons */}
           <div className="flex space-x-3">
             <Button variant="outline" onClick={onClose} className="flex-1">
-              Cancel
+              {txHash ? 'Close' : 'Cancel'}
             </Button>
-            <Button 
-              onClick={handleSend} 
-              disabled={isLoading || !amount || !recipientAddress || !destinationChain}
-              className="flex-1 flex items-center space-x-2"
-            >
-              {isLoading ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  <span>Sending...</span>
-                </>
-              ) : (
-                <>
-                  <span>Send</span>
-                  <ArrowRight className="w-4 h-4" />
-                </>
-              )}
-            </Button>
+            {!txHash && (
+              <Button 
+                onClick={handleSend} 
+                disabled={isLoading || !amount || !recipientAddress || !destinationChain}
+                className="flex-1 flex items-center space-x-2"
+              >
+                {isLoading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>Sending...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Send</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </Button>
+            )}
           </div>
+            </>
+          )}
         </CardContent>
       </Card>
     </div>

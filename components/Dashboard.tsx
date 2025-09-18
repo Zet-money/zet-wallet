@@ -298,7 +298,7 @@ export default function Dashboard() {
                         <span className="inline-block h-4 w-16 bg-muted animate-pulse rounded" />
                       ) : (
                         (balances[asset.symbol] !== undefined
-                          ? Number(balances[asset.symbol]).toFixed(4)
+                          ? parseFloat(balances[asset.symbol]).toPrecision(6)
                           : asset.balance)
                       )}
                     </p>

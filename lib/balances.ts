@@ -40,9 +40,11 @@ export async function fetchBalancesForChain(params: {
     try {
       if (t.address) {
         const bal = await fetchErc20Balance(t.address, address, provider)
+        console.log('bal', bal)
         return { symbol: t.symbol, balance: bal }
       }
       const bal = await fetchNativeBalance(address, provider)
+      console.log('bal', bal)
       return { symbol: t.symbol, balance: bal }
     } catch {
       return { symbol: t.symbol, balance: '0' }
