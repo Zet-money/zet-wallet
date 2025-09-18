@@ -2,11 +2,13 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { HDNodeWallet } from 'ethers';
+import { getSolanaAddressFromMnemonic } from '@/lib/solana';
 
 export interface Wallet {
   address: string;
   mnemonic: string;
   isImported: boolean;
+  solanaAddress?: string;
 }
 
 interface WalletContextType {
@@ -65,7 +67,23 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const session = loadSession();
     if (session) {
-      setWallet(session.wallet);
+      const w = session.wallet as Wallet
+      // Backfill solanaAddress if missing
+      if (!w.solanaAddress && w.mnemonic) {
+        getSolanaAddressFromMnemonic(w.mnemonic).then((addr) => {
+          const updated: Wallet = { ...w, solanaAddress: addr }
+          setWallet(updated)
+          saveSession(updated)
+          setIsWalletInitialized(true)
+          setIsLoading(false)
+        }).catch(() => {
+          setWallet(w)
+          setIsWalletInitialized(true)
+          setIsLoading(false)
+        })
+        return
+      }
+      setWallet(w);
       setIsWalletInitialized(true);
     }
     setIsLoading(false);
@@ -73,25 +91,40 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
 
   const createWallet = () => {
     const hd = HDNodeWallet.createRandom();
-    const newWallet: Wallet = {
+    const baseWallet: Wallet = {
       address: hd.address,
       mnemonic: hd.mnemonic?.phrase ?? '',
       isImported: false,
     };
-    setWallet(newWallet);
+    // Also derive Solana address
+    if (baseWallet.mnemonic) {
+      getSolanaAddressFromMnemonic(baseWallet.mnemonic).then((solAddr) => {
+        setWallet({ ...baseWallet, solanaAddress: solAddr });
+      }).catch(() => setWallet(baseWallet))
+    } else {
+      setWallet(baseWallet)
+    }
     // Wait for user confirmation before initializing app session
   };
 
   const importWallet = (mnemonic: string) => {
     const hd = HDNodeWallet.fromPhrase(mnemonic.trim());
-    const newWallet: Wallet = {
+    const baseWallet: Wallet = {
       address: hd.address,
       mnemonic: hd.mnemonic?.phrase ?? mnemonic.trim(),
       isImported: true,
     };
-    setWallet(newWallet);
-    saveSession(newWallet);
-    setIsWalletInitialized(true);
+    // Also derive Solana address
+    getSolanaAddressFromMnemonic(baseWallet.mnemonic).then((solAddr) => {
+      const newWallet: Wallet = { ...baseWallet, solanaAddress: solAddr }
+      setWallet(newWallet);
+      saveSession(newWallet);
+      setIsWalletInitialized(true);
+    }).catch(() => {
+      setWallet(baseWallet);
+      saveSession(baseWallet);
+      setIsWalletInitialized(true);
+    })
   };
 
   const confirmMnemonicSaved = () => {

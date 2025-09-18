@@ -8,6 +8,15 @@ export type TokenInfo = {
 
 // Basic curated set per chain; extend as needed.
 export const EVM_TOKENS: Record<string, TokenInfo[]> = {
+  solana: [
+    // Native SOL (no address)
+    { symbol: 'SOL', name: 'Solana', logo: 'SOL', addressByNetwork: {} },
+    // SPL tokens
+    // USDC: mainnet mint EPjFWd..., devnet mint Gh9ZwE...
+    { symbol: 'USDC', name: 'USD Coin', logo: 'USDC', addressByNetwork: { mainnet: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', testnet: '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU' } },
+    // USDT: mainnet mint Es9vMF..., exclude in testnet
+    { symbol: 'USDT', name: 'Tether USD', logo: 'USDT', addressByNetwork: { mainnet: 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB' } },
+  ],
   zetachain: [
     // Native
     { symbol: 'ZETA', name: 'ZetaChain', logo: 'ZETA', addressByNetwork: {} },

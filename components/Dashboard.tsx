@@ -17,6 +17,7 @@ import { fetchBalancesForChain } from '@/lib/balances';
 import { IN_APP_RPC_MAP } from '@/lib/rpc';
 import { getTokenPriceUSD, getTokenChangeUSD24h } from '@/lib/prices';
 import ReceiveFlow from './ReceiveFlow';
+import { fetchSolBalance, fetchSplBalance } from '@/lib/solana';
 
 const chains = [
   { value: 'ethereum', label: 'Ethereum', icon: 'https://assets.parqet.com/logos/crypto/ETH?format=png' },
@@ -27,6 +28,7 @@ const chains = [
   { value: 'optimism', label: 'Optimism', icon: 'https://assets.parqet.com/logos/crypto/OP?format=png' },
   { value: 'base', label: 'Base', icon: 'https://assets.parqet.com/logos/crypto/BASE?format=png' },
   { value: 'zetachain', label: 'ZetaChain', icon: 'https://assets.parqet.com/logos/crypto/ZETA?format=png' },
+  { value: 'solana', label: 'Solana', icon: 'https://assets.parqet.com/logos/crypto/SOL?format=png' },
 ];
 
 export default function Dashboard() {
@@ -84,23 +86,41 @@ export default function Dashboard() {
       setLoadingBalances(true)
       console.log('loading balances for', chainKey, network, wallet.address)
       try {
-        const tokensForFetch = baseTokens.map((t) => {
-          const addr = t.addressByNetwork?.[network]
-          const isErc20 = Boolean(t.addressByNetwork?.mainnet || t.addressByNetwork?.testnet)
-          return {
-            symbol: t.symbol,
-            address: isErc20 ? (addr && addr.length > 0 ? addr : undefined) : null,
+        if (chainKey === 'solana') {
+          const sAddr = wallet?.solanaAddress
+          if (!sAddr) throw new Error('Solana wallet not initialized')
+          const solanaBalances: Record<string, string> = {}
+          // SOL
+          const solBal = await fetchSolBalance(sAddr, network as any)
+          solanaBalances['SOL'] = solBal.toString()
+          // SPL tokens present for network
+          for (const t of baseTokens) {
+            if (t.symbol === 'SOL') continue
+            const mint = t.addressByNetwork?.[network]
+            if (!mint) continue
+            const bal = await fetchSplBalance(sAddr, mint, network as any)
+            solanaBalances[t.symbol] = bal.toString()
           }
-        })
-        const map = await fetchBalancesForChain({
-          chain: chainKey,
-          network,
-          address: wallet.address,
-          tokens: tokensForFetch,
-          rpcMap: IN_APP_RPC_MAP,
-        })
-        console.log('balances', map)
-        setBalances(map)
+          setBalances(solanaBalances)
+        } else {
+          const tokensForFetch = baseTokens.map((t) => {
+            const addr = t.addressByNetwork?.[network]
+            const isErc20 = Boolean(t.addressByNetwork?.mainnet || t.addressByNetwork?.testnet)
+            return {
+              symbol: t.symbol,
+              address: isErc20 ? (addr && addr.length > 0 ? addr : undefined) : null,
+            }
+          })
+          const map = await fetchBalancesForChain({
+            chain: chainKey,
+            network,
+            address: wallet.address,
+            tokens: tokensForFetch,
+            rpcMap: IN_APP_RPC_MAP,
+          })
+          console.log('balances', map)
+          setBalances(map)
+        }
 
         // Load USD prices for visible symbols
         const uniqueSymbols = Array.from(new Set(baseTokens.map(t => t.symbol)))
@@ -167,6 +187,7 @@ export default function Dashboard() {
   };
 
   const truncateAddress = (address: string) => {
+    if (!address) return ''
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
 
@@ -182,9 +203,24 @@ export default function Dashboard() {
               </div>
               <div>
                 <h1 className="font-semibold">Zet Wallet</h1>
-                <p className="text-xs text-muted-foreground">
-                  {wallet ? truncateAddress(wallet.address) : 'No wallet'}
-                </p>
+                <div className="mt-1 space-y-1">
+                  <div className="flex items-center space-x-2 text-xs text-muted-foreground">
+                    <img src="https://assets.parqet.com/logos/crypto/ETH?format=png" alt="ETH" className="w-3 h-3" onError={(e) => { e.currentTarget.style.display = 'none' }} />
+                    <span>{wallet ? truncateAddress(wallet.address) : 'No EVM wallet'}</span>
+                    <button
+                      onClick={async () => { if (wallet?.address) { await navigator.clipboard.writeText(wallet.address); toast.success('EVM address copied') } }}
+                      className="px-1 py-0.5 border rounded"
+                    >Copy</button>
+                  </div>
+                  <div className="flex items-center space-x-2 text-xs text-muted-foreground">
+                    <img src="https://assets.parqet.com/logos/crypto/SOL?format=png" alt="SOL" className="w-3 h-3" onError={(e) => { e.currentTarget.style.display = 'none' }} />
+                    <span>{wallet?.solanaAddress ? truncateAddress(wallet.solanaAddress) : 'No Solana wallet'}</span>
+                    <button
+                      onClick={async () => { if (wallet?.solanaAddress) { await navigator.clipboard.writeText(wallet.solanaAddress); toast.success('Solana address copied') } }}
+                      className="px-1 py-0.5 border rounded"
+                    >Copy</button>
+                  </div>
+                </div>
               </div>
             </div>
             
@@ -192,11 +228,11 @@ export default function Dashboard() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={copyAddress}
+                onClick={() => setShowReceiveModal(true)}
                 className="flex items-center space-x-1 p-2"
               >
-                {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                <span className="hidden sm:inline">Copy</span>
+                <Download className="w-4 h-4" />
+                <span className="hidden sm:inline">Receive</span>
               </Button>
               
               <Select value={network} onValueChange={(v) => setNetwork(v as any)}>
