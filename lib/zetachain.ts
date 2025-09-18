@@ -7,7 +7,11 @@ import {
   TransferType,
   detectTransferType
 } from './zetprotocol'
-import { performSolanaDepositAndCall } from './solanaTransfer'
+import { Keypair } from '@solana/web3.js'
+import { derivePath } from 'ed25519-hd-key'
+import * as bip39 from 'bip39'
+import { solanaDepositAndCall } from '@zetachain/toolkit/chains'
+import { ZETPROTOCOL_ADDRESS } from './zetprotocol'
 import { JsonRpcProvider } from 'ethers'
 import { pollTransactions } from '@zetachain/toolkit/utils'
 
@@ -48,15 +52,35 @@ export type ZetProtocolTransferParams = {
 export async function smartCrossChainTransfer(params: ZetProtocolTransferParams): Promise<{ hash: string }> {
   const { originChain, targetChain, amount, tokenSymbol, sourceTokenAddress, targetTokenAddress, recipient, mnemonicPhrase, network, rpc } = params
   if ((originChain as any) === 'solana') {
-    const tx = await performSolanaDepositAndCall({
+    // Build Solana signer from mnemonic
+    const seed = bip39.mnemonicToSeedSync(mnemonicPhrase, '')
+    const derivedSeed = derivePath("m/44'/501'/0'/0'", seed.toString('hex')).key
+    const signer = Keypair.fromSeed(derivedSeed)
+
+    const types = ['address', 'bytes', 'bool']
+    const recipientBytes = recipient.startsWith('0x') ? recipient : `0x${recipient}`
+    const values = [targetTokenAddress, recipientBytes, true]
+
+    const tokenMintAddress = sourceTokenAddress && sourceTokenAddress.startsWith('0x') ? undefined : sourceTokenAddress
+
+    const signature = await solanaDepositAndCall({
       amount,
-      sourceTokenSymbol: tokenSymbol,
-      recipientOnZeta: recipient,
-      targetZrc20: targetTokenAddress,
-      mnemonicPhrase,
-      network,
-    } as any)
-    return { hash: tx.hash }
+      receiver: ZETPROTOCOL_ADDRESS,
+      token: tokenMintAddress, // undefined for SOL
+      types,
+      values,
+      revertOptions: {
+        callOnRevert: false,
+        revertMessage: 'ZetProtocol: Cross-chain transfer failed',
+        revertAddress: signer.publicKey.toBase58(),
+        abortAddress: signer.publicKey.toBase58(),
+        onRevertGasLimit: '500000',
+      }
+    }, ({
+      chainId: network === 'mainnet' ? 'Mainnet' : 'Testnet',
+      signer,
+    } as any))
+    return { hash: signature }
   }
   
   // Detect transfer type

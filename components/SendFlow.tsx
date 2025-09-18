@@ -164,9 +164,9 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
       // Source token: ERC-20 on origin chain (or zero address for native tokens)
       const originTokens = getTokensFor(originChain, networkKey);
       const originTokenInfo = originTokens.find(t => t.symbol.toUpperCase() === asset.symbol.toUpperCase());
-      // For Solana origin, sourceTokenAddress is not used; set dummy
+      // For Solana origin, use SPL mint for tokens (USDC/USDT), undefined for SOL
       const sourceTokenAddress = isSolanaOrigin
-        ? '0x0000000000000000000000000000000000000000'
+        ? (originTokenInfo?.addressByNetwork?.[networkKey] || '')
         : (originTokenInfo?.addressByNetwork?.[networkKey] || '0x0000000000000000000000000000000000000000');
 
       // Target token: ZRC-20 on ZetaChain representing the destination asset/chain

@@ -4,7 +4,7 @@ import { ContractTransactionResponse } from 'ethers'
 import { getEvmSignerFromPhrase, type SupportedEvm, type Network, type RpcMap } from './providers'
 
 // ZetProtocol contract address on ZetaChain testnet
-const ZETPROTOCOL_ADDRESS = '0x7689b1a47fb4c5F16aBA476E4D315b8421CAebD2'
+export const ZETPROTOCOL_ADDRESS = '0x7689b1a47fb4c5F16aBA476E4D315b8421CAebD2'
 
 // Transfer types matching the Solidity enum
 export enum TransferType {
