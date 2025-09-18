@@ -74,6 +74,20 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
   const [blockNumber, setBlockNumber] = useState<number | undefined>(undefined);
   const [cctxs, setCctxs] = useState<any[]>([]);
   const { network } = useNetwork();
+  const explorerFor = (chain: string) => {
+    const net = network === 'mainnet'
+    switch (chain.toLowerCase()) {
+      case 'ethereum': return net ? 'https://etherscan.io/tx/' : 'https://sepolia.etherscan.io/tx/'
+      case 'polygon': return net ? 'https://polygonscan.com/tx/' : 'https://www.oklink.com/amoy/tx/'
+      case 'bsc': return net ? 'https://bscscan.com/tx/' : 'https://testnet.bscscan.com/tx/'
+      case 'avalanche': return net ? 'https://snowtrace.io/tx/' : 'https://testnet.snowtrace.io/tx/'
+      case 'arbitrum': return net ? 'https://arbiscan.io/tx/' : 'https://sepolia.arbiscan.io/tx/'
+      case 'optimism': return net ? 'https://optimistic.etherscan.io/tx/' : 'https://sepolia-optimistic.etherscan.io/tx/'
+      case 'base': return net ? 'https://basescan.org/tx/' : 'https://sepolia.basescan.org/tx/'
+      case 'solana': return net ? 'https://solscan.io/tx/' : 'https://solscan.io/tx/?cluster=devnet'
+      default: return ''
+    }
+  }
   const destinationChains = useMemo(() => {
     // Use keys of EVM_TOKENS to represent supported EVM chains
     return Object.keys(EVM_TOKENS).map((key) => {
@@ -234,40 +248,27 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
             duration: 5000
           });
 
-          // Now track the cross-chain transaction using ZetaChain's tracking
-          try {
-            const cctxResult = await trackCrossChainTransaction({
-              hash: tx.hash,
-              network,
-              timeoutSeconds: 300 // 5 minutes for cross-chain completion
-            });
-
-            setTxPhase(cctxResult.status);
-            setCctxs(cctxResult.cctxs || []);
-
-            if (cctxResult.status === 'completed') {
-              toast.success('Cross-chain transfer completed!', {
-                description: `Successfully transferred to ${destinationChain}`,
-                duration: 10000
+          if (!isSolanaOrigin) {
+            // Track only for EVM origins for now
+            try {
+              const cctxResult = await trackCrossChainTransaction({
+                hash: tx.hash,
+                network,
+                timeoutSeconds: 300
               });
-            } else if (cctxResult.status === 'failed') {
-              toast.error('Cross-chain transfer failed', {
-                description: cctxResult.error || 'Transfer failed during cross-chain processing',
-                duration: 10000
-              });
-            } else if (cctxResult.status === 'timeout') {
-              toast.warning('Cross-chain transfer timeout', {
-                description: 'Transfer is taking longer than expected. Please check the blockchain explorer.',
-                duration: 10000
-              });
+              setTxPhase(cctxResult.status);
+              setCctxs(cctxResult.cctxs || []);
+              if (cctxResult.status === 'completed') {
+                toast.success('Cross-chain transfer completed!', { description: `Successfully transferred to ${destinationChain}`, duration: 10000 });
+              } else if (cctxResult.status === 'failed') {
+                toast.error('Cross-chain transfer failed', { description: cctxResult.error || 'Transfer failed during cross-chain processing', duration: 10000 });
+              } else if (cctxResult.status === 'timeout') {
+                toast.warning('Cross-chain transfer timeout', { description: 'Transfer is taking longer than expected. Please check the blockchain explorer.', duration: 10000 });
+              }
+            } catch (cctxError) {
+              console.error('Error tracking cross-chain transaction:', cctxError);
+              setTxPhase('pending');
             }
-          } catch (cctxError) {
-            console.error('Error tracking cross-chain transaction:', cctxError);
-            setTxPhase('pending');
-            toast.warning('Tracking cross-chain status...', {
-              description: 'Origin confirmed, monitoring cross-chain completion',
-              duration: 5000
-            });
           }
         } else if (originResult.status === 'failed') {
           toast.error('Transaction failed on origin chain', {
