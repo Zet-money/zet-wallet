@@ -1,4 +1,5 @@
-"use server"
+// Note: This file contains both server and client functions
+// Server functions are marked with "use server" directive
 import { type SupportedEvm, type Network, type RpcMap } from './providers'
 import { 
   performDirectTransfer, 
@@ -287,9 +288,60 @@ export async function waitForTxConfirmation(params: {
   return { status: 'timeout', confirmations: 0 }
 }
 
+// Server action for fetching CCTX data
+async function fetchCctxData(hash: string, network: Network) {
+  "use server"
+  
+  const apiUrl = network === 'mainnet'
+    ? 'https://zetachain.blockpi.network/lcd/v1/public'
+    : 'https://zetachain-athens.blockpi.network/lcd/v1/public'
+  
+  const endpoint = `/zeta-chain/crosschain/inboundHashToCctxData/${hash}`
+  console.log('[ZETA][CCTX][SERVER] Fetching CCTX data', { endpoint, fullUrl: `${apiUrl}${endpoint}` })
+  
+  try {
+    const cctxData = await fetchFromApi<{ CrossChainTxs: any[] }>(apiUrl, endpoint)
+    console.log('[ZETA][CCTX][SERVER] CCTX data received', {
+      hasCrossChainTxs: !!cctxData.CrossChainTxs,
+      cctxCount: cctxData.CrossChainTxs?.length || 0,
+      cctxDataKeys: Object.keys(cctxData || {})
+    })
+    return cctxData
+  } catch (error) {
+    console.error('[ZETA][CCTX][SERVER] Fetch error', { 
+      error: error instanceof Error ? error.message : String(error),
+      hash,
+      apiUrl
+    })
+    throw error
+  }
+}
+
+// Server action for fetching TSS data
+async function fetchTssData(network: Network) {
+  "use server"
+  
+  const apiUrl = network === 'mainnet'
+    ? 'https://zetachain.blockpi.network/lcd/v1/public'
+    : 'https://zetachain-athens.blockpi.network/lcd/v1/public'
+  
+  try {
+    const tssData = await fetchFromApi<{ TSS: { finalizedZetaHeight: string } }>(apiUrl, '/zeta-chain/observer/TSS')
+    console.log('[ZETA][CCTX][SERVER] TSS data fetched', { tssData })
+    return tssData
+  } catch (error) {
+    console.error('[ZETA][CCTX][SERVER] TSS fetch error', { 
+      error: error instanceof Error ? error.message : String(error),
+      apiUrl
+    })
+    throw error
+  }
+}
+
 /**
  * Track cross-chain transaction using correct blockpi.network RPC endpoints
  * Uses inboundHashToCctxData API with origin chain tx hash as inbound hash
+ * This is a client-side function that calls server actions
  */
 export async function trackCrossChainTransaction(params: {
   hash: string
@@ -303,13 +355,8 @@ export async function trackCrossChainTransaction(params: {
   progress?: CctxProgress
 }> {
   const { hash, network, timeoutSeconds = 300, onUpdate } = params
-  console.log('[ZETA][CCTX] Tracking cross-chain transaction', { hash, network, timeoutSeconds })
+  console.log('[ZETA][CCTX] Tracking cross-chain transaction (client-side)', { hash, network, timeoutSeconds })
   
-  // Use correct blockpi.network RPC endpoints
-  const apiUrl = network === 'mainnet'
-    ? 'https://zetachain.blockpi.network/lcd/v1/public'
-    : 'https://zetachain-athens.blockpi.network/lcd/v1/public'
-
   return await new Promise((outerResolve) => {
     let done = false
     let intervalId: NodeJS.Timeout | undefined
@@ -321,14 +368,11 @@ export async function trackCrossChainTransaction(params: {
         return
       }
       
-      console.log('[ZETA][CCTX][POLL] Starting poll cycle', { hash, apiUrl, done })
+      console.log('[ZETA][CCTX][POLL] Starting poll cycle', { hash, done })
       
       try {
-        // Use inboundHashToCctxData with origin chain tx hash
-        const endpoint = `/zeta-chain/crosschain/inboundHashToCctxData/${hash}`
-        console.log('[ZETA][CCTX][POLL] Fetching CCTX data', { endpoint, fullUrl: `${apiUrl}${endpoint}` })
-        
-        const cctxData = await fetchFromApi<{ CrossChainTxs: any[] }>(apiUrl, endpoint)
+        // Call server action to fetch CCTX data
+        const cctxData = await fetchCctxData(hash, network)
         
         console.log('[ZETA][CCTX][POLL] CCTX data received', {
           hasCrossChainTxs: !!cctxData.CrossChainTxs,
@@ -346,7 +390,8 @@ export async function trackCrossChainTransaction(params: {
             outboundParams: cctx.outbound_params
           })
           
-          const progress = await parseCctxProgress(cctx, apiUrl)
+          // Parse progress on client side
+          const progress = await parseCctxProgressClient(cctx, network)
           
           console.log('[ZETA][CCTX][POLL] CCTX found and parsed', { 
             status: cctx.cctx_status?.status,
@@ -415,8 +460,7 @@ export async function trackCrossChainTransaction(params: {
         console.error('[ZETA][CCTX][POLL] Poll error occurred', { 
           error: error instanceof Error ? error.message : String(error),
           stack: error instanceof Error ? error.stack : undefined,
-          hash,
-          apiUrl
+          hash
         })
         if (onUpdate) {
           console.log('[ZETA][CCTX][POLL] Calling onUpdate with error status')
@@ -458,7 +502,103 @@ export async function trackCrossChainTransaction(params: {
   })
 }
 
-// Parse CCTX response into progress information
+// Client-side version of parseCctxProgress that calls server action for TSS data
+async function parseCctxProgressClient(cctx: any, network: Network): Promise<CctxProgress> {
+  console.log('[ZETA][CCTX][PARSE] Starting parseCctxProgressClient', { 
+    cctxKeys: Object.keys(cctx || {}),
+    network,
+    hasCctxStatus: !!cctx.cctx_status,
+    hasInboundParams: !!cctx.inbound_params,
+    hasOutboundParams: !!cctx.outbound_params
+  })
+  
+  const status = cctx.cctx_status?.status || 'pending'
+  const inboundParams = cctx.inbound_params || {}
+  const outboundParams = cctx.outbound_params?.[0] || {}
+  
+  console.log('[ZETA][CCTX][PARSE] Extracted basic data', {
+    status,
+    inboundParamsKeys: Object.keys(inboundParams),
+    outboundParamsKeys: Object.keys(outboundParams),
+    inboundParams,
+    outboundParams
+  })
+  
+  // Get current finalized height for confirmations calculation via server action
+  let finalizedHeight = 0
+  try {
+    console.log('[ZETA][CCTX][PARSE] Fetching TSS data for finalized height', { network })
+    const tssData = await fetchTssData(network)
+    finalizedHeight = Number(tssData.TSS.finalizedZetaHeight || 0)
+    console.log('[ZETA][CCTX][PARSE] TSS data fetched', { tssData, finalizedHeight })
+  } catch (error) {
+    console.error('[ZETA][CCTX][PARSE] Failed to get finalized height', { error, network })
+  }
+  
+  const inboundHeight = Number(inboundParams.finalized_zeta_height || 0)
+  const confirmations = Math.max(0, finalizedHeight - inboundHeight)
+  
+  console.log('[ZETA][CCTX][PARSE] Height calculations', {
+    finalizedHeight,
+    inboundHeight,
+    confirmations,
+    inboundFinalizedZetaHeight: inboundParams.finalized_zeta_height
+  })
+  
+  // Determine status and status text
+  let progressStatus: CctxProgress['status'] = 'pending'
+  let statusText = 'Pending'
+  
+  console.log('[ZETA][CCTX][PARSE] Determining status', {
+    status,
+    outboundHash: outboundParams.hash,
+    txFinalizationStatus: inboundParams.tx_finalization_status,
+    errorMessage: cctx.cctx_status?.error_message,
+    statusMessage: cctx.cctx_status?.status_message
+  })
+  
+  if (status === 'OutboundMined') {
+    progressStatus = 'completed'
+    statusText = 'Cross-chain transfer completed'
+    console.log('[ZETA][CCTX][PARSE] Status: OutboundMined -> completed')
+  } else if (status === 'Aborted' || status === 'Reverted') {
+    progressStatus = 'failed'
+    statusText = `Transfer ${status.toLowerCase()}: ${cctx.cctx_status?.error_message || cctx.cctx_status?.status_message || 'Unknown error'}`
+    console.log('[ZETA][CCTX][PARSE] Status: Failed', { status, statusText })
+  } else if (outboundParams.hash) {
+    progressStatus = 'outbound_broadcasted'
+    statusText = 'Outbound transaction broadcasted'
+    console.log('[ZETA][CCTX][PARSE] Status: Outbound broadcasted', { outboundHash: outboundParams.hash })
+  } else if (inboundParams.tx_finalization_status === 'Executed') {
+    progressStatus = 'inbound_confirmed'
+    statusText = 'Inbound transaction confirmed'
+    console.log('[ZETA][CCTX][PARSE] Status: Inbound confirmed')
+  } else {
+    console.log('[ZETA][CCTX][PARSE] Status: Pending (default)')
+  }
+  
+  const result = {
+    status: progressStatus,
+    confirmations,
+    statusText,
+    outboundHash: outboundParams.hash,
+    inboundHeight,
+    finalizedHeight,
+    targetChainId: outboundParams.receiver_chainId,
+    amount: inboundParams.amount,
+    asset: inboundParams.asset,
+    sender: inboundParams.sender,
+    receiver: outboundParams.receiver,
+    gasUsed: outboundParams.gas_used,
+    gasLimit: outboundParams.call_options?.gas_limit,
+    errorMessage: cctx.cctx_status?.error_message || cctx.cctx_status?.error_message_revert || cctx.cctx_status?.error_message_abort
+  }
+  
+  console.log('[ZETA][CCTX][PARSE] Final parsed result', result)
+  return result
+}
+
+// Server-side version of parseCctxProgress (kept for trackCrossChainConfirmations)
 async function parseCctxProgress(cctx: any, apiUrl: string): Promise<CctxProgress> {
   console.log('[ZETA][CCTX][PARSE] Starting parseCctxProgress', { 
     cctxKeys: Object.keys(cctx || {}),
@@ -595,6 +735,7 @@ export async function trackCrossChainConfirmations(params: {
   timeoutSeconds?: number
   onProgress?: (p: { confirmations: number; status?: string; progress?: CctxProgress }) => void
 }): Promise<{ status: 'completed' | 'failed' | 'timeout'; confirmations: number; cctx?: any; progress?: CctxProgress }> {
+  "use server"
   console.log('[ZETA][CCTX][CONF] Starting trackCrossChainConfirmations', { params })
   const { hash, network, minConfirmations = 20, timeoutSeconds = 300, onProgress } = params
   const apiUrl = network === 'mainnet' 
