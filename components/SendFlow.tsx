@@ -13,8 +13,8 @@ import { useNetwork } from '@/contexts/NetworkContext';
 // Call server API; avoid importing server-only toolkit client-side
 import type { SupportedEvm } from '@/lib/providers';
 import { EVM_TOKENS, getTokensFor, type Network as TokenNetwork, type TokenInfo } from '@/lib/tokens';
-import { smartCrossChainTransfer, getTxStatus, waitForTxConfirmation, type CctxProgress } from '@/lib/zetachain';
-import { trackCrossChainConfirmations as trackCrossChainTransaction } from '@/lib/zetachain-server';
+import { smartCrossChainTransfer, getTxStatus, waitForTxConfirmation } from '@/lib/zetachain';
+import { CctxProgress, trackCrossChainConfirmations as trackCrossChainTransaction } from '@/lib/zetachain-server';
 import CctxProgressComponent from '@/components/CctxProgress';
 import { waitForSolTxConfirmation, getSolTxStatus } from '@/lib/solana';
 import { getZrcAddressFor } from '@/lib/zrc';

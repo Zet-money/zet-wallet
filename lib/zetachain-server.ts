@@ -1,4 +1,4 @@
-"use server"
+"use client"
 
 import { type Network } from './providers'
 
@@ -181,7 +181,7 @@ export async function parseCctxProgress(cctx: any, apiUrl: string): Promise<Cctx
     outboundHash: outboundParams.hash,
     inboundHeight,
     finalizedHeight,
-    targetChainId: outboundParams.receiver_chainId,
+    targetChainId: outboundParams.receiver_chainId || outboundParams.receiver_chain_id,
     amount: inboundParams.amount,
     asset: inboundParams.asset,
     sender: inboundParams.sender,
@@ -190,6 +190,17 @@ export async function parseCctxProgress(cctx: any, apiUrl: string): Promise<Cctx
     gasLimit: outboundParams.call_options?.gas_limit,
     errorMessage: cctx.cctx_status?.error_message || cctx.cctx_status?.error_message_revert || cctx.cctx_status?.error_message_abort
   }
+  
+  console.log('[ZETA][CCTX][PARSE] Final result with debugging', {
+    result,
+    outboundParamsKeys: Object.keys(outboundParams),
+    inboundParamsKeys: Object.keys(inboundParams),
+    outboundReceiverChainId: outboundParams.receiver_chainId,
+    outboundReceiverChain_id: outboundParams.receiver_chain_id,
+    inboundSenderChainId: inboundParams.sender_chain_id,
+    amount: inboundParams.amount,
+    asset: inboundParams.asset
+  })
   
   console.log('[ZETA][CCTX][PARSE] Final parsed result', result)
   return result

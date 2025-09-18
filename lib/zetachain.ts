@@ -1,4 +1,4 @@
-// Client-side functions for CCTX tracking
+"use server";
 import { type SupportedEvm, type Network, type RpcMap } from './providers'
 import { 
   performDirectTransfer, 
@@ -11,15 +11,6 @@ import { solanaDepositAndCall } from '@zetachain/toolkit/chains'
 import { ZETPROTOCOL_ADDRESS } from './zetprotocol'
 import { solanaMnemonicToKeypairForRetrieval } from './solana'
 import { JsonRpcProvider } from 'ethers'
-import { 
-  fetchCctxData, 
-  fetchTssData, 
-  type CctxProgress,
-  trackCrossChainConfirmations 
-} from './zetachain-server'
-
-// Re-export CctxProgress type for client components
-export type { CctxProgress }
 
 export type Erc20Token = {
   symbol: string
@@ -277,9 +268,6 @@ export async function waitForTxConfirmation(params: {
   return { status: 'timeout', confirmations: 0 }
 }
 
-
-// Re-export the server function for direct use in components
-export { trackCrossChainConfirmations as trackCrossChainTransaction }
 
 
 

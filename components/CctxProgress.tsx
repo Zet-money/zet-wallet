@@ -1,6 +1,6 @@
 "use client"
 
-import { CctxProgress } from '@/lib/zetachain'
+import { CctxProgress } from '@/lib/zetachain-server'
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -22,8 +22,16 @@ const chainNames: Record<string, string> = {
   '42161': 'Arbitrum',
   '10': 'Optimism',
   '8453': 'Base',
+  '84532': 'Base Testnet',
   '7001': 'ZetaChain',
-  'solana': 'Solana'
+  'solana': 'Solana',
+  'ethereum': 'Ethereum',
+  'polygon': 'Polygon',
+  'bsc': 'BSC',
+  'avalanche': 'Avalanche',
+  'arbitrum': 'Arbitrum',
+  'optimism': 'Optimism',
+  'base': 'Base'
 }
 
 const statusIcons = {
@@ -79,23 +87,54 @@ export default function CctxProgressComponent({
   }
 
   const getTargetChainName = () => {
-    const chainName = chainNames[progress.targetChainId || ''] || targetChain
+    // Try to resolve by targetChainId first, then by targetChain name
+    let chainName = chainNames[progress.targetChainId || '']
+    if (!chainName) {
+      chainName = chainNames[targetChain.toLowerCase()] || targetChain
+    }
+    
     console.log('[UI][CCTX][PROGRESS] Target chain name resolved', {
       targetChainId: progress.targetChainId,
       targetChain,
-      chainName
+      chainName,
+      availableChains: Object.keys(chainNames)
     })
     return chainName
   }
 
-  const formatAmount = (amount: string | undefined) => {
+  const formatAmount = (amount: string | undefined, asset?: string) => {
     if (!amount) {
       console.log('[UI][CCTX][PROGRESS] Amount is undefined, returning 0')
       return '0'
     }
-    const num = Number(amount)
-    const formatted = num === 0 ? '0' : num.toLocaleString()
-    console.log('[UI][CCTX][PROGRESS] Amount formatted', { amount, num, formatted })
+    
+    // Determine decimals based on asset type
+    let decimals = 18 // Default for most tokens
+    if (asset) {
+      const assetLower = asset.toLowerCase()
+      if (assetLower.includes('usdc') || assetLower.includes('usdt')) {
+        decimals = 6
+      } else if (assetLower.includes('dai')) {
+        decimals = 18
+      } else if (assetLower.includes('weth') || assetLower.includes('wbtc')) {
+        decimals = 18
+      }
+    }
+    
+    // Convert from smallest unit to human readable
+    const num = Number(amount) / Math.pow(10, decimals)
+    const formatted = num === 0 ? '0' : num.toLocaleString(undefined, { 
+      minimumFractionDigits: 0, 
+      maximumFractionDigits: 6 
+    })
+    
+    console.log('[UI][CCTX][PROGRESS] Amount formatted', { 
+      amount, 
+      decimals, 
+      num, 
+      formatted,
+      asset 
+    })
     return formatted
   }
 
@@ -153,7 +192,7 @@ export default function CctxProgressComponent({
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
             <span className="text-muted-foreground">Amount:</span>
-            <p className="font-mono">{formatAmount(progress.amount)}</p>
+            <p className="font-mono">{formatAmount(progress.amount, progress.asset)}</p>
           </div>
           <div>
             <span className="text-muted-foreground">Target Chain:</span>
