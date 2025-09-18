@@ -137,6 +137,22 @@ export default function Dashboard() {
     asset.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Sort: non-zero balances first (keep original order within groups)
+  const displayedAssets = useMemo(() => {
+    const annotated = filteredAssets.map((asset, idx) => ({ asset, idx }))
+    annotated.sort((left, right) => {
+      const lb = parseFloat(balances[left.asset.symbol] ?? '0')
+      const rb = parseFloat(balances[right.asset.symbol] ?? '0')
+      const lval = Number.isFinite(lb) ? lb : 0
+      const rval = Number.isFinite(rb) ? rb : 0
+      const lNonZero = lval > 0
+      const rNonZero = rval > 0
+      if (lNonZero === rNonZero) return left.idx - right.idx
+      return lNonZero ? -1 : 1
+    })
+    return annotated.map(x => x.asset)
+  }, [filteredAssets, balances])
+
   const copyAddress = async () => {
     if (wallet?.address) {
       try {
@@ -258,7 +274,7 @@ export default function Dashboard() {
 
         {/* Assets List */}
         <div className="space-y-3">
-          {filteredAssets.map((asset) => (
+          {displayedAssets.map((asset) => (
             <Card 
               key={asset.id} 
               className="hover:shadow-md transition-shadow cursor-pointer active:scale-[0.98]"
