@@ -301,7 +301,12 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
           });
 
           // Immediately show CCTX tracker UI with pending state
-          console.log('[UI][CCTX] Setting up pending CCTX progress state')
+          console.log('[UI][CCTX] Setting up pending CCTX progress state', {
+            amount,
+            destinationToken,
+            destinationChain,
+            recipientAddress
+          })
           setCctxProgress({
             status: 'pending',
             confirmations: 0,

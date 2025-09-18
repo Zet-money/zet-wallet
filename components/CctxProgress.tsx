@@ -90,7 +90,31 @@ export default function CctxProgressComponent({
     // Try to resolve by targetChainId first, then by targetChain name
     let chainName = chainNames[progress.targetChainId || '']
     if (!chainName) {
-      chainName = chainNames[targetChain.toLowerCase()] || targetChain
+      // Try exact match first
+      chainName = chainNames[targetChain.toLowerCase()]
+      if (!chainName) {
+        // Try partial matches for common variations
+        const targetLower = targetChain.toLowerCase()
+        if (targetLower.includes('base')) {
+          chainName = 'Base'
+        } else if (targetLower.includes('polygon') || targetLower.includes('matic')) {
+          chainName = 'Polygon'
+        } else if (targetLower.includes('ethereum') || targetLower.includes('eth')) {
+          chainName = 'Ethereum'
+        } else if (targetLower.includes('arbitrum') || targetLower.includes('arb')) {
+          chainName = 'Arbitrum'
+        } else if (targetLower.includes('optimism') || targetLower.includes('op')) {
+          chainName = 'Optimism'
+        } else if (targetLower.includes('avalanche') || targetLower.includes('avax')) {
+          chainName = 'Avalanche'
+        } else if (targetLower.includes('bsc') || targetLower.includes('binance')) {
+          chainName = 'BSC'
+        } else if (targetLower.includes('solana') || targetLower.includes('sol')) {
+          chainName = 'Solana'
+        } else {
+          chainName = targetChain // Fallback to original value
+        }
+      }
     }
     
     console.log('[UI][CCTX][PROGRESS] Target chain name resolved', {
@@ -106,6 +130,12 @@ export default function CctxProgressComponent({
     if (!amount) {
       console.log('[UI][CCTX][PROGRESS] Amount is undefined, returning 0')
       return '0'
+    }
+    
+    // Check if amount is already in human-readable format (has decimal point)
+    if (amount.includes('.')) {
+      console.log('[UI][CCTX][PROGRESS] Amount already formatted, returning as-is', { amount })
+      return amount
     }
     
     // Determine decimals based on asset type
@@ -133,7 +163,8 @@ export default function CctxProgressComponent({
       decimals, 
       num, 
       formatted,
-      asset 
+      asset,
+      hasDecimalPoint: amount.includes('.')
     })
     return formatted
   }
