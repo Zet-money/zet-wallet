@@ -72,7 +72,7 @@ export const EVM_TOKENS: Record<string, TokenInfo[]> = {
   ],
   polygon: [
     { symbol: 'MATIC', name: 'Polygon', logo: 'MATIC', addressByNetwork: {} },
-    { symbol: 'USDC', name: 'USD Coin', logo: 'USDC', addressByNetwork: { mainnet: '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174', testnet: '0x41E94Eb019C0762fBfcf9Fb1E58725BfB0e7582' } }, // https://developers.circle.com/stablecoins/usdc-contract-addresses
+    { symbol: 'USDC', name: 'USD Coin', logo: 'USDC', addressByNetwork: { mainnet: '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359', testnet: '0x41E94Eb019C0762f9Bfcf9Fb1E58725BfB0e7582' } }, // https://developers.circle.com/stablecoins/usdc-contract-addresses
     { symbol: 'USDT', name: 'Tether USD', logo: 'USDT', addressByNetwork: { mainnet: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F', testnet: '' } },
     { symbol: 'WETH', name: 'Wrapped Ether', logo: 'WETH', addressByNetwork: { mainnet: '0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619', testnet: '' } },
   ],

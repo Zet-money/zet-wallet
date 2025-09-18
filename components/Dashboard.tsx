@@ -97,7 +97,7 @@ export default function Dashboard() {
           network,
           address: wallet.address,
           tokens: tokensForFetch,
-          rpcMap: IN_APP_RPC_MAP as any,
+          rpcMap: IN_APP_RPC_MAP,
         })
         console.log('balances', map)
         setBalances(map)
