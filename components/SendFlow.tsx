@@ -84,6 +84,7 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
   const [transactionAmount, setTransactionAmount] = useState<string>('');
   const [transactionToken, setTransactionToken] = useState<string>('');
   const [transactionTargetChain, setTransactionTargetChain] = useState<string>('');
+  const [transactionReceiver, setTransactionReceiver] = useState<string>('');
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const startTimeRef = useRef<number | null>(null);
   const { network } = useNetwork();
@@ -305,6 +306,7 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
       setTransactionAmount(amount);
       setTransactionToken(destinationToken);
       setTransactionTargetChain(destinationChain);
+      setTransactionReceiver(recipientAddress);
       startTimer(); // Start the transaction timer
 
       // First wait for origin chain confirmation with live polling updates
@@ -367,7 +369,7 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
             transactionAmount,
             transactionToken,
             transactionTargetChain,
-            recipientAddress
+            transactionReceiver
           })
           setCctxProgress({
             status: 'pending',
@@ -376,7 +378,7 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
             amount: transactionAmount,
             asset: transactionToken,
             sender: '', // Will be filled when CCTX data is available
-            receiver: recipientAddress,
+            receiver: transactionReceiver,
             targetChainId: transactionTargetChain
           })
           setTxPhase('pending')
@@ -415,7 +417,8 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
                     ...progress,
                     amount: transactionAmount,
                     asset: transactionToken,
-                    targetChainId: transactionTargetChain
+                    targetChainId: transactionTargetChain,
+                    receiver: transactionReceiver
                   }
                   setCctxProgress(updatedProgress)
                   setTxPhase(progress.status === 'completed' ? 'completed' : progress.status === 'failed' ? 'failed' : 'pending')
@@ -443,7 +446,8 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
                 ...cctxResult.progress,
                 amount: transactionAmount,
                 asset: transactionToken,
-                targetChainId: transactionTargetChain
+                targetChainId: transactionTargetChain,
+                receiver: transactionReceiver
               }
               setCctxProgress(finalProgress)
             }
@@ -632,6 +636,7 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
                     targetChain={destinationChain}
                     duration={transactionDuration}
                     isTimerRunning={isTimerRunning}
+                    receiver={transactionReceiver}
                     onViewExplorer={(hash, chain) => {
                       console.log('[UI][CCTX][EXPLORER] Explorer link clicked', { hash, chain })
                       const explorerUrl = explorerFor(chain)

@@ -13,6 +13,7 @@ interface CctxProgressProps {
   targetChain: string
   duration?: number
   isTimerRunning?: boolean
+  receiver?: string
   onViewExplorer?: (hash: string, chain: string) => void
 }
 
@@ -60,6 +61,7 @@ export default function CctxProgressComponent({
   targetChain, 
   duration = 0,
   isTimerRunning = false,
+  receiver,
   onViewExplorer 
 }: CctxProgressProps) {
   console.log('[UI][CCTX][PROGRESS] CctxProgressComponent rendered', {
@@ -268,9 +270,9 @@ export default function CctxProgressComponent({
 
         <div className="space-y-2">
           <span className="text-sm text-muted-foreground">To:</span>
-          {progress.receiver ? (
+          {receiver ? (
             <p className="font-mono text-xs break-all bg-muted p-2 rounded">
-              {progress.receiver}
+              {receiver}
             </p>
           ) : (
             <div className="bg-muted p-2 rounded animate-pulse">
