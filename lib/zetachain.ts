@@ -257,12 +257,13 @@ export async function trackCrossChainTransaction(params: {
   hash: string
   network: Network
   timeoutSeconds?: number
+  onUpdate?: (args: { cctxs: any; statusText?: string }) => void
 }): Promise<{ 
   status: 'completed' | 'failed' | 'timeout' | 'pending'
   cctxs?: any
   error?: string
 }> {
-  const { hash, network, timeoutSeconds = 300 } = params
+  const { hash, network, timeoutSeconds = 300, onUpdate } = params
 
   // Endpoints
   const apiUrl = network === 'mainnet'
@@ -292,6 +293,18 @@ export async function trackCrossChainTransaction(params: {
     let intervalId: NodeJS.Timeout | undefined
     let timeoutId: NodeJS.Timeout | undefined
 
+    // Minimal emitter to surface updates to UI
+    const emitter = {
+      emit: (event: string, payload: any) => {
+        try {
+          if (onUpdate) {
+            const statusText = typeof payload?.text === 'string' ? payload.text : undefined
+            onUpdate({ cctxs: state.cctxs, statusText })
+          }
+        } catch {}
+      }
+    } as any
+
     const resolve = (cctxs: any) => {
       if (done) return
       done = true
@@ -313,7 +326,7 @@ export async function trackCrossChainTransaction(params: {
       hash,
       tss,
       state,
-      emitter: null,
+      emitter,
       json: true,
       timeoutSeconds,
       resolve,
@@ -332,7 +345,7 @@ export async function trackCrossChainTransaction(params: {
         hash,
         tss,
         state,
-        emitter: null,
+        emitter,
         json: true,
         timeoutSeconds,
         resolve,

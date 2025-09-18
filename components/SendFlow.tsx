@@ -272,7 +272,12 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
               const cctxResult = await trackCrossChainTransaction({
                 hash: tx.hash,
                 network,
-                timeoutSeconds: 300
+                timeoutSeconds: 300,
+                onUpdate: ({ statusText }) => {
+                  if (statusText) {
+                    setTxPhase('pending')
+                  }
+                }
               });
               setTxPhase(cctxResult.status as any);
               setCctxs(cctxResult.cctxs || []);
