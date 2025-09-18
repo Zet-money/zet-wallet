@@ -29,6 +29,17 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
   const [priceChange, setPriceChange] = useState<number | null>(null)
   const isPositive = (priceChange ?? 0) > 0;
 
+  // Display helper: truncate without rounding to N decimal places
+  function truncateBalance(value: string, decimals: number): string {
+    if (!value) return '0'
+    const clean = value.replace(/,/g, '')
+    if (!clean.includes('.')) return clean
+    const [intPart, fracPart = ''] = clean.split('.')
+    if (decimals <= 0) return intPart
+    const truncated = fracPart.slice(0, decimals)
+    return truncated.length ? `${intPart}.${truncated}` : intPart
+  }
+
   useEffect(() => {
     const load = async () => {
       const c = await getTokenChangeUSD24h(asset.symbol)
@@ -82,7 +93,7 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
           <CardContent className="p-6">
             <div className="text-center space-y-4">
               <div>
-                <p className="text-2xl font-bold">{parseFloat(asset.balance).toPrecision(6)} {asset.symbol}</p>
+                <p className="text-2xl font-bold">{truncateBalance(asset.balance, 6)} {asset.symbol}</p>
                 <p className="text-lg text-muted-foreground">${asset.usdValue}</p>
               </div>
               
@@ -141,7 +152,7 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
             </div>
             <div className="flex justify-between items-center">
               <span className="text-muted-foreground">Balance</span>
-              <span className="font-medium">{parseFloat(asset.balance).toPrecision(6)} {asset.symbol}</span>
+              <span className="font-medium">{truncateBalance(asset.balance, 6)} {asset.symbol}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-muted-foreground">USD Value</span>
