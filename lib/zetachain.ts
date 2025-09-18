@@ -187,6 +187,7 @@ export async function getTxStatus(params: {
 }): Promise<{ status: 'pending' | 'confirmed' | 'failed'; confirmations: number; blockNumber?: number; gasUsed?: string }> {
   const { originChain, hash, network, rpc } = params
   const rpcUrl = rpc?.[originChain]
+  console.log('[ZETA][EVM] Getting tx status', { originChain, network, rpc: rpcUrl?.[network], hash })
   if (!rpcUrl) {
     return { status: 'pending', confirmations: 0 }
   }

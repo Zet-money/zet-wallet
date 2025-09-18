@@ -16,6 +16,7 @@ import { EVM_TOKENS, getTokensFor, type Network as TokenNetwork, type TokenInfo 
 import { smartCrossChainTransfer, getTxStatus, waitForTxConfirmation, trackCrossChainTransaction, trackCrossChainConfirmations } from '@/lib/zetachain';
 import { waitForSolTxConfirmation, getSolTxStatus } from '@/lib/solana';
 import { getZrcAddressFor } from '@/lib/zrc';
+import { IN_APP_RPC_MAP } from '@/lib/rpc';
 
 interface SendFlowProps {
   asset: {
@@ -244,7 +245,7 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
           const start = Date.now()
           const timeoutMs = 120000
           while (Date.now() - start < timeoutMs) {
-            const status = await getTxStatus({ originChain, hash: tx.hash, network })
+            const status = await getTxStatus({ originChain, hash: tx.hash, network, rpc: IN_APP_RPC_MAP as any })
             console.log('[UI][EVM] status', status)
             setConfirmations(status.confirmations)
             if (status.blockNumber) setBlockNumber(status.blockNumber)
