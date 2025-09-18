@@ -406,18 +406,26 @@ type CrossChainTxResponse = { CrossChainTx: any }
 
 async function getFinalizedHeight(api: string): Promise<number | null> {
   try {
-    const data = await fetchFromApi<TssResponse>(api, `/zeta-chain/observer/TSS`)
+    console.log('[ZETA][CCTX][CONF] getFinalizedHeight', { api })
+    // OpenAPI now serves under /zetachain
+    const data = await fetchFromApi<TssResponse>(api, `/zetachain/observer/TSS`)
+    console.log('[ZETA][CCTX][CONF] getFinalizedHeight', { data })
     return Number(data.TSS.finalizedZetaHeight || 0)
-  } catch {
+  } catch (err) {
+    console.error('[ZETA][CCTX][CONF] TSS fetch error', err)
     return null
   }
 }
 
 async function getCctx(api: string, hash: string): Promise<any | null> {
   try {
-    const data = await fetchFromApi<CrossChainTxResponse>(api, `/zeta-chain/crosschain/cctx/${hash}`)
+    console.log('[ZETA][CCTX][CONF] getCctx', { api, hash })
+    // OpenAPI now serves under /zetachain
+    const data = await fetchFromApi<CrossChainTxResponse>(api, `/zetachain/crosschain/cctx/${hash}`)
+    console.log('[ZETA][CCTX][CONF] getCctx', { data })
     return data.CrossChainTx
-  } catch {
+  } catch (err) {
+    console.error('[ZETA][CCTX][CONF] CCTX fetch error', err)
     return null
   }
 }
