@@ -64,6 +64,7 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
   const [recipientAddress, setRecipientAddress] = useState('');
   const [amount, setAmount] = useState('');
   const [destinationChain, setDestinationChain] = useState('');
+  const [destinationToken, setDestinationToken] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [txHash, setTxHash] = useState<string | null>(null);
   const [txPhase, setTxPhase] = useState<'idle' | 'pending' | 'confirmed' | 'failed' | 'timeout' | 'completed'>('idle');
@@ -81,24 +82,57 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
     })
   }, [])
 
+  // Get available tokens for the selected destination chain
+  const destinationTokens = useMemo(() => {
+    if (!destinationChain) return []
+    
+    const networkKey = (network === 'mainnet' ? 'mainnet' : 'testnet') as TokenNetwork
+    
+    // For ZetaChain, show ZRC-20 tokens
+    if (destinationChain === 'zetachain') {
+      const tokens = getTokensFor('zetachain', networkKey)
+      return tokens.map((token) => ({
+        value: token.symbol,
+        label: token.symbol,
+        name: token.name,
+        logo: `https://assets.parqet.com/logos/crypto/${token.logo || token.symbol}?format=png`
+      }))
+    }
+    
+    // For other chains, show native tokens and ERC-20s
+    const tokens = getTokensFor(destinationChain, networkKey)
+    
+    return tokens.map((token) => ({
+      value: token.symbol,
+      label: token.symbol,
+      name: token.name,
+      logo: `https://assets.parqet.com/logos/crypto/${token.logo || token.symbol}?format=png`
+    }))
+  }, [destinationChain, network])
+
   const handleSend = async () => {
     if (!recipientAddress.trim()) {
       toast.error('Please enter a recipient address');
       return;
     }
-    
+
     if (!amount || parseFloat(amount) <= 0) {
       toast.error('Please enter a valid amount');
       return;
     }
-    
+
     if (parseFloat(amount) > parseFloat(asset.balance.replace(',', ''))) {
       toast.error('Insufficient balance');
       return;
     }
-    
+
     if (!destinationChain) {
       toast.error('Please select a destination chain');
+      return;
+    }
+
+    if (!destinationToken) {
+      toast.error('Please select a destination token');
       return;
     }
 
@@ -110,19 +144,21 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
 
       // Resolve token addresses from tokens.ts
       const networkKey = (network === 'mainnet' ? 'mainnet' : 'testnet') as TokenNetwork;
-      
-      // Source token: ERC-20 on origin chain
+
+      // Source token: ERC-20 on origin chain (or zero address for native tokens)
       const originTokens = getTokensFor(originChain, networkKey);
       const originTokenInfo = originTokens.find(t => t.symbol.toUpperCase() === asset.symbol.toUpperCase());
-      const sourceTokenAddress = originTokenInfo?.addressByNetwork?.[networkKey];
+      const sourceTokenAddress = originTokenInfo?.addressByNetwork?.[networkKey] || '0x0000000000000000000000000000000000000000'; // Zero address for native tokens
 
       // Target token: ZRC-20 on ZetaChain representing the destination asset/chain
-      const targetTokenAddress = getZrcAddressFor(targetChain, asset.symbol, networkKey)
+      console.log('Resolving target token:', { targetChain, destinationToken, networkKey })
+      const targetTokenAddress = getZrcAddressFor(targetChain, destinationToken, networkKey)
+      console.log('Target token address resolved:', targetTokenAddress)
 
-      if (!sourceTokenAddress || !targetTokenAddress) {
-        throw new Error(`Token address not available: source=${sourceTokenAddress}, target=${targetTokenAddress}`);
+      if (!targetTokenAddress) {
+        throw new Error(`Target token address not available: target=${targetTokenAddress}`);
       }
-      
+
       // Load mnemonic from session (support nested wallet key)
       const sessionRaw = typeof window !== 'undefined' ? localStorage.getItem('zet_wallet_session') : null;
       const session = sessionRaw ? (() => { try { return JSON.parse(sessionRaw) } catch { return {} } })() : {} as any;
@@ -134,23 +170,24 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
         throw new Error('Wallet session not found. Please restore or create a wallet.');
       }
 
-      console.log({
+      console.log('Transfer Parameters:', {
         originChain,
         targetChain,
         amount,
-        tokenSymbol: asset.symbol,
+        sourceTokenSymbol: asset.symbol,
+        destinationTokenSymbol: destinationToken,
         sourceTokenAddress,
         targetTokenAddress,
         recipient: recipientAddress,
-        mnemonicPhrase: sessionMnemonic,
         network,
+        isNativeToken: !originTokenInfo?.addressByNetwork?.[networkKey]
       })
 
       const tx = await smartCrossChainTransfer({
         originChain,
         targetChain,
         amount,
-        tokenSymbol: asset.symbol,
+        tokenSymbol: destinationToken,
         sourceTokenAddress,
         targetTokenAddress,
         recipient: recipientAddress,
@@ -169,18 +206,18 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
           requiredConfirmations: 1,
           timeoutMs: 120000 // 2 minutes for origin chain
         });
-        
+
         setTxPhase(originResult.status);
         setConfirmations(originResult.confirmations);
         setGasUsed(originResult.gasUsed);
         setBlockNumber(originResult.blockNumber);
-        
+
         if (originResult.status === 'confirmed') {
           toast.success('Transaction confirmed on origin chain!', {
             description: `Now tracking cross-chain completion...`,
             duration: 5000
           });
-          
+
           // Now track the cross-chain transaction using ZetaChain's tracking
           try {
             const cctxResult = await trackCrossChainTransaction({
@@ -188,10 +225,10 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
               network,
               timeoutSeconds: 300 // 5 minutes for cross-chain completion
             });
-            
+
             setTxPhase(cctxResult.status);
             setCctxs(cctxResult.cctxs || []);
-            
+
             if (cctxResult.status === 'completed') {
               toast.success('Cross-chain transfer completed!', {
                 description: `Successfully transferred to ${destinationChain}`,
@@ -261,7 +298,7 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
             <X className="w-4 h-4" />
           </Button>
         </CardHeader>
-        
+
         <CardContent className="space-y-6">
           {txHash ? (
             <div className="space-y-4">
@@ -269,24 +306,24 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
                 <div className="text-sm font-medium">Transaction Hash</div>
                 <div className="text-xs break-all font-mono bg-muted p-2 rounded">{txHash}</div>
               </div>
-              
+
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Status</span>
                 <Badge variant={
-                  txPhase === 'completed' ? 'default' : 
-                  txPhase === 'confirmed' ? 'default' : 
-                  txPhase === 'failed' ? 'destructive' : 
-                  txPhase === 'timeout' ? 'destructive' : 
-                  'secondary'
+                  txPhase === 'completed' ? 'default' :
+                    txPhase === 'confirmed' ? 'default' :
+                      txPhase === 'failed' ? 'destructive' :
+                        txPhase === 'timeout' ? 'destructive' :
+                          'secondary'
                 }>
-                  {txPhase === 'pending' ? 'Pending' : 
-                   txPhase === 'confirmed' ? 'Origin Confirmed' : 
-                   txPhase === 'completed' ? 'Completed' : 
-                   txPhase === 'failed' ? 'Failed' : 
-                   txPhase === 'timeout' ? 'Timeout' : 'Unknown'}
+                  {txPhase === 'pending' ? 'Pending' :
+                    txPhase === 'confirmed' ? 'Origin Confirmed' :
+                      txPhase === 'completed' ? 'Completed' :
+                        txPhase === 'failed' ? 'Failed' :
+                          txPhase === 'timeout' ? 'Timeout' : 'Unknown'}
                 </Badge>
               </div>
-              
+
               {(txPhase === 'confirmed' || txPhase === 'completed') && (
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
@@ -314,7 +351,7 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
                   )}
                 </div>
               )}
-              
+
               {txPhase === 'pending' && (
                 <div className="space-y-2">
                   <div className="text-sm">Confirmations: {confirmations}</div>
@@ -323,7 +360,7 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
                   </div>
                 </div>
               )}
-              
+
               {txPhase === 'confirmed' && (
                 <div className="space-y-2">
                   <div className="text-sm">Origin chain confirmed</div>
@@ -332,10 +369,10 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
                   </div>
                 </div>
               )}
-              
+
               {txPhase === 'timeout' && (
                 <div className="text-xs text-muted-foreground">
-                  Transaction is taking longer than expected. This can happen during network congestion. 
+                  Transaction is taking longer than expected. This can happen during network congestion.
                   Please check the blockchain explorer for the latest status.
                 </div>
               )}
@@ -344,163 +381,202 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
             <>
               {/* Asset Info */}
               <div className="flex items-center space-x-3 p-3 bg-muted rounded-lg">
-            <div className="w-10 h-10 bg-background rounded-full flex items-center justify-center overflow-hidden">
-              <img 
-                src={asset.logo} 
-                alt={asset.symbol}
-                className="w-8 h-8 object-contain"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                  e.currentTarget.nextElementSibling?.classList.remove('hidden');
-                }}
-              />
-              <div className="w-8 h-8 bg-muted rounded-full items-center justify-center text-xs font-semibold hidden">
-                {asset.symbol}
-              </div>
-            </div>
-            <div className="flex-1">
-              <div className="flex items-center space-x-2">
-                <span className="font-semibold">{asset.symbol}</span>
-                <Badge variant="secondary" className="text-xs">{asset.chain}</Badge>
-              </div>
-              <p className="text-sm text-muted-foreground">Balance: {asset.balance} {asset.symbol}</p>
-            </div>
-          </div>
-
-          {/* Recipient Address */}
-          <div className="space-y-2">
-            <Label htmlFor="recipient">Recipient Address</Label>
-            <Input
-              id="recipient"
-              placeholder="Enter wallet address"
-              value={recipientAddress}
-              onChange={(e) => setRecipientAddress(e.target.value)}
-              className="font-mono"
-            />
-          </div>
-
-          {/* Amount */}
-          <div className="space-y-2">
-            <Label htmlFor="amount">Amount</Label>
-            <div className="space-y-2">
-              <Input
-                id="amount"
-                type="number"
-                placeholder="0.00"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                step="0.000001"
-              />
-              {amount && (
-                <p className="text-sm text-muted-foreground">
-                  ≈ ${usdAmount.toFixed(2)} USD
-                </p>
-              )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setAmount(asset.balance.replace(',', ''))}
-                className="w-full"
-              >
-                Max: {asset.balance} {asset.symbol}
-              </Button>
-            </div>
-          </div>
-
-          {/* Destination Chain */}
-          <div className="space-y-2">
-            <Label htmlFor="destination">Destination Chain</Label>
-            <Select value={destinationChain} onValueChange={setDestinationChain}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select destination chain" />
-              </SelectTrigger>
-              <SelectContent>
-                {destinationChains.map((chain) => (
-                  <SelectItem key={chain.value} value={chain.value}>
-                    <div className="flex items-center space-x-2">
-                      <img 
-                        src={chain.icon}
-                        alt={chain.label}
-                        className="w-4 h-4 object-contain"
-                        onError={(e) => { e.currentTarget.style.display = 'none' }}
-                      />
-                      <span>{chain.label}</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Cross-chain Warning */}
-          {destinationChain && destinationChain !== asset.chain.toLowerCase() && (
-            <div className="flex items-start space-x-2 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-              <AlertCircle className="w-4 h-4 text-yellow-600 dark:text-yellow-400 mt-0.5" />
-              <div className="text-sm">
-                <p className="font-medium text-yellow-800 dark:text-yellow-200">
-                  Cross-chain Transfer
-                </p>
-                <p className="text-yellow-700 dark:text-yellow-300">
-                  This will transfer {asset.symbol} from {asset.chain} to {destinationChains.find(c => c.value === destinationChain)?.label}.
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Transaction Summary */}
-          {amount && recipientAddress && destinationChain && (
-            <div className="space-y-3 p-4 bg-muted rounded-lg">
-              <h4 className="font-semibold">Transaction Summary</h4>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Amount:</span>
-                  <span>{amount} {asset.symbol}</span>
+                <div className="w-10 h-10 bg-background rounded-full flex items-center justify-center overflow-hidden">
+                  <img
+                    src={asset.logo}
+                    alt={asset.symbol}
+                    className="w-8 h-8 object-contain"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                      e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                    }}
+                  />
+                  <div className="w-8 h-8 bg-muted rounded-full items-center justify-center text-xs font-semibold hidden">
+                    {asset.symbol}
+                  </div>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">From:</span>
-                  <span>{asset.chain}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">To:</span>
-                  <span>{destinationChains.find(c => c.value === destinationChain)?.label}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Network Fee:</span>
-                  <span>~$5.00</span>
-                </div>
-                <div className="border-t pt-2 flex justify-between font-semibold">
-                  <span>Total:</span>
-                  <span>{amount} {asset.symbol}</span>
+                <div className="flex-1">
+                  <div className="flex items-center space-x-2">
+                    <span className="font-semibold">{asset.symbol}</span>
+                    <Badge variant="secondary" className="text-xs">{asset.chain}</Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground">Balance: {asset.balance} {asset.symbol}</p>
                 </div>
               </div>
-            </div>
-          )}
 
-          {/* Action Buttons */}
-          <div className="flex space-x-3">
-            <Button variant="outline" onClick={onClose} className="flex-1">
-              {txHash ? 'Close' : 'Cancel'}
-            </Button>
-            {!txHash && (
-              <Button 
-                onClick={handleSend} 
-                disabled={isLoading || !amount || !recipientAddress || !destinationChain}
-                className="flex-1 flex items-center space-x-2"
-              >
-                {isLoading ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    <span>Sending...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>Send</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </>
+              {/* Recipient Address */}
+              <div className="space-y-2">
+                <Label htmlFor="recipient">Recipient Address</Label>
+                <Input
+                  id="recipient"
+                  placeholder="Enter wallet address"
+                  value={recipientAddress}
+                  onChange={(e) => setRecipientAddress(e.target.value)}
+                  className="font-mono"
+                />
+              </div>
+
+              {/* Amount */}
+              <div className="space-y-2">
+                <Label htmlFor="amount">Amount</Label>
+                <div className="space-y-2">
+                  <Input
+                    id="amount"
+                    type="number"
+                    placeholder="0.00"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    step="0.000001"
+                  />
+                  {amount && (
+                    <p className="text-sm text-muted-foreground">
+                      ≈ ${usdAmount.toFixed(2)} USD
+                    </p>
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setAmount(asset.balance.replace(',', ''))}
+                    className="w-full"
+                  >
+                    Max: {asset.balance} {asset.symbol}
+                  </Button>
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-start gap-5">
+                {/* Destination Chain */}
+                <div className="space-y-2">
+                  <Label htmlFor="destination">Destination Chain</Label>
+                  <Select value={destinationChain} onValueChange={(value) => {
+                    setDestinationChain(value)
+                    setDestinationToken('') // Reset destination token when chain changes
+                  }}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select destination chain" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {destinationChains.map((chain) => (
+                        <SelectItem key={chain.value} value={chain.value}>
+                          <div className="flex items-center space-x-2">
+                            <img
+                              src={chain.icon}
+                              alt={chain.label}
+                              className="w-4 h-4 object-contain"
+                              onError={(e) => { e.currentTarget.style.display = 'none' }}
+                            />
+                            <span>{chain.label}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Destination Token */}
+                {destinationChain && (
+                  <div className="space-y-2">
+                    <Label htmlFor="destinationToken">Destination Token</Label>
+                    <Select value={destinationToken} onValueChange={setDestinationToken}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select destination token" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {destinationTokens.map((token) => (
+                          <SelectItem key={token.value} value={token.value}>
+                            <div className="flex items-center space-x-2">
+                              <img
+                                src={token.logo}
+                                alt={token.label}
+                                className="w-4 h-4 object-contain"
+                                onError={(e) => { e.currentTarget.style.display = 'none' }}
+                              />
+                              <div className="flex flex-col">
+                                <span className="font-medium">{token.label}</span>
+                                <span className="text-xs text-muted-foreground">{token.name}</span>
+                              </div>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 )}
-              </Button>
-            )}
-          </div>
+              </div>
+
+              {/* Cross-chain Warning */}
+              {destinationChain && destinationChain !== asset.chain.toLowerCase() && (
+                <div className="flex items-start space-x-2 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                  <AlertCircle className="w-4 h-4 text-yellow-600 dark:text-yellow-400 mt-0.5" />
+                  <div className="text-sm">
+                    <p className="font-medium text-yellow-800 dark:text-yellow-200">
+                      Cross-chain Transfer
+                    </p>
+                    <p className="text-yellow-700 dark:text-yellow-300">
+                      This will transfer {asset.symbol} from {asset.chain} to {destinationChains.find(c => c.value === destinationChain)?.label} and receive {destinationToken}.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Transaction Summary */}
+              {amount && recipientAddress && destinationChain && destinationToken && (
+                <div className="space-y-3 p-4 bg-muted rounded-lg">
+                  <h4 className="font-semibold">Transaction Summary</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Amount:</span>
+                      <span>{amount} {asset.symbol}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">From:</span>
+                      <span>{asset.chain}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">To:</span>
+                      <span>{destinationChains.find(c => c.value === destinationChain)?.label}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Receive:</span>
+                      <span>{destinationToken}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Network Fee:</span>
+                      <span>~$5.00</span>
+                    </div>
+                    <div className="border-t pt-2 flex justify-between font-semibold">
+                      <span>Total:</span>
+                      <span>{amount} {asset.symbol}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex space-x-3">
+                <Button variant="outline" onClick={onClose} className="flex-1">
+                  {txHash ? 'Close' : 'Cancel'}
+                </Button>
+                {!txHash && (
+                  <Button
+                    onClick={handleSend}
+                    disabled={isLoading || !amount || !recipientAddress || !destinationChain || !destinationToken}
+                    className="flex-1 flex items-center space-x-2"
+                  >
+                    {isLoading ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        <span>Sending...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>Send</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
             </>
           )}
         </CardContent>

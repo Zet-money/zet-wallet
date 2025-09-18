@@ -162,24 +162,37 @@ export async function performCrossChainTransfer({
   // Call ZetProtocol contract
   const senderAddress = await signer.getAddress()
   
+  // Check if this is a native token (zero address)
+  const isNativeToken = sourceTokenAddress === '0x0000000000000000000000000000000000000000'
+  
+  // Prepare the deposit parameters
+  const depositParams: any = {
+    amount,
+    receiver: ZETPROTOCOL_ADDRESS, // Send to ZetProtocol contract
+    types,
+    values,
+    revertOptions: {
+      callOnRevert: false,
+      revertMessage: 'ZetProtocol: Cross-chain transfer failed',
+      revertAddress: senderAddress,
+      abortAddress: senderAddress,
+      onRevertGasLimit: '500000',
+    }
+  }
+  
+  // Only include token parameter for ERC-20 tokens, not native tokens
+  if (!isNativeToken) {
+    depositParams.token = sourceTokenAddress
+  }
+  
+  console.log('Deposit parameters:', {
+    isNativeToken,
+    sourceTokenAddress,
+    depositParams
+  })
+  
   try {
-    const tx = await evmDepositAndCall(
-      {
-        amount,
-        receiver: ZETPROTOCOL_ADDRESS, // Send to ZetProtocol contract
-        token: sourceTokenAddress,
-        types,
-        values,
-        revertOptions: {
-          callOnRevert: false,
-          revertMessage: 'ZetProtocol: Cross-chain transfer failed',
-          revertAddress: senderAddress,
-          abortAddress: senderAddress,
-          onRevertGasLimit: '500000',
-        }
-      },
-      { signer }
-    )
+    const tx = await evmDepositAndCall(depositParams, { signer })
     
     return tx
   } catch (error) {
