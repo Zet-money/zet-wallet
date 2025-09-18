@@ -316,23 +316,52 @@ export async function trackCrossChainTransaction(params: {
     let timeoutId: NodeJS.Timeout | undefined
 
     const pollCctx = async () => {
-      if (done) return
+      if (done) {
+        console.log('[ZETA][CCTX][POLL] Poll skipped - already done')
+        return
+      }
+      
+      console.log('[ZETA][CCTX][POLL] Starting poll cycle', { hash, apiUrl, done })
       
       try {
         // Use inboundHashToCctxData with origin chain tx hash
-        const cctxData = await fetchFromApi<{ CrossChainTxs: any[] }>(apiUrl, `/zeta-chain/crosschain/inboundHashToCctxData/${hash}`)
+        const endpoint = `/zeta-chain/crosschain/inboundHashToCctxData/${hash}`
+        console.log('[ZETA][CCTX][POLL] Fetching CCTX data', { endpoint, fullUrl: `${apiUrl}${endpoint}` })
+        
+        const cctxData = await fetchFromApi<{ CrossChainTxs: any[] }>(apiUrl, endpoint)
+        
+        console.log('[ZETA][CCTX][POLL] CCTX data received', {
+          hasCrossChainTxs: !!cctxData.CrossChainTxs,
+          cctxCount: cctxData.CrossChainTxs?.length || 0,
+          cctxDataKeys: Object.keys(cctxData || {}),
+          cctxData
+        })
         
         if (cctxData.CrossChainTxs && cctxData.CrossChainTxs.length > 0) {
           const cctx = cctxData.CrossChainTxs[0]
+          console.log('[ZETA][CCTX][POLL] Processing first CCTX', {
+            cctxKeys: Object.keys(cctx || {}),
+            cctxStatus: cctx.cctx_status,
+            inboundParams: cctx.inbound_params,
+            outboundParams: cctx.outbound_params
+          })
+          
           const progress = await parseCctxProgress(cctx, apiUrl)
           
-          console.log('[ZETA][CCTX] CCTX found', { 
+          console.log('[ZETA][CCTX][POLL] CCTX found and parsed', { 
             status: cctx.cctx_status?.status,
             confirmations: progress.confirmations,
-            outboundHash: progress.outboundHash
+            outboundHash: progress.outboundHash,
+            progressStatus: progress.status,
+            progressStatusText: progress.statusText
           })
           
           if (onUpdate) {
+            console.log('[ZETA][CCTX][POLL] Calling onUpdate callback', {
+              cctxsCount: cctxData.CrossChainTxs.length,
+              statusText: progress.statusText,
+              progressStatus: progress.status
+            })
             onUpdate({ 
               cctxs: cctxData.CrossChainTxs, 
               statusText: progress.statusText,
@@ -342,6 +371,7 @@ export async function trackCrossChainTransaction(params: {
           
           // Check if completed
           if (cctx.cctx_status?.status === 'OutboundMined') {
+            console.log('[ZETA][CCTX][POLL] Status is OutboundMined - completing', { status: cctx.cctx_status.status })
             done = true
             if (intervalId) clearInterval(intervalId)
             if (timeoutId) clearTimeout(timeoutId)
@@ -351,15 +381,29 @@ export async function trackCrossChainTransaction(params: {
           
           // Check if failed
           if (cctx.cctx_status?.status === 'Aborted' || cctx.cctx_status?.status === 'Reverted') {
+            console.log('[ZETA][CCTX][POLL] Status is failed - completing', { 
+              status: cctx.cctx_status.status,
+              errorMessage: cctx.cctx_status.error_message
+            })
             done = true
             if (intervalId) clearInterval(intervalId)
             if (timeoutId) clearTimeout(timeoutId)
             outerResolve({ status: 'failed', cctxs: cctxData.CrossChainTxs, progress })
             return
           }
+          
+          console.log('[ZETA][CCTX][POLL] Status is not final - continuing to poll', { 
+            status: cctx.cctx_status?.status,
+            progressStatus: progress.status
+          })
         } else {
-          console.log('[ZETA][CCTX] No CCTX found yet, continuing to poll...')
+          console.log('[ZETA][CCTX][POLL] No CCTX found yet, continuing to poll...', {
+            cctxData,
+            hasCrossChainTxs: !!cctxData.CrossChainTxs,
+            cctxCount: cctxData.CrossChainTxs?.length || 0
+          })
           if (onUpdate) {
+            console.log('[ZETA][CCTX][POLL] Calling onUpdate with pending status')
             onUpdate({ 
               cctxs: [], 
               statusText: 'Waiting for cross-chain transaction to be detected...',
@@ -368,8 +412,14 @@ export async function trackCrossChainTransaction(params: {
           }
         }
       } catch (error) {
-        console.error('[ZETA][CCTX] Poll error', error)
+        console.error('[ZETA][CCTX][POLL] Poll error occurred', { 
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+          hash,
+          apiUrl
+        })
         if (onUpdate) {
+          console.log('[ZETA][CCTX][POLL] Calling onUpdate with error status')
           onUpdate({ 
             cctxs: [], 
             statusText: 'Error polling cross-chain status...',
@@ -380,17 +430,29 @@ export async function trackCrossChainTransaction(params: {
     }
 
     // Start polling immediately
+    console.log('[ZETA][CCTX] Starting immediate poll')
     pollCctx()
 
     // Poll every 3 seconds
-    intervalId = setInterval(pollCctx, 3000)
+    console.log('[ZETA][CCTX] Setting up interval poll every 3 seconds')
+    intervalId = setInterval(() => {
+      console.log('[ZETA][CCTX] Interval poll triggered', { done, intervalId })
+      pollCctx()
+    }, 3000)
 
     // Absolute timeout
+    console.log('[ZETA][CCTX] Setting up timeout', { timeoutSeconds })
     timeoutId = setTimeout(() => {
-      if (done) return
-      console.warn('[ZETA][CCTX] Timeout reached')
+      if (done) {
+        console.log('[ZETA][CCTX] Timeout reached but already done')
+        return
+      }
+      console.warn('[ZETA][CCTX] Timeout reached - resolving with timeout status')
       done = true
-      if (intervalId) clearInterval(intervalId)
+      if (intervalId) {
+        console.log('[ZETA][CCTX] Clearing interval on timeout')
+        clearInterval(intervalId)
+      }
       outerResolve({ status: 'timeout', cctxs: [] })
     }, timeoutSeconds * 1000)
   })
@@ -398,41 +460,80 @@ export async function trackCrossChainTransaction(params: {
 
 // Parse CCTX response into progress information
 async function parseCctxProgress(cctx: any, apiUrl: string): Promise<CctxProgress> {
+  console.log('[ZETA][CCTX][PARSE] Starting parseCctxProgress', { 
+    cctxKeys: Object.keys(cctx || {}),
+    apiUrl,
+    hasCctxStatus: !!cctx.cctx_status,
+    hasInboundParams: !!cctx.inbound_params,
+    hasOutboundParams: !!cctx.outbound_params
+  })
+  
   const status = cctx.cctx_status?.status || 'pending'
   const inboundParams = cctx.inbound_params || {}
   const outboundParams = cctx.outbound_params?.[0] || {}
   
+  console.log('[ZETA][CCTX][PARSE] Extracted basic data', {
+    status,
+    inboundParamsKeys: Object.keys(inboundParams),
+    outboundParamsKeys: Object.keys(outboundParams),
+    inboundParams,
+    outboundParams
+  })
+  
   // Get current finalized height for confirmations calculation
   let finalizedHeight = 0
   try {
+    console.log('[ZETA][CCTX][PARSE] Fetching TSS data for finalized height', { apiUrl })
     const tssData = await fetchFromApi<{ TSS: { finalizedZetaHeight: string } }>(apiUrl, '/zeta-chain/observer/TSS')
     finalizedHeight = Number(tssData.TSS.finalizedZetaHeight || 0)
+    console.log('[ZETA][CCTX][PARSE] TSS data fetched', { tssData, finalizedHeight })
   } catch (error) {
-    console.error('[ZETA][CCTX] Failed to get finalized height', error)
+    console.error('[ZETA][CCTX][PARSE] Failed to get finalized height', { error, apiUrl })
   }
   
   const inboundHeight = Number(inboundParams.finalized_zeta_height || 0)
   const confirmations = Math.max(0, finalizedHeight - inboundHeight)
   
+  console.log('[ZETA][CCTX][PARSE] Height calculations', {
+    finalizedHeight,
+    inboundHeight,
+    confirmations,
+    inboundFinalizedZetaHeight: inboundParams.finalized_zeta_height
+  })
+  
   // Determine status and status text
   let progressStatus: CctxProgress['status'] = 'pending'
   let statusText = 'Pending'
   
+  console.log('[ZETA][CCTX][PARSE] Determining status', {
+    status,
+    outboundHash: outboundParams.hash,
+    txFinalizationStatus: inboundParams.tx_finalization_status,
+    errorMessage: cctx.cctx_status?.error_message,
+    statusMessage: cctx.cctx_status?.status_message
+  })
+  
   if (status === 'OutboundMined') {
     progressStatus = 'completed'
     statusText = 'Cross-chain transfer completed'
+    console.log('[ZETA][CCTX][PARSE] Status: OutboundMined -> completed')
   } else if (status === 'Aborted' || status === 'Reverted') {
     progressStatus = 'failed'
     statusText = `Transfer ${status.toLowerCase()}: ${cctx.cctx_status?.error_message || cctx.cctx_status?.status_message || 'Unknown error'}`
+    console.log('[ZETA][CCTX][PARSE] Status: Failed', { status, statusText })
   } else if (outboundParams.hash) {
     progressStatus = 'outbound_broadcasted'
     statusText = 'Outbound transaction broadcasted'
+    console.log('[ZETA][CCTX][PARSE] Status: Outbound broadcasted', { outboundHash: outboundParams.hash })
   } else if (inboundParams.tx_finalization_status === 'Executed') {
     progressStatus = 'inbound_confirmed'
     statusText = 'Inbound transaction confirmed'
+    console.log('[ZETA][CCTX][PARSE] Status: Inbound confirmed')
+  } else {
+    console.log('[ZETA][CCTX][PARSE] Status: Pending (default)')
   }
   
-  return {
+  const result = {
     status: progressStatus,
     confirmations,
     statusText,
@@ -448,13 +549,42 @@ async function parseCctxProgress(cctx: any, apiUrl: string): Promise<CctxProgres
     gasLimit: outboundParams.call_options?.gas_limit,
     errorMessage: cctx.cctx_status?.error_message || cctx.cctx_status?.error_message_revert || cctx.cctx_status?.error_message_abort
   }
+  
+  console.log('[ZETA][CCTX][PARSE] Final parsed result', result)
+  return result
 }
 
 // Custom lightweight tracker using Zeta RPC finalized height as confirmations
 async function fetchFromApi<T>(api: string, endpoint: string): Promise<T> {
-  const res = await fetch(`${api}${endpoint}`, { cache: 'no-store' })
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
-  return (await res.json()) as T
+  const fullUrl = `${api}${endpoint}`
+  console.log('[ZETA][CCTX][FETCH] Making API request', { api, endpoint, fullUrl })
+  
+  try {
+    const res = await fetch(fullUrl, { cache: 'no-store' })
+    console.log('[ZETA][CCTX][FETCH] Response received', { 
+      status: res.status, 
+      statusText: res.statusText, 
+      ok: res.ok,
+      headers: Object.fromEntries(res.headers.entries())
+    })
+    
+    if (!res.ok) {
+      console.error('[ZETA][CCTX][FETCH] HTTP error', { status: res.status, statusText: res.statusText, fullUrl })
+      throw new Error(`HTTP ${res.status}`)
+    }
+    
+    const data = await res.json()
+    console.log('[ZETA][CCTX][FETCH] JSON parsed successfully', { 
+      dataKeys: Object.keys(data || {}),
+      dataType: typeof data,
+      dataLength: Array.isArray(data) ? data.length : 'not array'
+    })
+    
+    return data as T
+  } catch (error) {
+    console.error('[ZETA][CCTX][FETCH] Fetch error', { error, fullUrl, api, endpoint })
+    throw error
+  }
 }
 
 
@@ -465,45 +595,128 @@ export async function trackCrossChainConfirmations(params: {
   timeoutSeconds?: number
   onProgress?: (p: { confirmations: number; status?: string; progress?: CctxProgress }) => void
 }): Promise<{ status: 'completed' | 'failed' | 'timeout'; confirmations: number; cctx?: any; progress?: CctxProgress }> {
-  console.log({ params })
+  console.log('[ZETA][CCTX][CONF] Starting trackCrossChainConfirmations', { params })
   const { hash, network, minConfirmations = 20, timeoutSeconds = 300, onProgress } = params
   const apiUrl = network === 'mainnet' 
     ? 'https://zetachain.blockpi.network/lcd/v1/public' 
     : 'https://zetachain-athens.blockpi.network/lcd/v1/public'
   const start = Date.now()
-  console.log('[ZETA][CCTX][CONF] Start', { hash, minConfirmations, timeoutSeconds })
+  console.log('[ZETA][CCTX][CONF] Configuration', { 
+    hash, 
+    network, 
+    minConfirmations, 
+    timeoutSeconds, 
+    apiUrl,
+    startTime: new Date(start).toISOString()
+  })
 
+  let pollCount = 0
   while (Date.now() - start < timeoutSeconds * 1000) {
+    pollCount++
+    const elapsed = Date.now() - start
+    console.log('[ZETA][CCTX][CONF] Poll cycle start', { 
+      pollCount, 
+      elapsed, 
+      remaining: timeoutSeconds * 1000 - elapsed,
+      hash 
+    })
+    
     try {
       // Use inboundHashToCctxData instead of direct CCTX lookup
-      const cctxData = await fetchFromApi<{ CrossChainTxs: any[] }>(apiUrl, `/zeta-chain/crosschain/inboundHashToCctxData/${hash}`)
+      const endpoint = `/zeta-chain/crosschain/inboundHashToCctxData/${hash}`
+      console.log('[ZETA][CCTX][CONF] Fetching CCTX data', { endpoint, fullUrl: `${apiUrl}${endpoint}` })
+      
+      const cctxData = await fetchFromApi<{ CrossChainTxs: any[] }>(apiUrl, endpoint)
+      
+      console.log('[ZETA][CCTX][CONF] CCTX data received', {
+        hasCrossChainTxs: !!cctxData.CrossChainTxs,
+        cctxCount: cctxData.CrossChainTxs?.length || 0,
+        cctxDataKeys: Object.keys(cctxData || {}),
+        pollCount
+      })
       
       if (cctxData.CrossChainTxs && cctxData.CrossChainTxs.length > 0) {
         const cctx = cctxData.CrossChainTxs[0]
-        const progress = await parseCctxProgress(cctx, apiUrl)
-        
-        if (onProgress) onProgress({ 
-          confirmations: progress.confirmations, 
-          status: cctx.cctx_status?.status,
-          progress 
+        console.log('[ZETA][CCTX][CONF] Processing CCTX', {
+          cctxKeys: Object.keys(cctx || {}),
+          cctxStatus: cctx.cctx_status,
+          inboundParams: cctx.inbound_params,
+          outboundParams: cctx.outbound_params,
+          pollCount
         })
         
-        console.log('[ZETA][CCTX][CONF] tick', { 
+        const progress = await parseCctxProgress(cctx, apiUrl)
+        
+        console.log('[ZETA][CCTX][CONF] Progress parsed', {
+          progressStatus: progress.status,
+          confirmations: progress.confirmations,
+          statusText: progress.statusText,
+          cctxStatus: cctx.cctx_status?.status,
+          pollCount
+        })
+        
+        if (onProgress) {
+          console.log('[ZETA][CCTX][CONF] Calling onProgress callback', {
+            confirmations: progress.confirmations,
+            status: cctx.cctx_status?.status,
+            progressStatus: progress.status,
+            pollCount
+          })
+          onProgress({ 
+            confirmations: progress.confirmations, 
+            status: cctx.cctx_status?.status,
+            progress 
+          })
+        }
+        
+        console.log('[ZETA][CCTX][CONF] Checking completion conditions', { 
           finalized: progress.finalizedHeight, 
           inboundHeight: progress.inboundHeight, 
           confirmations: progress.confirmations, 
-          status: cctx.cctx_status?.status 
+          status: cctx.cctx_status?.status,
+          minConfirmations,
+          isAborted: cctx.cctx_status?.status === 'Aborted',
+          isReverted: cctx.cctx_status?.status === 'Reverted',
+          isOutboundMined: cctx.cctx_status?.status === 'OutboundMined',
+          hasMinConfirmations: progress.confirmations >= minConfirmations,
+          pollCount
         })
 
         if (cctx.cctx_status?.status === 'Aborted' || cctx.cctx_status?.status === 'Reverted') {
+          console.log('[ZETA][CCTX][CONF] Status is failed - returning failed', {
+            status: cctx.cctx_status.status,
+            confirmations: progress.confirmations,
+            pollCount
+          })
           return { status: 'failed', confirmations: progress.confirmations, cctx, progress }
         }
         if (cctx.cctx_status?.status === 'OutboundMined' || progress.confirmations >= minConfirmations) {
+          console.log('[ZETA][CCTX][CONF] Status is completed - returning completed', {
+            status: cctx.cctx_status?.status,
+            confirmations: progress.confirmations,
+            minConfirmations,
+            isOutboundMined: cctx.cctx_status?.status === 'OutboundMined',
+            hasMinConfirmations: progress.confirmations >= minConfirmations,
+            pollCount
+          })
           return { status: 'completed', confirmations: progress.confirmations, cctx, progress }
         }
+        
+        console.log('[ZETA][CCTX][CONF] Not completed yet - continuing to poll', {
+          status: cctx.cctx_status?.status,
+          confirmations: progress.confirmations,
+          minConfirmations,
+          pollCount
+        })
       } else {
-        console.log('[ZETA][CCTX][CONF] No CCTX found yet')
+        console.log('[ZETA][CCTX][CONF] No CCTX found yet', {
+          cctxData,
+          hasCrossChainTxs: !!cctxData.CrossChainTxs,
+          cctxCount: cctxData.CrossChainTxs?.length || 0,
+          pollCount
+        })
         if (onProgress) {
+          console.log('[ZETA][CCTX][CONF] Calling onProgress with pending status', { pollCount })
           onProgress({ 
             confirmations: 0, 
             status: 'pending',
@@ -512,12 +725,25 @@ export async function trackCrossChainConfirmations(params: {
         }
       }
     } catch (error) {
-      console.error('[ZETA][CCTX][CONF] Poll error', error)
+      console.error('[ZETA][CCTX][CONF] Poll error occurred', { 
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        hash,
+        apiUrl,
+        pollCount,
+        elapsed: Date.now() - start
+      })
     }
     
+    console.log('[ZETA][CCTX][CONF] Waiting 3 seconds before next poll', { pollCount })
     await new Promise(r => setTimeout(r, 3000))
   }
-  console.warn('[ZETA][CCTX][CONF] timeout')
+  
+  console.warn('[ZETA][CCTX][CONF] Timeout reached', { 
+    timeoutSeconds, 
+    elapsed: Date.now() - start,
+    pollCount
+  })
   return { status: 'timeout', confirmations: 0 }
 }
 

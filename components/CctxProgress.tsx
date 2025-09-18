@@ -50,32 +50,63 @@ export default function CctxProgressComponent({
   targetChain, 
   onViewExplorer 
 }: CctxProgressProps) {
+  console.log('[UI][CCTX][PROGRESS] CctxProgressComponent rendered', {
+    progress,
+    originChain,
+    targetChain,
+    hasOnViewExplorer: !!onViewExplorer
+  })
+  
   const getProgressPercentage = () => {
-    switch (progress.status) {
-      case 'pending': return 10
-      case 'inbound_confirmed': return 40
-      case 'outbound_broadcasted': return 80
-      case 'completed': return 100
-      case 'failed': return 0
-      case 'error': return 0
-      default: return 0
-    }
+    const percentage = (() => {
+      switch (progress.status) {
+        case 'pending': return 10
+        case 'inbound_confirmed': return 40
+        case 'outbound_broadcasted': return 80
+        case 'completed': return 100
+        case 'failed': return 0
+        case 'error': return 0
+        default: return 0
+      }
+    })()
+    
+    console.log('[UI][CCTX][PROGRESS] Progress percentage calculated', {
+      status: progress.status,
+      percentage
+    })
+    
+    return percentage
   }
 
   const getTargetChainName = () => {
-    return chainNames[progress.targetChainId || ''] || targetChain
+    const chainName = chainNames[progress.targetChainId || ''] || targetChain
+    console.log('[UI][CCTX][PROGRESS] Target chain name resolved', {
+      targetChainId: progress.targetChainId,
+      targetChain,
+      chainName
+    })
+    return chainName
   }
 
   const formatAmount = (amount: string | undefined) => {
-    if (!amount) return '0'
+    if (!amount) {
+      console.log('[UI][CCTX][PROGRESS] Amount is undefined, returning 0')
+      return '0'
+    }
     const num = Number(amount)
-    if (num === 0) return '0'
-    return num.toLocaleString()
+    const formatted = num === 0 ? '0' : num.toLocaleString()
+    console.log('[UI][CCTX][PROGRESS] Amount formatted', { amount, num, formatted })
+    return formatted
   }
 
   const formatGas = (gas: string | undefined) => {
-    if (!gas || gas === '0') return 'N/A'
-    return Number(gas).toLocaleString()
+    if (!gas || gas === '0') {
+      console.log('[UI][CCTX][PROGRESS] Gas is undefined or 0, returning N/A', { gas })
+      return 'N/A'
+    }
+    const formatted = Number(gas).toLocaleString()
+    console.log('[UI][CCTX][PROGRESS] Gas formatted', { gas, formatted })
+    return formatted
   }
 
   return (

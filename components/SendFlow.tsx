@@ -131,35 +131,60 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
   }, [destinationChain, network])
 
   const handleSend = async () => {
+    console.log('[UI][SEND] handleSend called', {
+      recipientAddress,
+      amount,
+      destinationChain,
+      destinationToken,
+      assetBalance: asset.balance,
+      asset
+    })
+    
     if (!recipientAddress.trim()) {
+      console.log('[UI][SEND] Validation failed - no recipient address')
       toast.error('Please enter a recipient address');
       return;
     }
 
     if (!amount || parseFloat(amount) <= 0) {
+      console.log('[UI][SEND] Validation failed - invalid amount', { amount, parsed: parseFloat(amount) })
       toast.error('Please enter a valid amount');
       return;
     }
 
     if (parseFloat(amount) > parseFloat(asset.balance.replace(',', ''))) {
+      console.log('[UI][SEND] Validation failed - insufficient balance', { 
+        amount: parseFloat(amount), 
+        balance: parseFloat(asset.balance.replace(',', '')) 
+      })
       toast.error('Insufficient balance');
       return;
     }
 
     if (!destinationChain) {
+      console.log('[UI][SEND] Validation failed - no destination chain')
       toast.error('Please select a destination chain');
       return;
     }
 
     if (!destinationToken) {
+      console.log('[UI][SEND] Validation failed - no destination token')
       toast.error('Please select a destination token');
       return;
     }
 
+    console.log('[UI][SEND] All validations passed, starting transfer process')
     setIsLoading(true);
     try {
       // Determine transfer type and target token
       const originChain = (asset.chain || 'ethereum').toLowerCase() as SupportedEvm;
+      
+      console.log('[UI][SEND] Chain configuration', {
+        originChain,
+        assetChain: asset.chain,
+        destinationChain,
+        destinationToken
+      })
       const isSolanaOrigin = (asset.chain || '').toLowerCase() === 'solana'
       const targetChain = destinationChain as SupportedEvm;
 
@@ -276,37 +301,85 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
 
           // Track cross-chain transaction for both EVM and Solana origins
           try {
-            console.log('[UI][CCTX] Starting trackCrossChainTransaction', { hash: tx.hash, network })
+            console.log('[UI][CCTX] Starting trackCrossChainTransaction', { 
+              hash: tx.hash, 
+              network, 
+              destinationChain,
+              originChain: (asset.chain || 'ethereum').toLowerCase()
+            })
+            
             const cctxResult = await trackCrossChainTransaction({
               hash: tx.hash,
               network,
               timeoutSeconds: 300,
               onUpdate: ({ cctxs, statusText, progress }) => {
+                console.log('[UI][CCTX] onUpdate callback triggered', {
+                  hasProgress: !!progress,
+                  hasCctxs: !!cctxs,
+                  statusText,
+                  progressStatus: progress?.status,
+                  progressConfirmations: progress?.confirmations,
+                  cctxsCount: cctxs?.length || 0
+                })
+                
                 if (progress) {
+                  console.log('[UI][CCTX] Setting progress state', {
+                    status: progress.status,
+                    confirmations: progress.confirmations,
+                    statusText: progress.statusText,
+                    outboundHash: progress.outboundHash
+                  })
                   setCctxProgress(progress)
                   setTxPhase(progress.status === 'completed' ? 'completed' : progress.status === 'failed' ? 'failed' : 'pending')
                   setConfirmations(progress.confirmations)
                 }
-                if (cctxs) setCctxs(cctxs)
+                if (cctxs) {
+                  console.log('[UI][CCTX] Setting CCTXs state', { cctxsCount: cctxs.length, cctxs })
+                  setCctxs(cctxs)
+                }
                 if (statusText) {
-                  console.log('[UI][CCTX] Status update:', statusText)
+                  console.log('[UI][CCTX] Status update received:', statusText)
                 }
               }
             })
             
+            console.log('[UI][CCTX] trackCrossChainTransaction completed', {
+              status: cctxResult.status,
+              hasProgress: !!cctxResult.progress,
+              hasCctxs: !!cctxResult.cctxs,
+              cctxsCount: cctxResult.cctxs?.length || 0,
+              progressStatus: cctxResult.progress?.status,
+              progressConfirmations: cctxResult.progress?.confirmations
+            })
+            
             setTxPhase(cctxResult.status as any);
-            if (cctxResult.progress) setCctxProgress(cctxResult.progress)
-            if (cctxResult.cctxs) setCctxs(cctxResult.cctxs);
+            if (cctxResult.progress) {
+              console.log('[UI][CCTX] Setting final progress state', cctxResult.progress)
+              setCctxProgress(cctxResult.progress)
+            }
+            if (cctxResult.cctxs) {
+              console.log('[UI][CCTX] Setting final CCTXs state', { cctxsCount: cctxResult.cctxs.length })
+              setCctxs(cctxResult.cctxs);
+            }
             
             if (cctxResult.status === 'completed') {
+              console.log('[UI][CCTX] Showing success toast')
               toast.success('Cross-chain transfer completed!', { description: `Successfully transferred to ${destinationChain}`, duration: 10000 });
             } else if (cctxResult.status === 'failed') {
+              console.log('[UI][CCTX] Showing failure toast')
               toast.error('Cross-chain transfer failed', { description: 'Transfer failed during cross-chain processing', duration: 10000 });
             } else if (cctxResult.status === 'timeout') {
+              console.log('[UI][CCTX] Showing timeout toast')
               toast.warning('Cross-chain transfer timeout', { description: 'Transfer is taking longer than expected. Please check the blockchain explorer.', duration: 10000 });
             }
           } catch (cctxError) {
-            console.error('Error tracking cross-chain transaction:', cctxError);
+            console.error('[UI][CCTX] Error tracking cross-chain transaction:', {
+              error: cctxError instanceof Error ? cctxError.message : String(cctxError),
+              stack: cctxError instanceof Error ? cctxError.stack : undefined,
+              hash: tx.hash,
+              network,
+              destinationChain
+            });
             setTxPhase('pending');
           }
         } else if (txPhase === 'failed') {
@@ -434,9 +507,15 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
                     originChain={(asset.chain || 'ethereum').toLowerCase()}
                     targetChain={destinationChain}
                     onViewExplorer={(hash, chain) => {
+                      console.log('[UI][CCTX][EXPLORER] Explorer link clicked', { hash, chain })
                       const explorerUrl = explorerFor(chain)
+                      console.log('[UI][CCTX][EXPLORER] Explorer URL resolved', { chain, explorerUrl })
                       if (explorerUrl) {
-                        window.open(`${explorerUrl}${hash}`, '_blank')
+                        const fullUrl = `${explorerUrl}${hash}`
+                        console.log('[UI][CCTX][EXPLORER] Opening explorer', { fullUrl })
+                        window.open(fullUrl, '_blank')
+                      } else {
+                        console.warn('[UI][CCTX][EXPLORER] No explorer URL found for chain', { chain })
                       }
                     }}
                   />
