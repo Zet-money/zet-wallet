@@ -221,6 +221,7 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
 
       // First wait for origin chain confirmation with live polling updates
       try {
+        let originConfirmed = false
         if (isSolanaOrigin) {
           const start = Date.now()
           const timeoutMs = 120000
@@ -230,6 +231,7 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
             if (s.status === 'finalized') {
               setTxPhase('confirmed')
               setConfirmations(1)
+              originConfirmed = true
               break
             } else if (s.status === 'failed') {
               setTxPhase('failed')
@@ -252,6 +254,7 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
             if (status.gasUsed) setGasUsed(status.gasUsed)
             if (status.status === 'confirmed') {
               setTxPhase('confirmed')
+              originConfirmed = true
               break
             }
             if (status.status === 'failed') {
@@ -263,7 +266,7 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
           }
         }
 
-        if (txPhase === 'confirmed') {
+        if (originConfirmed) {
           toast.success('Transaction confirmed on origin chain!', {
             description: `Now tracking cross-chain completion...`,
             duration: 5000
@@ -272,6 +275,7 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
           if (!isSolanaOrigin) {
             // Track only for EVM origins for now
             try {
+              console.log('[UI][CCTX] Starting trackCrossChainConfirmations', { hash: tx.hash, network })
               const cctxResult = await trackCrossChainConfirmations({
                 hash: tx.hash,
                 network,

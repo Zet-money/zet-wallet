@@ -429,6 +429,7 @@ export async function trackCrossChainConfirmations(params: {
   timeoutSeconds?: number
   onProgress?: (p: { confirmations: number; status?: string }) => void
 }): Promise<{ status: 'completed' | 'failed' | 'timeout'; confirmations: number; cctx?: any }> {
+  console.log({ params })
   const { hash, network, minConfirmations = 20, timeoutSeconds = 300, onProgress } = params
   const apiUrl = network === 'mainnet' ? 'https://api.zetachain.network' : 'https://api.athens.zetachain.network'
   const start = Date.now()
