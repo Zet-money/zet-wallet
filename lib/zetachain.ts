@@ -63,13 +63,6 @@ export async function smartCrossChainTransfer(params: ZetProtocolTransferParams)
 
     const tokenMintAddress = sourceTokenAddress && sourceTokenAddress.startsWith('0x') ? undefined : sourceTokenAddress
 
-    // Create an Anchor-like wallet shim to satisfy toolkit expectations
-    const anchorLikeWallet = {
-      publicKey: signer.publicKey,
-      signTransaction: async (tx: any) => { tx.partialSign(signer); return tx },
-      signAllTransactions: async (txs: any[]) => { txs.forEach((t) => t.partialSign(signer)); return txs },
-    } as any
-
     const signature = await solanaDepositAndCall({
       amount,
       receiver: ZETPROTOCOL_ADDRESS,
@@ -85,7 +78,7 @@ export async function smartCrossChainTransfer(params: ZetProtocolTransferParams)
       }
     }, ({
       chainId: network === 'mainnet' ? 'Mainnet' : 'Testnet',
-      signer: anchorLikeWallet,
+      signer,
     } as any))
     return { hash: signature }
   }
