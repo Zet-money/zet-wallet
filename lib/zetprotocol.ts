@@ -161,25 +161,35 @@ export async function performCrossChainTransfer({
   
   // Call ZetProtocol contract
   const senderAddress = await signer.getAddress()
-  const tx = await evmDepositAndCall(
-    {
-      amount,
-      receiver: ZETPROTOCOL_ADDRESS, // Send to ZetProtocol contract
-      token: sourceTokenAddress,
-      types,
-      values,
-      revertOptions: {
-        callOnRevert: false,
-        revertMessage: 'ZetProtocol: Cross-chain transfer failed',
-        revertAddress: senderAddress,
-        abortAddress: senderAddress,
-        onRevertGasLimit: '500000',
-      }
-    },
-    { signer }
-  )
   
-  return tx
+  try {
+    const tx = await evmDepositAndCall(
+      {
+        amount,
+        receiver: ZETPROTOCOL_ADDRESS, // Send to ZetProtocol contract
+        token: sourceTokenAddress,
+        types,
+        values,
+        revertOptions: {
+          callOnRevert: false,
+          revertMessage: 'ZetProtocol: Cross-chain transfer failed',
+          revertAddress: senderAddress,
+          abortAddress: senderAddress,
+          onRevertGasLimit: '500000',
+        }
+      },
+      { signer }
+    )
+    
+    return tx
+  } catch (error) {
+    console.error('Error in evmDepositAndCall:', error)
+    // If the error is related to token contract calls, provide more specific error message
+    if (error instanceof Error && error.message.includes('missing revert data')) {
+      throw new Error(`Token contract call failed. This might be due to an invalid token address or network issues. Token: ${sourceTokenAddress}`)
+    }
+    throw error
+  }
 }
 
 /**

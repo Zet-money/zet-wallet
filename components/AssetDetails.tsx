@@ -82,7 +82,7 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
           <CardContent className="p-6">
             <div className="text-center space-y-4">
               <div>
-                <p className="text-2xl font-bold">{asset.balance} {asset.symbol}</p>
+                <p className="text-2xl font-bold">{parseFloat(asset.balance).toPrecision(6)} {asset.symbol}</p>
                 <p className="text-lg text-muted-foreground">${asset.usdValue}</p>
               </div>
               
@@ -141,7 +141,7 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
             </div>
             <div className="flex justify-between items-center">
               <span className="text-muted-foreground">Balance</span>
-              <span className="font-medium">{asset.balance} {asset.symbol}</span>
+              <span className="font-medium">{parseFloat(asset.balance).toPrecision(6)} {asset.symbol}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-muted-foreground">USD Value</span>
