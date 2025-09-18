@@ -54,4 +54,44 @@ export async function fetchSplBalance(owner: string, mint: string, network: Sola
   return amount / Math.pow(10, decimals)
 }
 
+export async function getSolTxStatus(params: {
+  signature: string
+  network: SolanaNetwork
+}): Promise<{ status: 'pending' | 'confirmed' | 'finalized' | 'failed' } > {
+  const { signature, network } = params
+  const conn = getSolanaConnection(network)
+  try {
+    const status = await conn.getSignatureStatus(signature, { searchTransactionHistory: true })
+    const conf = status?.value
+    if (!conf) return { status: 'pending' }
+    if (conf.err) return { status: 'failed' }
+    // confirmationStatus can be 'processed' | 'confirmed' | 'finalized'
+    if (conf.confirmationStatus === 'finalized') return { status: 'finalized' }
+    if (conf.confirmationStatus === 'confirmed') return { status: 'confirmed' }
+    return { status: 'pending' }
+  } catch {
+    return { status: 'pending' }
+  }
+}
+
+export async function waitForSolTxConfirmation(params: {
+  signature: string
+  network: SolanaNetwork
+  timeoutMs?: number
+}): Promise<{ status: 'finalized' | 'failed' | 'timeout' }> {
+  const { signature, network, timeoutMs = 300000 } = params
+  const conn = getSolanaConnection(network)
+  const start = Date.now()
+  while (Date.now() - start < timeoutMs) {
+    const res = await conn.getSignatureStatus(signature, { searchTransactionHistory: true })
+    const val = res.value
+    if (val) {
+      if (val.err) return { status: 'failed' }
+      if (val.confirmationStatus === 'finalized') return { status: 'finalized' }
+    }
+    await new Promise(r => setTimeout(r, 1500))
+  }
+  return { status: 'timeout' }
+}
+
 

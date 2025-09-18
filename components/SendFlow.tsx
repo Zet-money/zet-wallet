@@ -14,6 +14,7 @@ import { useNetwork } from '@/contexts/NetworkContext';
 import type { SupportedEvm } from '@/lib/providers';
 import { EVM_TOKENS, getTokensFor, type Network as TokenNetwork, type TokenInfo } from '@/lib/tokens';
 import { smartCrossChainTransfer, getTxStatus, waitForTxConfirmation, trackCrossChainTransaction } from '@/lib/zetachain';
+import { waitForSolTxConfirmation } from '@/lib/solana';
 import { getZrcAddressFor } from '@/lib/zrc';
 
 interface SendFlowProps {
@@ -203,18 +204,29 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
 
       // First wait for origin chain confirmation
       try {
-        const originResult = await waitForTxConfirmation({
-          originChain,
-          hash: tx.hash,
-          network,
-          requiredConfirmations: 1,
-          timeoutMs: 120000 // 2 minutes for origin chain
-        });
+        const originResult = isSolanaOrigin
+          ? await (async () => {
+              const sol = await waitForSolTxConfirmation({ signature: tx.hash, network })
+              if (sol.status === 'finalized') {
+                return { status: 'confirmed', confirmations: 1 }
+              }
+              if (sol.status === 'failed') {
+                return { status: 'failed', confirmations: 0 }
+              }
+              return { status: 'timeout', confirmations: 0 }
+            })()
+          : await waitForTxConfirmation({
+              originChain,
+              hash: tx.hash,
+              network,
+              requiredConfirmations: 1,
+              timeoutMs: 120000 // 2 minutes for origin chain
+            });
 
-        setTxPhase(originResult.status);
+        setTxPhase(originResult.status as any);
         setConfirmations(originResult.confirmations);
-        setGasUsed(originResult.gasUsed);
-        setBlockNumber(originResult.blockNumber);
+        if ('gasUsed' in originResult) setGasUsed((originResult as any).gasUsed);
+        if ('blockNumber' in originResult) setBlockNumber((originResult as any).blockNumber);
 
         if (originResult.status === 'confirmed') {
           toast.success('Transaction confirmed on origin chain!', {
@@ -259,7 +271,7 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
           }
         } else if (originResult.status === 'failed') {
           toast.error('Transaction failed on origin chain', {
-            description: `Transaction failed in block ${originResult.blockNumber}`,
+            description: `Transaction failed on origin chain`,
             duration: 10000
           });
         } else if (originResult.status === 'timeout') {
