@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { WalletProvider, useWallet } from '@/contexts/WalletContext';
 import SplashScreen from '@/components/SplashScreen';
 import WalletSetup from '@/components/WalletSetup';
@@ -9,15 +10,20 @@ import PwaInstallBanner from '@/components/PwaInstallBanner';
 
 function AppContent() {
   const { isWalletInitialized, isLoading } = useWallet();
-  const [showSplash, setShowSplash] = useState(true);
+  const searchParams = useSearchParams();
+  const initParam = searchParams.get('init');
+  const [showSplash, setShowSplash] = useState(() => initParam === 'false' ? false : true);
 
   useEffect(() => {
+    if (initParam === 'false') {
+      setShowSplash(false);
+      return;
+    }
     const timer = setTimeout(() => {
       setShowSplash(false);
     }, 2000);
-
     return () => clearTimeout(timer);
-  }, []);
+  }, [initParam]);
 
   // Show splash screen first
   if (showSplash) {
