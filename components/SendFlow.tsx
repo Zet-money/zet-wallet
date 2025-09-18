@@ -13,7 +13,8 @@ import { useNetwork } from '@/contexts/NetworkContext';
 // Call server API; avoid importing server-only toolkit client-side
 import type { SupportedEvm } from '@/lib/providers';
 import { EVM_TOKENS, getTokensFor, type Network as TokenNetwork, type TokenInfo } from '@/lib/tokens';
-import { smartCrossChainTransfer, getTxStatus, waitForTxConfirmation, trackCrossChainTransaction, trackCrossChainConfirmations } from '@/lib/zetachain';
+import { smartCrossChainTransfer, getTxStatus, waitForTxConfirmation, trackCrossChainTransaction, trackCrossChainConfirmations, type CctxProgress } from '@/lib/zetachain';
+import CctxProgressComponent from '@/components/CctxProgress';
 import { waitForSolTxConfirmation, getSolTxStatus } from '@/lib/solana';
 import { getZrcAddressFor } from '@/lib/zrc';
 import { IN_APP_RPC_MAP } from '@/lib/rpc';
@@ -76,6 +77,7 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
   const [gasUsed, setGasUsed] = useState<string | undefined>(undefined);
   const [blockNumber, setBlockNumber] = useState<number | undefined>(undefined);
   const [cctxs, setCctxs] = useState<any[]>([]);
+  const [cctxProgress, setCctxProgress] = useState<CctxProgress | null>(null);
   const { network } = useNetwork();
   const explorerFor = (chain: string) => {
     const net = network === 'mainnet'
@@ -272,33 +274,40 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
             duration: 5000
           });
 
-          if (!isSolanaOrigin) {
-            // Track only for EVM origins for now
-            try {
-              console.log('[UI][CCTX] Starting trackCrossChainConfirmations', { hash: tx.hash, network })
-              const cctxResult = await trackCrossChainConfirmations({
-                hash: tx.hash,
-                network,
-                minConfirmations: 20,
-                timeoutSeconds: 300,
-                onProgress: ({ confirmations, status }) => {
-                  setTxPhase(status === 'OutboundMined' ? 'completed' : 'pending')
-                  setConfirmations(confirmations)
+          // Track cross-chain transaction for both EVM and Solana origins
+          try {
+            console.log('[UI][CCTX] Starting trackCrossChainTransaction', { hash: tx.hash, network })
+            const cctxResult = await trackCrossChainTransaction({
+              hash: tx.hash,
+              network,
+              timeoutSeconds: 300,
+              onUpdate: ({ cctxs, statusText, progress }) => {
+                if (progress) {
+                  setCctxProgress(progress)
+                  setTxPhase(progress.status === 'completed' ? 'completed' : progress.status === 'failed' ? 'failed' : 'pending')
+                  setConfirmations(progress.confirmations)
                 }
-              })
-              setTxPhase(cctxResult.status as any);
-              setCctxs(cctxResult.cctx ? [cctxResult.cctx] : []);
-              if (cctxResult.status === 'completed') {
-                toast.success('Cross-chain transfer completed!', { description: `Successfully transferred to ${destinationChain}`, duration: 10000 });
-              } else if (cctxResult.status === 'failed') {
-                toast.error('Cross-chain transfer failed', { description: 'Transfer failed during cross-chain processing', duration: 10000 });
-              } else if (cctxResult.status === 'timeout') {
-                toast.warning('Cross-chain transfer timeout', { description: 'Transfer is taking longer than expected. Please check the blockchain explorer.', duration: 10000 });
+                if (cctxs) setCctxs(cctxs)
+                if (statusText) {
+                  console.log('[UI][CCTX] Status update:', statusText)
+                }
               }
-            } catch (cctxError) {
-              console.error('Error tracking cross-chain transaction:', cctxError);
-              setTxPhase('pending');
+            })
+            
+            setTxPhase(cctxResult.status as any);
+            if (cctxResult.progress) setCctxProgress(cctxResult.progress)
+            if (cctxResult.cctxs) setCctxs(cctxResult.cctxs);
+            
+            if (cctxResult.status === 'completed') {
+              toast.success('Cross-chain transfer completed!', { description: `Successfully transferred to ${destinationChain}`, duration: 10000 });
+            } else if (cctxResult.status === 'failed') {
+              toast.error('Cross-chain transfer failed', { description: 'Transfer failed during cross-chain processing', duration: 10000 });
+            } else if (cctxResult.status === 'timeout') {
+              toast.warning('Cross-chain transfer timeout', { description: 'Transfer is taking longer than expected. Please check the blockchain explorer.', duration: 10000 });
             }
+          } catch (cctxError) {
+            console.error('Error tracking cross-chain transaction:', cctxError);
+            setTxPhase('pending');
           }
         } else if (txPhase === 'failed') {
           toast.error('Transaction failed on origin chain', {
@@ -414,6 +423,23 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
                   <div className="text-xs text-muted-foreground">
                     Now processing cross-chain transfer to {destinationChains.find(c => c.value === destinationChain)?.label}...
                   </div>
+                </div>
+              )}
+
+              {/* CCTX Progress Component */}
+              {cctxProgress && (
+                <div className="mt-4">
+                  <CctxProgressComponent
+                    progress={cctxProgress}
+                    originChain={(asset.chain || 'ethereum').toLowerCase()}
+                    targetChain={destinationChain}
+                    onViewExplorer={(hash, chain) => {
+                      const explorerUrl = explorerFor(chain)
+                      if (explorerUrl) {
+                        window.open(`${explorerUrl}${hash}`, '_blank')
+                      }
+                    }}
+                  />
                 </div>
               )}
 
