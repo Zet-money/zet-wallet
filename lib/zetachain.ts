@@ -10,6 +10,7 @@ import {
 import { solanaDepositAndCall } from '@zetachain/toolkit/chains'
 import { ZETPROTOCOL_ADDRESS } from './zetprotocol'
 import { solanaMnemonicToKeypairForRetrieval } from './solana'
+import { solanaDepositAndCallServer } from './solana-deposit-server'
 import { JsonRpcProvider } from 'ethers'
 
 export type Erc20Token = {
@@ -56,32 +57,27 @@ export async function smartCrossChainTransfer(params: ZetProtocolTransferParams)
       recipient,
       network
     })
-    // Build Solana signer from mnemonic via helper
-    const { keypair: signer } = await solanaMnemonicToKeypairForRetrieval(mnemonicPhrase)
-
+    // Use server-side function to avoid client fs issues
     const types = ['address', 'bytes', 'bool']
     const recipientBytes = recipient.startsWith('0x') ? recipient : `0x${recipient}`
     const values = [targetTokenAddress, recipientBytes, true]
-
     const tokenMintAddress = sourceTokenAddress && sourceTokenAddress.startsWith('0x') ? undefined : sourceTokenAddress
-
-    const signature = await solanaDepositAndCall({
+    const signature = await solanaDepositAndCallServer({
       amount,
       receiver: ZETPROTOCOL_ADDRESS,
-      token: tokenMintAddress, // undefined for SOL
+      token: tokenMintAddress,
       types,
       values,
       revertOptions: {
         callOnRevert: false,
         revertMessage: 'ZetProtocol: Cross-chain transfer failed',
-        revertAddress: signer.publicKey.toBase58(),
-        abortAddress: signer.publicKey.toBase58(),
-        onRevertGasLimit: '500000',
-      }
-    }, ({
-      chainId: network === 'mainnet' ? 'Mainnet' : 'Devnet',
-      signer,
-    } as any))
+        revertAddress: undefined,
+        abortAddress: undefined,
+        onRevertGasLimit: '500000'
+      },
+      mnemonicPhrase,
+      network
+    })
     console.log('[ZETA][SOL] Submitted solanaDepositAndCall signature', signature)
     return { hash: signature }
   }
