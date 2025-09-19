@@ -1,7 +1,6 @@
 "use server";
 
 import * as anchor from '@coral-xyz/anchor'
-import { Wallet } from '@coral-xyz/anchor'
 import { ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID, AccountLayout } from '@solana/spl-token'
 import { PublicKey, SystemProgram, clusterApiUrl, Connection } from '@solana/web3.js'
 import { ethers } from 'ethers'
@@ -25,7 +24,19 @@ function createGatewayProgram(network: Network, signer: anchor.web3.Keypair) {
   const idl = network === 'mainnet' ? (GATEWAY_PROD_IDL as anchor.Idl) : (GATEWAY_DEV_IDL as anchor.Idl)
   const rpcUrl = getSolanaRpc(network)
   const connection = new Connection(rpcUrl)
-  const provider = new anchor.AnchorProvider(connection, new Wallet(signer))
+  // Handle environments where anchor.Wallet isn't exported in ESM bundle
+  const wallet = (anchor as any).Wallet
+    ? new (anchor as any).Wallet(signer)
+    : ({
+        publicKey: signer.publicKey,
+        signTransaction: async (tx: any) => {
+          tx.partialSign(signer); return tx
+        },
+        signAllTransactions: async (txs: any[]) => {
+          txs.forEach((t) => t.partialSign(signer)); return txs
+        }
+      })
+  const provider = new anchor.AnchorProvider(connection, wallet as any)
   const program = new anchor.Program(idl, provider)
   return { program, provider }
 }
