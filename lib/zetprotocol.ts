@@ -199,7 +199,7 @@ export async function performCrossChainTransfer({
     console.error('Error in evmDepositAndCall:', error)
     // If the error is related to token contract calls, provide more specific error message
     if (error instanceof Error && error.message.includes('missing revert data')) {
-      throw new Error(`Token contract call failed. This might be due to an invalid token address or network issues. Token: ${sourceTokenAddress}`)
+      throw new Error(`Token contract call failed. The token contract at ${sourceTokenAddress} may not exist or may not be a valid ERC-20 token on this network. Please verify the token address and network.`)
     }
     throw error
   }

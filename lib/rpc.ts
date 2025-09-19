@@ -16,7 +16,7 @@ export const IN_APP_RPC_MAP: RpcMap = {
   },
   avalanche: {
     mainnet: 'https://avalanche-c-chain.publicnode.com',
-    testnet: 'https://avax-fuji.g.alchemy.com/v2/OdGfAJzOcimvQbvwlzgPFKM2tMO-1fvx',
+    testnet: 'https://avalanche-fuji-c-chain-rpc.publicnode.com',
   },
   arbitrum: {
     mainnet: 'https://arb1.arbitrum.io/rpc',

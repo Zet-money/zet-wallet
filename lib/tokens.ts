@@ -105,7 +105,7 @@ export const EVM_TOKENS: Record<string, TokenInfo[]> = {
   ],
   avalanche: [
     { symbol: 'AVAX', name: 'Avalanche', logo: 'AVAX', addressByNetwork: {} },
-    { symbol: 'USDC', name: 'USD Coin', logo: 'USDC', addressByNetwork: { mainnet: '0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E', testnet: '0x5425890298aed601595a70AB815c96711a31Bc65' } }, // https://developers.circle.com/stablecoins/usdc-contract-addresses
+    { symbol: 'USDC', name: 'USD Coin', logo: 'USDC', addressByNetwork: { mainnet: '0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E', testnet: '' } }, // https://developers.circle.com/stablecoins/usdc-contract-addresses - No official USDC on Fuji testnet
     { symbol: 'USDT', name: 'Tether USD', logo: 'USDT', addressByNetwork: { mainnet: '0x9702230a8ea53601f5cd2dc00fdbc13d4df4a8c7', testnet: '' } }, // https://tether.to/ru/supported-protocols/
   ],
 }
