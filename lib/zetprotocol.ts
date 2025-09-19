@@ -142,11 +142,23 @@ export async function performCrossChainTransfer({
   const withdrawFlag = transferType !== TransferType.SAME_CHAIN_SWAP
   const types = ['address', 'bytes', 'bool']
   // Encode recipient according to target chain requirements:
-  // - Solana: base58 address → bytes → 0x-hex string
+  // - Solana: encode the base58 string as UTF-8 bytes (some observers expect string-bytes)
+  //           fallback is raw 32-byte pubkey if utf-8 route fails
   // - EVM: ensure 0x-prefixed hex string
-  const recipientBytes = (targetChain as any) === 'solana'
-    ? (`0x${Buffer.from(new PublicKey(recipient).toBytes()).toString('hex')}`)
-    : (recipient.startsWith('0x') ? recipient : `0x${recipient}`)
+  let recipientBytes: string
+  if ((targetChain as any) === 'solana') {
+    try {
+      const utf8Bytes = Buffer.from(recipient, 'utf8')
+      recipientBytes = `0x${utf8Bytes.toString('hex')}`
+      console.log('[ZetProtocol] Solana recipient encoded (utf8 bytes)', { len: utf8Bytes.length })
+    } catch (e) {
+      const pkBytes = Buffer.from(new PublicKey(recipient).toBytes())
+      recipientBytes = `0x${pkBytes.toString('hex')}`
+      console.log('[ZetProtocol] Solana recipient encoded (pubkey bytes fallback)', { len: pkBytes.length })
+    }
+  } else {
+    recipientBytes = recipient.startsWith('0x') ? recipient : `0x${recipient}`
+  }
   const values = [
     targetTokenAddress, // ZRC-20 on ZetaChain representing the destination asset/chain
     recipientBytes,

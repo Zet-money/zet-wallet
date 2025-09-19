@@ -304,8 +304,8 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
       setTxHash(tx.hash);
       setTxPhase('pending');
       setTransactionAmount(amount);
-      setTransactionToken(destinationToken);
-      setTransactionTargetChain(destinationChain);
+      setTransactionToken(asset.symbol);
+      setTransactionTargetChain(originChain);
       setTransactionReceiver(recipientAddress);
       startTimer(); // Start the transaction timer
 
