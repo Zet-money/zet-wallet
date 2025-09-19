@@ -140,7 +140,10 @@ export async function performCrossChainTransfer({
   // Prepare ABI params expected by the deployed Universal/Swap contract: (address targetTokenZRC20, bytes recipient, bool withdraw)
   const withdrawFlag = transferType !== TransferType.SAME_CHAIN_SWAP
   const types = ['address', 'bytes', 'bool']
-  const recipientBytes = recipient.startsWith('0x') ? recipient : `0x${recipient}`
+  // For Solana targets, do NOT prepend 0x. Other EVM targets should be 0x-prefixed hex.
+  const recipientBytes = (targetChain as any) === 'solana'
+    ? recipient
+    : (recipient.startsWith('0x') ? recipient : `0x${recipient}`)
   const values = [
     targetTokenAddress, // ZRC-20 on ZetaChain representing the destination asset/chain
     recipientBytes,
