@@ -1,4 +1,5 @@
 import { evmDepositAndCall } from '@zetachain/toolkit/chains'
+import { PublicKey } from '@solana/web3.js'
 import { getFees } from '@zetachain/toolkit/query'
 import { ContractTransactionResponse } from 'ethers'
 import { getEvmSignerFromPhrase, type SupportedEvm, type Network, type RpcMap } from './providers'
@@ -140,9 +141,11 @@ export async function performCrossChainTransfer({
   // Prepare ABI params expected by the deployed Universal/Swap contract: (address targetTokenZRC20, bytes recipient, bool withdraw)
   const withdrawFlag = transferType !== TransferType.SAME_CHAIN_SWAP
   const types = ['address', 'bytes', 'bool']
-  // For Solana targets, do NOT prepend 0x. Other EVM targets should be 0x-prefixed hex.
+  // Encode recipient according to target chain requirements:
+  // - Solana: base58 address → bytes → 0x-hex string
+  // - EVM: ensure 0x-prefixed hex string
   const recipientBytes = (targetChain as any) === 'solana'
-    ? recipient
+    ? (`0x${Buffer.from(new PublicKey(recipient).toBytes()).toString('hex')}`)
     : (recipient.startsWith('0x') ? recipient : `0x${recipient}`)
   const values = [
     targetTokenAddress, // ZRC-20 on ZetaChain representing the destination asset/chain
