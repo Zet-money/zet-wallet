@@ -22,6 +22,7 @@
     "@radix-ui/react-tooltip": "^1.2.8",
     "@solana/spl-token": "^0.4.14",
     "@solana/web3.js": "^1.98.4",
+    "@zetachain/protocol-contracts-solana": "^5.0.0",
     "@zetachain/toolkit": "^16.1.2",
     "bip39": "^3.1.0",
     "class-variance-authority": "^0.7.1",

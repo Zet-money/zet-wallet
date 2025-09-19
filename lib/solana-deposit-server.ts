@@ -101,7 +101,7 @@ export async function solanaDepositAndCallServer(params: {
     const { from, decimals } = await getSplSourceAccount(provider, token)
     // TSS PDA and ATA for mint
     const [tssPda] = PublicKey.findProgramAddressSync([Buffer.from('meta', 'utf8')], gatewayProgram.programId)
-    const [tssAta] = await PublicKey.findProgramAddress(
+    const [tssAta] = PublicKey.findProgramAddressSync(
       [tssPda.toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), new PublicKey(token).toBuffer()],
       ASSOCIATED_TOKEN_PROGRAM_ID
     )
