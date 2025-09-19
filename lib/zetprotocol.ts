@@ -201,6 +201,10 @@ export async function performCrossChainTransfer({
     if (error instanceof Error && error.message.includes('missing revert data')) {
       throw new Error(`Token contract call failed. The token contract at ${sourceTokenAddress} may not exist or may not be a valid ERC-20 token on this network. Please verify the token address and network.`)
     }
+    // Handle Avalanche RPC compatibility issues
+    if (error instanceof Error && error.message.includes('eth_getTransactionCount')) {
+      throw new Error(`RPC compatibility issue with Avalanche. The RPC endpoint may not support all required Ethereum methods. Please try again or contact support if the issue persists.`)
+    }
     throw error
   }
 }

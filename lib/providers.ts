@@ -87,6 +87,14 @@ export function getEvmProvider(chain: SupportedEvm, network: Network, rpc?: RpcM
   if (network === 'testnet') {
     provider.disableCcipRead = true
   }
+  
+  // Special handling for Avalanche RPC compatibility
+  if (chain === 'avalanche') {
+    // Some Avalanche RPC endpoints have issues with certain methods
+    // We'll let ethers handle the fallback gracefully
+    provider.disableCcipRead = true
+  }
+  
   return provider
 }
 

@@ -15,8 +15,8 @@ export const IN_APP_RPC_MAP: RpcMap = {
     testnet: 'https://data-seed-prebsc-1-s1.binance.org:8545',
   },
   avalanche: {
-    mainnet: 'https://avalanche-c-chain.publicnode.com',
-    testnet: 'https://avalanche-fuji-c-chain-rpc.publicnode.com',
+    mainnet: 'https://api.avax.network/ext/bc/C/rpc',
+    testnet: 'https://api.avax-test.network/ext/bc/C/rpc',
   },
   arbitrum: {
     mainnet: 'https://arb1.arbitrum.io/rpc',
