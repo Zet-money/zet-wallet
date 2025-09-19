@@ -147,7 +147,7 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
       case 'arbitrum': return net ? 'https://arbiscan.io/tx/' : 'https://sepolia.arbiscan.io/tx/'
       case 'optimism': return net ? 'https://optimistic.etherscan.io/tx/' : 'https://sepolia-optimistic.etherscan.io/tx/'
       case 'base': return net ? 'https://basescan.org/tx/' : 'https://sepolia.basescan.org/tx/'
-      case 'solana': return net ? 'https://solscan.io/tx/' : 'https://solscan.io/tx/?cluster=devnet'
+      case 'solana': return 'https://solscan.io/tx/'
       default: return ''
     }
   }
@@ -642,7 +642,10 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
                       const explorerUrl = explorerFor(chain)
                       console.log('[UI][CCTX][EXPLORER] Explorer URL resolved', { chain, explorerUrl })
                       if (explorerUrl) {
-                        const fullUrl = `${explorerUrl}${hash}`
+                        let fullUrl = `${explorerUrl}${hash}`
+                        if (chain.toLowerCase() === 'solana' && network !== 'mainnet') {
+                          fullUrl = `${explorerUrl}${hash}?cluster=devnet`
+                        }
                         console.log('[UI][CCTX][EXPLORER] Opening explorer', { fullUrl })
                         window.open(fullUrl, '_blank')
                       } else {
