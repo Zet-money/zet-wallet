@@ -432,6 +432,10 @@ export const evmDepositAndCall = async (
       }
     }
     
+    if (!tx) {
+      throw new Error('Failed to submit transaction after all retries');
+    }
+    
     console.log('[evmDepositAndCall] ERC20 transaction hash:', tx.hash);
     return tx;
   } else {
@@ -482,6 +486,10 @@ export const evmDepositAndCall = async (
         }
         throw error; // Re-throw if not a nonce error or max retries reached
       }
+    }
+    
+    if (!tx) {
+      throw new Error('Failed to submit transaction after all retries');
     }
     
     console.log('[evmDepositAndCall] Native token transaction hash:', tx.hash);
