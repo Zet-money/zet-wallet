@@ -9,7 +9,6 @@ import { useWallet } from '@/contexts/WalletContext';
 import { fetchBalancesForChain } from '@/lib/balances';
 import { IN_APP_RPC_MAP } from '@/lib/rpc';
 import { getTokenPriceUSD } from '@/lib/prices';
-import { fetchSolBalance, fetchSplBalance } from '@/lib/solana';
 
 export default function AssetPage() {
   const params = useParams();
@@ -32,30 +31,15 @@ export default function AssetPage() {
       if (!token) return
       setLoading(true)
       try {
-        let bal: string | undefined
-        if (chainKey === 'solana') {
-          const owner = wallet?.solanaAddress
-          if (!owner) throw new Error('Solana wallet not initialized')
-          if (token.symbol === 'SOL') {
-            const n = await fetchSolBalance(owner, network as any)
-            bal = n.toString()
-          } else if (tokenAddress) {
-            const n = await fetchSplBalance(owner, tokenAddress, network as any)
-            bal = n.toString()
-          } else {
-            bal = '0'
-          }
-        } else {
-          if (!wallet?.address) return
-          const map = await fetchBalancesForChain({
-            chain: chainKey,
-            network,
-            address: wallet.address,
-            tokens: [{ symbol: token.symbol, address: tokenAddress || undefined }],
-            rpcMap: IN_APP_RPC_MAP as any,
-          })
-          bal = map[token.symbol]
-        }
+        if (!wallet?.address) return
+        const map = await fetchBalancesForChain({
+          chain: chainKey,
+          network,
+          address: wallet.address,
+          tokens: [{ symbol: token.symbol, address: tokenAddress || undefined }],
+          rpcMap: IN_APP_RPC_MAP as any,
+        })
+        const bal = map[token.symbol]
         if (bal !== undefined) {
           const asStr = (() => {
             const num = Number(bal)

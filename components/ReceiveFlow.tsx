@@ -26,8 +26,7 @@ export default function ReceiveFlow({ asset, onClose }: ReceiveFlowProps) {
   const { wallet } = useWallet();
   const [copied, setCopied] = useState(false);
   const [copiedAddress, setCopiedAddress] = useState(false);
-  const isSolana = (asset.chain || '').toLowerCase() === 'solana';
-  const displayAddress = isSolana ? (wallet?.solanaAddress || '') : (wallet?.address || '');
+  const displayAddress = wallet?.address || '';
 
   const copyToClipboard = async (text: string, type: 'address' | 'qr') => {
     try {

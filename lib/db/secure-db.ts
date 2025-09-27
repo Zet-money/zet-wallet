@@ -249,7 +249,7 @@ export class SecureDB {
       
       // Try wallets store first
       const tx = this.db!.transaction('wallets', 'readonly');
-      let result = await tx.objectStore('wallets').get(key);
+      let result: any = await tx.objectStore('wallets').get(key);
       await tx.done;
       
       if (result) return result;
