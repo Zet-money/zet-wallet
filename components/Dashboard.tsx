@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import ThemeToggle from './ThemeToggle';
 import UserSettingsModal from './UserSettingsModal';
+import BaseLogo from './BaseLogo';
 import { useNetwork } from '@/contexts/NetworkContext';
 import { getTokensFor } from '@/lib/tokens';
 import { fetchBalancesForChain } from '@/lib/balances';
@@ -234,14 +235,7 @@ export default function Dashboard() {
         <div className="mb-6">
           <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border">
             <div className="flex items-center space-x-3">
-              <img 
-                src="https://assets.parqet.com/logos/crypto/BASE?format=png" 
-                alt="Base"
-                className="w-6 h-6 object-contain"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                }}
-              />
+              <BaseLogo size={24} className="flex-shrink-0" />
               <div>
                 <h3 className="font-semibold text-sm">Base Network</h3>
                 <p className="text-xs text-muted-foreground">Only supported chain for sending</p>
