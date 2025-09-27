@@ -28,6 +28,10 @@ export function UserSettingsProvider({ children }: { children: React.ReactNode }
   const loadProfile = async (): Promise<void> => {
     try {
       setIsLoading(true);
+      
+      // Ensure SecureDB is initialized
+      await secureDB.init();
+      
       const encryptedProfile = await secureDB.get('user-profile');
       
       if (encryptedProfile) {
@@ -51,6 +55,9 @@ export function UserSettingsProvider({ children }: { children: React.ReactNode }
 
   const updateProfile = async (newProfile: Partial<UserProfile>): Promise<void> => {
     try {
+      // Ensure SecureDB is initialized
+      await secureDB.init();
+      
       const updatedProfile: UserProfile = {
         name: '',
         username: '',
