@@ -90,6 +90,12 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
     
     // If source token is USDC, only show USDC as destination token
     if (asset.symbol === 'USDC') {
+      console.log('[USDC Token Filter] Debug:', {
+        destinationChain,
+        assetChain: asset.chain,
+        availableTokens: tokens.map(t => t.symbol)
+      });
+      
       // Find USDC token with appropriate symbol for the destination chain
       let usdcToken = tokens.find(token => token.symbol === 'USDC');
       
@@ -107,16 +113,21 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
         };
         
         const usdcSymbol = usdcSymbolMap[asset.chain] || 'USDC.BASE'; // Default to BASE if not found
+        console.log('[USDC Token Filter] Looking for USDC symbol:', usdcSymbol);
         usdcToken = tokens.find(token => token.symbol === usdcSymbol);
+        console.log('[USDC Token Filter] Found USDC token:', usdcToken);
       }
       
       if (usdcToken) {
+        console.log('[USDC Token Filter] Returning USDC token:', usdcToken.symbol);
         return [{
           value: usdcToken.symbol,
           label: usdcToken.symbol,
           name: usdcToken.name,
           logo: usdcToken.symbol === 'ETH' ? 'base-logo' : `https://assets.parqet.com/logos/crypto/${usdcToken.logo || usdcToken.symbol}?format=png`
         }];
+      } else {
+        console.log('[USDC Token Filter] No USDC token found, returning all tokens');
       }
     }
     
@@ -130,6 +141,13 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
 
   // Auto-select USDC as destination token when source is USDC
   useEffect(() => {
+    console.log('[USDC Auto-select] Debug:', {
+      assetSymbol: asset.symbol,
+      destinationChain,
+      assetChain: asset.chain,
+      currentDestinationToken: destinationToken
+    });
+    
     if (asset.symbol === 'USDC' && destinationChain) {
       // For ZetaChain, use the appropriate USDC symbol based on source chain
       if (destinationChain === 'zetachain') {
@@ -143,8 +161,10 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
           'avalanche': 'USDC.AVAX'
         };
         const usdcSymbol = usdcSymbolMap[asset.chain] || 'USDC.BASE';
+        console.log('[USDC Auto-select] Setting ZetaChain USDC symbol:', usdcSymbol);
         setDestinationToken(usdcSymbol);
       } else {
+        console.log('[USDC Auto-select] Setting standard USDC for chain:', destinationChain);
         setDestinationToken('USDC');
       }
     }
