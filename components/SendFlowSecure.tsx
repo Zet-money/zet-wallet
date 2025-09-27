@@ -46,6 +46,21 @@ function toLabel(key: string) {
   }
 }
 
+function logoSymbolForChain(key: string) {
+  switch (key) {
+    case 'ethereum': return 'ETH'
+    case 'polygon': return 'MATIC'
+    case 'bsc': return 'BNB'
+    case 'avalanche': return 'AVAX'
+    case 'arbitrum': return 'ARB'
+    case 'optimism': return 'OP'
+    case 'base': return 'BASE'
+    case 'solana': return 'SOL'
+    case 'zetachain': return 'ZETA'
+    default: return 'ETH'
+  }
+}
+
 export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
   const { network } = useNetwork();
   const { transferETH, transferERC20, isExecuting, error: transactionError } = useSecureTransaction();
@@ -57,10 +72,11 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
   const [txPhase, setTxPhase] = useState<'idle' | 'pending' | 'confirmed' | 'failed' | 'completed'>('idle');
   const [transactionAmount, setTransactionAmount] = useState<string>('');
 
-  // Destination chains (only Base supported for now)
+  // Destination chains
   const destinationChains = useMemo(() => {
     return Object.keys(EVM_TOKENS).map((key) => {
-      const icon = key === 'base' ? 'base-logo' : `https://assets.parqet.com/logos/crypto/${key.toUpperCase()}?format=png`;
+      const symbol = logoSymbolForChain(key);
+      const icon = key === 'base' ? 'base-logo' : `https://assets.parqet.com/logos/crypto/${symbol}?format=png`;
       return { value: key, label: toLabel(key), icon };
     });
   }, []);
