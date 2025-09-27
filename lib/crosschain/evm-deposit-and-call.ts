@@ -261,11 +261,27 @@ const broadcastGatewayTx = async (params: {
     typeof value === 'bigint' ? value.toString() : value, 2));
   
   try {
-    const tx = await params.signer.sendTransaction(txRequest);
+    // Get the current nonce to avoid nonce conflicts
+    const nonce = await params.signer.getNonce();
+    console.log('[broadcastGatewayTx] Current nonce:', nonce);
+    
+    const tx = await params.signer.sendTransaction({
+      ...txRequest,
+      nonce: nonce
+    });
     console.log('[broadcastGatewayTx] Transaction sent successfully:', tx.hash);
     return tx;
   } catch (error) {
     console.error('[broadcastGatewayTx] Transaction failed:', error);
+    
+    // If it's a nonce error, provide more helpful information
+    if (error instanceof Error && error.message.includes('nonce')) {
+      console.error('[broadcastGatewayTx] Nonce error detected. This usually means:');
+      console.error('[broadcastGatewayTx] 1. A transaction with the same nonce was already submitted');
+      console.error('[broadcastGatewayTx] 2. The transaction was submitted multiple times');
+      console.error('[broadcastGatewayTx] 3. There might be a race condition');
+    }
+    
     throw error;
   }
 };
@@ -386,15 +402,35 @@ export const evmDepositAndCall = async (
     });
 
     console.log('[evmDepositAndCall] Broadcasting ERC20 gateway transaction...');
-    const tx = await broadcastGatewayTx({
-      signer: validatedOptions.signer,
-      txData: {
-        data: callData.data,
-        to: gatewayAddress,
-        value: callData.value,
-      },
-      txOptions: validatedOptions.txOptions || {},
-    });
+    
+    // Retry mechanism for nonce errors
+    let tx;
+    let retryCount = 0;
+    const maxRetries = 3;
+    
+    while (retryCount < maxRetries) {
+      try {
+        tx = await broadcastGatewayTx({
+          signer: validatedOptions.signer,
+          txData: {
+            data: callData.data,
+            to: gatewayAddress,
+            value: callData.value,
+          },
+          txOptions: validatedOptions.txOptions || {},
+        });
+        break; // Success, exit retry loop
+      } catch (error) {
+        if (error instanceof Error && error.message.includes('nonce') && retryCount < maxRetries - 1) {
+          retryCount++;
+          console.log(`[evmDepositAndCall] Nonce error, retrying (${retryCount}/${maxRetries})...`);
+          // Wait a bit before retry
+          await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+          continue;
+        }
+        throw error; // Re-throw if not a nonce error or max retries reached
+      }
+    }
     
     console.log('[evmDepositAndCall] ERC20 transaction hash:', tx.hash);
     return tx;
@@ -418,15 +454,35 @@ export const evmDepositAndCall = async (
     });
 
     console.log('[evmDepositAndCall] Broadcasting native token gateway transaction...');
-    const tx = await broadcastGatewayTx({
-      signer: validatedOptions.signer,
-      txData: {
-        data: callData.data,
-        to: gatewayAddress,
-        value: callData.value,
-      },
-      txOptions: validatedOptions.txOptions || {},
-    });
+    
+    // Retry mechanism for nonce errors
+    let tx;
+    let retryCount = 0;
+    const maxRetries = 3;
+    
+    while (retryCount < maxRetries) {
+      try {
+        tx = await broadcastGatewayTx({
+          signer: validatedOptions.signer,
+          txData: {
+            data: callData.data,
+            to: gatewayAddress,
+            value: callData.value,
+          },
+          txOptions: validatedOptions.txOptions || {},
+        });
+        break; // Success, exit retry loop
+      } catch (error) {
+        if (error instanceof Error && error.message.includes('nonce') && retryCount < maxRetries - 1) {
+          retryCount++;
+          console.log(`[evmDepositAndCall] Nonce error, retrying (${retryCount}/${maxRetries})...`);
+          // Wait a bit before retry
+          await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+          continue;
+        }
+        throw error; // Re-throw if not a nonce error or max retries reached
+      }
+    }
     
     console.log('[evmDepositAndCall] Native token transaction hash:', tx.hash);
     return tx;
