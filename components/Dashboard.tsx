@@ -20,7 +20,7 @@ import { fetchBalancesForChain } from '@/lib/balances';
 import { IN_APP_RPC_MAP } from '@/lib/rpc';
 import { getTokenPriceUSD, getTokenChangeUSD24h } from '@/lib/prices';
 import ReceiveFlow from './ReceiveFlow';
-import { fetchSolBalance, fetchSplBalance } from '@/lib/solana';
+// Solana imports removed - only Base chain supported
 
 // Only Base chain is supported for sending
 
