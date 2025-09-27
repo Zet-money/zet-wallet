@@ -502,5 +502,3 @@ export const createSwapCall = (
 };
 
 export type { EvmDepositAndCallParams, EvmOptions, RevertOptions };
-
-export type { EvmDepositAndCallParams, EvmOptions, RevertOptions };
