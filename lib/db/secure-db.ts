@@ -241,6 +241,49 @@ export class SecureDB {
   }
 
   /**
+   * Generic get method for any key
+   */
+  async get(key: string): Promise<any> {
+    try {
+      this.ensureInitialized();
+      
+      // Try wallets store first
+      const tx = this.db!.transaction('wallets', 'readonly');
+      let result = await tx.objectStore('wallets').get(key);
+      await tx.done;
+      
+      if (result) return result;
+      
+      // Try credentials store
+      const tx2 = this.db!.transaction('credentials', 'readonly');
+      result = await tx2.objectStore('credentials').get(key);
+      await tx2.done;
+      
+      return result || null;
+    } catch (error) {
+      console.error('[SecureDB] Error getting data:', error);
+      throw new Error('Failed to get data');
+    }
+  }
+
+  /**
+   * Generic set method for any key-value pair
+   */
+  async set(key: string, value: any): Promise<void> {
+    try {
+      this.ensureInitialized();
+      
+      // Store in wallets store by default
+      const tx = this.db!.transaction('wallets', 'readwrite');
+      await tx.objectStore('wallets').put({ id: key, ...value });
+      await tx.done;
+    } catch (error) {
+      console.error('[SecureDB] Error setting data:', error);
+      throw new Error('Failed to set data');
+    }
+  }
+
+  /**
    * Get database statistics
    */
   async getStats(): Promise<{ walletCount: number; credentialCount: number }> {
