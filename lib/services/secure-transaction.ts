@@ -13,6 +13,13 @@ export class SecureTransactionService {
   }
 
   /**
+   * Initialize the biometric migration service
+   */
+  async init(): Promise<void> {
+    await this.biometricMigration.init();
+  }
+
+  /**
    * Securely execute a cross-chain transaction
    * - Decrypts mnemonic using biometrics
    * - Creates signer
@@ -27,6 +34,9 @@ export class SecureTransactionService {
     let mnemonic: string | null = null;
     
     try {
+      // Step 0: Ensure biometric migration is initialized
+      await this.init();
+      
       // Step 1: Decrypt mnemonic using biometrics
       console.log('[SecureTransaction] Decrypting mnemonic with biometrics...');
       const unlockResult = await this.biometricMigration.unlockWalletWithBiometrics();
