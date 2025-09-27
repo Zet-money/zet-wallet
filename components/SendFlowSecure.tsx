@@ -299,9 +299,9 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
                 </Button>
               </div>
             </div>
-            {amount && !isNaN(parseFloat(amount)) && (
+            {amount && !isNaN(parseFloat(amount)) && maxAmount > 0 && (
               <div className="text-sm text-muted-foreground">
-                ≈ ${(parseFloat(amount) * (assetUsd / maxAmount)).toFixed(2)} USD
+                ≈ ${((parseFloat(amount) * assetUsd) / maxAmount).toFixed(2)} USD
               </div>
             )}
           </div>
