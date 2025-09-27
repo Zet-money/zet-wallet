@@ -329,7 +329,7 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
           console.log('[UI][TRACKING] Starting transaction tracking', { hash: tx.hash });
           
           // Wait for transaction confirmation on origin chain
-          const originConfirmed = await waitForTxConfirmation(tx.hash, rpcUrl, 300);
+          const originConfirmed = await waitForTxConfirmation(tx.hash, rpcUrl);
           
           if (originConfirmed) {
             toast.success('Transaction confirmed on origin chain!', {
