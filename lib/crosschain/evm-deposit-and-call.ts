@@ -2,6 +2,8 @@ import { ethers } from "ethers";
 import { z } from "zod";
 import { BASE_GATEWAY_ABI } from "./base-gateway.abi";
 
+export const ZETPROTOCOL_ADDRESS = '0x7689b1a47fb4c5F16aBA476E4D315b8421CAebD2'
+
 // ERC20 ABI - simplified version
 const ERC20_ABI = [
   "function decimals() view returns (uint8)",
@@ -135,6 +137,7 @@ const generateEvmDepositAndCallData = (params: {
     // If we have function call data to encode
     try {
       // Create interface for the target function on ZetaChain
+      // The function signature should be: function execute(address,bytes,bool)
       const functionSignature = `function execute(${params.types.join(', ')})`;
       console.log('[generateEvmDepositAndCallData] Function signature:', functionSignature);
       const targetInterface = new ethers.Interface([functionSignature]);
@@ -320,6 +323,26 @@ export const evmDepositAndCall = async (
     
   console.log('[evmDepositAndCall] Gateway address:', gatewayAddress);
 
+  // Check if this is a ZetProtocol call (has types and values)
+  const isZetProtocolCall = validatedParams.types && validatedParams.values && 
+    validatedParams.types.length > 0 && validatedParams.values.length > 0;
+  
+  if (isZetProtocolCall) {
+    console.log('[evmDepositAndCall] ===== ZETPROTOCOL CALL DETECTED =====');
+    console.log('[evmDepositAndCall] Using ZetProtocol contract as receiver:', ZETPROTOCOL_ADDRESS);
+    console.log('[evmDepositAndCall] User recipient will be in payload data');
+    
+    // For ZetProtocol calls, we need to restructure the parameters
+    // The receiver should be the ZetProtocol contract, not the user's address
+    const zetProtocolParams = {
+      ...validatedParams,
+      receiver: ZETPROTOCOL_ADDRESS, // Override receiver to ZetProtocol contract
+    };
+    
+    console.log('[evmDepositAndCall] ZetProtocol params:', JSON.stringify(zetProtocolParams, (key, value) => 
+      typeof value === 'bigint' ? value.toString() : value, 2));
+  }
+
   if (validatedParams.token) {
     console.log('[evmDepositAndCall] ===== ERC20 TOKEN PATH =====');
     console.log('[evmDepositAndCall] Token address:', validatedParams.token);
@@ -350,7 +373,7 @@ export const evmDepositAndCall = async (
       amount: validatedParams.amount,
       decimals: decimals,
       erc20: validatedParams.token,
-      receiver: validatedParams.receiver,
+      receiver: isZetProtocolCall ? ZETPROTOCOL_ADDRESS : validatedParams.receiver,
       revertOptions: validatedParams.revertOptions,
       types: validatedParams.types,
       values: validatedParams.values,
@@ -382,7 +405,7 @@ export const evmDepositAndCall = async (
     
     const callData = generateEvmDepositAndCallData({
       amount: validatedParams.amount,
-      receiver: validatedParams.receiver,
+      receiver: isZetProtocolCall ? ZETPROTOCOL_ADDRESS : validatedParams.receiver,
       revertOptions: validatedParams.revertOptions,
       types: validatedParams.types,
       values: validatedParams.values,
@@ -477,5 +500,7 @@ export const createSwapCall = (
     values: [tokenIn, tokenOut, ethers.parseEther(amountIn), ethers.parseEther(minAmountOut), recipient]
   };
 };
+
+export type { EvmDepositAndCallParams, EvmOptions, RevertOptions };
 
 export type { EvmDepositAndCallParams, EvmOptions, RevertOptions };
