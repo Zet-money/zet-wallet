@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+// Select components removed - only Base chain supported
 import { Badge } from '@/components/ui/badge';
 import { Search, Send, Download, Settings, Copy, Check, X, Lock } from 'lucide-react';
 import { useWallet } from '@/contexts/WalletContext';
@@ -22,17 +22,7 @@ import { getTokenPriceUSD, getTokenChangeUSD24h } from '@/lib/prices';
 import ReceiveFlow from './ReceiveFlow';
 import { fetchSolBalance, fetchSplBalance } from '@/lib/solana';
 
-const chains = [
-  { value: 'ethereum', label: 'Ethereum', icon: 'https://assets.parqet.com/logos/crypto/ETH?format=png' },
-  { value: 'polygon', label: 'Polygon', icon: 'https://assets.parqet.com/logos/crypto/MATIC?format=png' },
-  { value: 'bsc', label: 'BNB Chain', icon: 'https://assets.parqet.com/logos/crypto/BNB?format=png' },
-  { value: 'avalanche', label: 'Avalanche', icon: 'https://assets.parqet.com/logos/crypto/AVAX?format=png' },
-  { value: 'arbitrum', label: 'Arbitrum', icon: 'https://assets.parqet.com/logos/crypto/ARB?format=png' },
-  { value: 'optimism', label: 'Optimism', icon: 'https://assets.parqet.com/logos/crypto/OP?format=png' },
-  { value: 'base', label: 'Base', icon: 'https://assets.parqet.com/logos/crypto/BASE?format=png' },
-  { value: 'zetachain', label: 'ZetaChain', icon: 'https://assets.parqet.com/logos/crypto/ZETA?format=png' },
-  { value: 'solana', label: 'Solana', icon: 'https://assets.parqet.com/logos/crypto/SOL?format=png' },
-];
+// Only Base chain is supported for sending
 
 export default function Dashboard() {
   const { wallet } = useWallet();
@@ -40,27 +30,13 @@ export default function Dashboard() {
   const { profile } = useUserSettings();
   const { network, setNetwork } = useNetwork();
   const router = useRouter();
-  const [selectedChain, setSelectedChain] = useState(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = window.localStorage.getItem('zet.chain')
-        const valid = saved && ['ethereum','polygon','bsc','avalanche','arbitrum','optimism','base','zetachain','solana'].includes(saved)
-        if (valid) return saved as string
-      } catch {}
-    }
-    return 'ethereum'
-  });
+  const [selectedChain, setSelectedChain] = useState('base'); // Only support Base chain
   const [searchQuery, setSearchQuery] = useState('');
   const [copied, setCopied] = useState(false);
   const [showSendModal, setShowSendModal] = useState(false);
   const [showReceiveModal, setShowReceiveModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
-  const handleChainChange = (value: string) => {
-    setSelectedChain(value)
-    try {
-      if (typeof window !== 'undefined') window.localStorage.setItem('zet.chain', value)
-    } catch {}
-  }
+  // Chain selection is disabled - only Base is supported
 
   // Persist selected chain on change
   useEffect(() => {
@@ -69,7 +45,7 @@ export default function Dashboard() {
     } catch {}
   }, [selectedChain])
 
-  const chainKey = selectedChain as any
+  const chainKey = 'base' // Only Base chain supported
   const baseTokens = getTokensFor(chainKey, network)
   const networkTokens = baseTokens.map((t, idx) => ({
     id: `${chainKey}-${t.symbol}-${idx}`,
@@ -77,7 +53,7 @@ export default function Dashboard() {
     name: t.name,
     balance: '—',
     usdValue: '0.00',
-    chain: chains.find(c => c.value === selectedChain)?.label || 'Ethereum',
+    chain: 'Base',
     logo: `https://assets.parqet.com/logos/crypto/${t.logo || t.symbol}?format=png`,
   }))
 
@@ -92,41 +68,24 @@ export default function Dashboard() {
       setLoadingBalances(true)
       console.log('loading balances for', chainKey, network, wallet.address)
       try {
-        if (chainKey === 'solana') {
-          const sAddr = wallet?.solanaAddress
-          if (!sAddr) throw new Error('Solana wallet not initialized')
-          const solanaBalances: Record<string, string> = {}
-          // SOL
-          const solBal = await fetchSolBalance(sAddr, network as any)
-          solanaBalances['SOL'] = solBal.toString()
-          // SPL tokens present for network
-          for (const t of baseTokens) {
-            if (t.symbol === 'SOL') continue
-            const mint = t.addressByNetwork?.[network]
-            if (!mint) continue
-            const bal = await fetchSplBalance(sAddr, mint, network as any)
-            solanaBalances[t.symbol] = bal.toString()
+        // Only Base chain is supported
+        const tokensForFetch = baseTokens.map((t) => {
+          const addr = t.addressByNetwork?.[network]
+          const isErc20 = Boolean(t.addressByNetwork?.mainnet || t.addressByNetwork?.testnet)
+          return {
+            symbol: t.symbol,
+            address: isErc20 ? (addr && addr.length > 0 ? addr : undefined) : null,
           }
-          setBalances(solanaBalances)
-        } else {
-          const tokensForFetch = baseTokens.map((t) => {
-            const addr = t.addressByNetwork?.[network]
-            const isErc20 = Boolean(t.addressByNetwork?.mainnet || t.addressByNetwork?.testnet)
-            return {
-              symbol: t.symbol,
-              address: isErc20 ? (addr && addr.length > 0 ? addr : undefined) : null,
-            }
-          })
-          const map = await fetchBalancesForChain({
-            chain: chainKey,
-            network,
-            address: wallet.address,
-            tokens: tokensForFetch,
-            rpcMap: IN_APP_RPC_MAP,
-          })
-          console.log('balances', map)
-          setBalances(map)
-        }
+        })
+        const map = await fetchBalancesForChain({
+          chain: chainKey,
+          network,
+          address: wallet.address,
+          tokens: tokensForFetch,
+          rpcMap: IN_APP_RPC_MAP,
+        })
+        console.log('balances', map)
+        setBalances(map)
 
         // Load USD prices for visible symbols
         const uniqueSymbols = Array.from(new Set(baseTokens.map(t => t.symbol)))
@@ -225,14 +184,6 @@ export default function Dashboard() {
                       className="px-1 py-0.5 border rounded text-xs flex-shrink-0"
                     >Copy</button>
                   </div>
-                  <div className="flex items-center space-x-2 text-xs text-muted-foreground">
-                    <img src="https://assets.parqet.com/logos/crypto/SOL?format=png" alt="SOL" className="w-3 h-3 flex-shrink-0" onError={(e) => { e.currentTarget.style.display = 'none' }} />
-                    <span className="truncate">{wallet?.solanaAddress ? truncateAddress(wallet.solanaAddress) : 'No Solana wallet'}</span>
-                    <button
-                      onClick={async () => { if (wallet?.solanaAddress) { await navigator.clipboard.writeText(wallet.solanaAddress); toast.success('Solana address copied') } }}
-                      className="px-1 py-0.5 border rounded text-xs flex-shrink-0"
-                    >Copy</button>
-                  </div>
                 </div>
               </div>
             </div>
@@ -279,30 +230,27 @@ export default function Dashboard() {
 
       {/* Main Content */}
       <div className="container mx-auto px-4 py-6 max-w-4xl">
-        {/* Chain Selector */}
+        {/* Base Chain Display (Only supported chain) */}
         <div className="mb-6">
-          <Select value={selectedChain} onValueChange={handleChainChange}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select a chain" />
-            </SelectTrigger>
-            <SelectContent>
-              {chains.map((chain) => (
-                <SelectItem key={chain.value} value={chain.value}>
-                  <div className="flex items-center space-x-2">
-                    <img 
-                      src={chain.icon} 
-                      alt={chain.label}
-                      className="w-4 h-4 object-contain"
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none';
-                      }}
-                    />
-                    <span>{chain.label}</span>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border">
+            <div className="flex items-center space-x-3">
+              <img 
+                src="https://assets.parqet.com/logos/crypto/BASE?format=png" 
+                alt="Base"
+                className="w-6 h-6 object-contain"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+              <div>
+                <h3 className="font-semibold text-sm">Base Network</h3>
+                <p className="text-xs text-muted-foreground">Only supported chain for sending</p>
+              </div>
+            </div>
+            <Badge variant="secondary" className="text-xs">
+              Active
+            </Badge>
+          </div>
         </div>
 
         {/* Action Buttons */}
