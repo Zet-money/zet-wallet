@@ -117,7 +117,8 @@ const generateEvmDepositAndCallData = (params: {
   values?: any[];
 }) => {
   console.log('[generateEvmDepositAndCallData] ===== GENERATING CALLDATA =====');
-  console.log('[generateEvmDepositAndCallData] Input params:', JSON.stringify(params, null, 2));
+  console.log('[generateEvmDepositAndCallData] Input params:', JSON.stringify(params, (key, value) => 
+    typeof value === 'bigint' ? value.toString() : value, 2));
   
   // Use the real ZetaChain Gateway ABI
   const gatewayInterface = new ethers.Interface(BASE_GATEWAY_ABI);
@@ -160,7 +161,8 @@ const generateEvmDepositAndCallData = (params: {
   };
   
   const revertOptions = params.revertOptions || defaultRevertOptions;
-  console.log('[generateEvmDepositAndCallData] Revert options:', JSON.stringify(revertOptions, null, 2));
+  console.log('[generateEvmDepositAndCallData] Revert options:', JSON.stringify(revertOptions, (key, value) => 
+    typeof value === 'bigint' ? value.toString() : value, 2));
   
   let callData: string;
   let value: bigint = BigInt(0);
@@ -296,8 +298,10 @@ export const evmDepositAndCall = async (
   options: EvmOptions
 ) => {
   console.log('[evmDepositAndCall] ===== STARTING TRANSACTION =====');
-  console.log('[evmDepositAndCall] Input params:', JSON.stringify(params, null, 2));
-  console.log('[evmDepositAndCall] Input options:', JSON.stringify(options, null, 2));
+  console.log('[evmDepositAndCall] Input params:', JSON.stringify(params, (key, value) => 
+    typeof value === 'bigint' ? value.toString() : value, 2));
+  console.log('[evmDepositAndCall] Input options:', JSON.stringify(options, (key, value) => 
+    typeof value === 'bigint' ? value.toString() : value, 2));
   
   const validatedParams = validateAndParseSchema(
     params,
@@ -305,8 +309,10 @@ export const evmDepositAndCall = async (
   ) as EvmDepositAndCallParamsType;
   const validatedOptions = validateAndParseSchema(options, evmOptionsSchema) as EvmOptionsType;
 
-  console.log('[evmDepositAndCall] Validated params:', JSON.stringify(validatedParams, null, 2));
-  console.log('[evmDepositAndCall] Validated options:', JSON.stringify(validatedOptions, null, 2));
+  console.log('[evmDepositAndCall] Validated params:', JSON.stringify(validatedParams, (key, value) => 
+    typeof value === 'bigint' ? value.toString() : value, 2));
+  console.log('[evmDepositAndCall] Validated options:', JSON.stringify(validatedOptions, (key, value) => 
+    typeof value === 'bigint' ? value.toString() : value, 2));
 
   const gatewayAddress =
     validatedOptions.gateway ||
