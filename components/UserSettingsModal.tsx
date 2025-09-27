@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { X, Save, User, Clock, Mail } from 'lucide-react';
+import { X, Save, User, Clock, Mail, Settings } from 'lucide-react';
 import { useUserSettings } from '@/contexts/UserSettingsContext';
 import { toast } from 'sonner';
 
