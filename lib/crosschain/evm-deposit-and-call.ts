@@ -108,34 +108,51 @@ const generateEvmDepositAndCallData = (params: {
   types?: string[];
   values?: any[];
 }) => {
-  // This is a simplified implementation
-  // In a real implementation, you would encode the function call data properly
-  const iface = new ethers.Interface([
+  // ZetaChain Gateway Contract Interface
+  const gatewayInterface = new ethers.Interface([
     "function depositAndCall(address receiver, uint256 amount, bytes calldata data) external payable",
     "function depositAndCallERC20(address token, address receiver, uint256 amount, bytes calldata data) external",
   ]);
+  
+  // Generate the calldata for the function that will be called on ZetaChain
+  let zetaChainCallData = "0x";
+  
+  if (params.types && params.values && params.types.length > 0 && params.values.length > 0) {
+    // If we have function call data to encode
+    try {
+      // Create interface for the target function on ZetaChain
+      const functionSignature = `function execute(${params.types.join(', ')})`;
+      const targetInterface = new ethers.Interface([functionSignature]);
+      
+      // Encode the function call data
+      zetaChainCallData = targetInterface.encodeFunctionData("execute", params.values);
+    } catch (error) {
+      console.warn("Failed to encode function call data:", error);
+      // Fallback to empty data
+      zetaChainCallData = "0x";
+    }
+  }
   
   let callData: string;
   let value: bigint = BigInt(0);
   
   if (params.erc20) {
     // ERC20 deposit and call
-    const functionData = iface.encodeFunctionData("depositAndCallERC20", [
+    const amount = ethers.parseUnits(params.amount, params.decimals || 18);
+    callData = gatewayInterface.encodeFunctionData("depositAndCallERC20", [
       params.erc20,
       params.receiver,
-      ethers.parseUnits(params.amount, params.decimals || 18),
-      "0x" // Empty data for now
+      amount,
+      zetaChainCallData
     ]);
-    callData = functionData;
   } else {
     // Native token deposit and call
     value = ethers.parseEther(params.amount);
-    const functionData = iface.encodeFunctionData("depositAndCall", [
+    callData = gatewayInterface.encodeFunctionData("depositAndCall", [
       params.receiver,
       value,
-      "0x" // Empty data for now
+      zetaChainCallData
     ]);
-    callData = functionData;
   }
   
   return {
@@ -270,6 +287,42 @@ export const evmDepositAndCall = async (
     });
     return tx;
   }
+};
+
+/**
+ * Helper function to create a simple transfer call
+ */
+export const createTransferCall = (to: string, amount: string) => {
+  return {
+    types: ["address", "uint256"],
+    values: [to, ethers.parseEther(amount)]
+  };
+};
+
+/**
+ * Helper function to create a contract call with custom function
+ */
+export const createContractCall = (functionName: string, types: string[], values: any[]) => {
+  return {
+    types: ["string", ...types],
+    values: [functionName, ...values]
+  };
+};
+
+/**
+ * Helper function to create a swap call (example)
+ */
+export const createSwapCall = (
+  tokenIn: string,
+  tokenOut: string,
+  amountIn: string,
+  minAmountOut: string,
+  recipient: string
+) => {
+  return {
+    types: ["address", "address", "uint256", "uint256", "address"],
+    values: [tokenIn, tokenOut, ethers.parseEther(amountIn), ethers.parseEther(minAmountOut), recipient]
+  };
 };
 
 export type { EvmDepositAndCallParams, EvmOptions };
