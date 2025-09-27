@@ -1,5 +1,6 @@
 import { ethers } from "ethers";
 import { z } from "zod";
+import { BASE_GATEWAY_ABI } from "./base-gateway.abi";
 
 // ERC20 ABI - simplified version
 const ERC20_ABI = [
@@ -16,16 +17,21 @@ interface ERC20Contract extends ethers.Contract {
   [key: string]: any; // Allow other properties
 }
 
+interface RevertOptions {
+  revertAddress: string;
+  callOnRevert: boolean;
+  abortAddress: string;
+  revertMessage: string;
+  onRevertGasLimit: string;
+}
+
 interface EvmDepositAndCallParams {
   amount: string;
   receiver: string;
   token?: string; // If undefined, it's a native token deposit
   types?: string[];
   values?: any[];
-  revertOptions?: {
-    revertOnError?: boolean;
-    gasLimit?: string;
-  };
+  revertOptions?: RevertOptions;
 }
 
 interface EvmOptions {
@@ -40,16 +46,21 @@ interface EvmOptions {
 }
 
 // Schema validation
+const revertOptionsSchema = z.object({
+  revertAddress: z.string(),
+  callOnRevert: z.boolean(),
+  abortAddress: z.string(),
+  revertMessage: z.string(),
+  onRevertGasLimit: z.string(),
+});
+
 const evmDepositAndCallParamsSchema = z.object({
   amount: z.string(),
   receiver: z.string(),
   token: z.string().optional(),
   types: z.array(z.string()).optional(),
   values: z.array(z.any()).optional(),
-  revertOptions: z.object({
-    revertOnError: z.boolean().optional(),
-    gasLimit: z.string().optional(),
-  }).optional(),
+  revertOptions: revertOptionsSchema.optional(),
 });
 
 const evmOptionsSchema = z.object({
@@ -101,18 +112,12 @@ const generateEvmDepositAndCallData = (params: {
   decimals?: number;
   erc20?: string;
   receiver: string;
-  revertOptions?: {
-    revertOnError?: boolean;
-    gasLimit?: string;
-  };
+  revertOptions?: RevertOptions;
   types?: string[];
   values?: any[];
 }) => {
-  // ZetaChain Gateway Contract Interface
-  const gatewayInterface = new ethers.Interface([
-    "function depositAndCall(address receiver, uint256 amount, bytes calldata data) external payable",
-    "function depositAndCallERC20(address token, address receiver, uint256 amount, bytes calldata data) external",
-  ]);
+  // Use the real ZetaChain Gateway ABI
+  const gatewayInterface = new ethers.Interface(BASE_GATEWAY_ABI);
   
   // Generate the calldata for the function that will be called on ZetaChain
   let zetaChainCallData = "0x";
@@ -133,25 +138,37 @@ const generateEvmDepositAndCallData = (params: {
     }
   }
   
+  // Default revert options if not provided
+  const defaultRevertOptions: RevertOptions = {
+    revertAddress: ethers.ZeroAddress,
+    callOnRevert: false,
+    abortAddress: ethers.ZeroAddress,
+    revertMessage: "0x",
+    onRevertGasLimit: "0"
+  };
+  
+  const revertOptions = params.revertOptions || defaultRevertOptions;
+  
   let callData: string;
   let value: bigint = BigInt(0);
   
   if (params.erc20) {
-    // ERC20 deposit and call
+    // ERC20 deposit and call using the real ABI
     const amount = ethers.parseUnits(params.amount, params.decimals || 18);
-    callData = gatewayInterface.encodeFunctionData("depositAndCallERC20", [
-      params.erc20,
+    callData = gatewayInterface.encodeFunctionData("depositAndCall", [
       params.receiver,
       amount,
-      zetaChainCallData
+      params.erc20,
+      zetaChainCallData,
+      revertOptions
     ]);
   } else {
-    // Native token deposit and call
+    // Native token deposit and call using the real ABI
     value = ethers.parseEther(params.amount);
     callData = gatewayInterface.encodeFunctionData("depositAndCall", [
       params.receiver,
-      value,
-      zetaChainCallData
+      zetaChainCallData,
+      revertOptions
     ]);
   }
   
@@ -290,6 +307,38 @@ export const evmDepositAndCall = async (
 };
 
 /**
+ * Helper function to create default revert options
+ */
+export const createDefaultRevertOptions = (): RevertOptions => {
+  return {
+    revertAddress: ethers.ZeroAddress,
+    callOnRevert: false,
+    abortAddress: ethers.ZeroAddress,
+    revertMessage: "0x",
+    onRevertGasLimit: "0"
+  };
+};
+
+/**
+ * Helper function to create custom revert options
+ */
+export const createRevertOptions = (
+  revertAddress: string = ethers.ZeroAddress,
+  callOnRevert: boolean = false,
+  abortAddress: string = ethers.ZeroAddress,
+  revertMessage: string = "0x",
+  onRevertGasLimit: string = "0"
+): RevertOptions => {
+  return {
+    revertAddress,
+    callOnRevert,
+    abortAddress,
+    revertMessage,
+    onRevertGasLimit
+  };
+};
+
+/**
  * Helper function to create a simple transfer call
  */
 export const createTransferCall = (to: string, amount: string) => {
@@ -325,4 +374,4 @@ export const createSwapCall = (
   };
 };
 
-export type { EvmDepositAndCallParams, EvmOptions };
+export type { EvmDepositAndCallParams, EvmOptions, RevertOptions };

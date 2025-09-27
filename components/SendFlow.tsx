@@ -20,6 +20,7 @@ import { waitForSolTxConfirmation, getSolTxStatus } from '@/lib/solana';
 import { getZrcAddressFor } from '@/lib/zrc';
 import { IN_APP_RPC_MAP } from '@/lib/rpc';
 import BaseLogo from './BaseLogo';
+import { useSecureTransaction } from '@/hooks/useSecureTransaction';
 
 interface SendFlowProps {
   asset: {
@@ -68,6 +69,8 @@ function logoSymbolForChain(key: string) {
 }
 
 export default function SendFlow({ asset, onClose }: SendFlowProps) {
+  const { network } = useNetwork();
+  const { transferETH, transferERC20, isExecuting, error: transactionError } = useSecureTransaction();
   const [recipientAddress, setRecipientAddress] = useState('');
   const [amount, setAmount] = useState('');
   const [destinationChain, setDestinationChain] = useState('');
