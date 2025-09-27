@@ -88,13 +88,33 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
     const networkKey = (network === 'mainnet' ? 'mainnet' : 'testnet') as TokenNetwork;
     const tokens = getTokensFor(destinationChain, networkKey);
     
+    // If source token is USDC, only show USDC as destination token
+    if (asset.symbol === 'USDC') {
+      const usdcToken = tokens.find(token => token.symbol === 'USDC');
+      if (usdcToken) {
+        return [{
+          value: usdcToken.symbol,
+          label: usdcToken.symbol,
+          name: usdcToken.name,
+          logo: usdcToken.symbol === 'ETH' ? 'base-logo' : `https://assets.parqet.com/logos/crypto/${usdcToken.logo || usdcToken.symbol}?format=png`
+        }];
+      }
+    }
+    
     return tokens.map((token) => ({
       value: token.symbol,
       label: token.symbol,
       name: token.name,
       logo: token.symbol === 'ETH' ? 'base-logo' : `https://assets.parqet.com/logos/crypto/${token.logo || token.symbol}?format=png`
     }));
-  }, [destinationChain, network]);
+  }, [destinationChain, network, asset.symbol]);
+
+  // Auto-select USDC as destination token when source is USDC
+  useEffect(() => {
+    if (asset.symbol === 'USDC' && destinationChain) {
+      setDestinationToken('USDC');
+    }
+  }, [asset.symbol, destinationChain]);
 
   const handleSend = async () => {
     console.log('[UI][SEND] handleSend called', {
@@ -299,8 +319,12 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
           {destinationChain && (
             <div className="space-y-2">
               <Label htmlFor="destinationToken">Destination Token</Label>
-              <Select value={destinationToken} onValueChange={setDestinationToken}>
-                <SelectTrigger>
+              <Select 
+                value={destinationToken} 
+                onValueChange={setDestinationToken}
+                disabled={asset.symbol === 'USDC'}
+              >
+                <SelectTrigger className={asset.symbol === 'USDC' ? 'opacity-50 cursor-not-allowed' : ''}>
                   <SelectValue placeholder="Select destination token" />
                 </SelectTrigger>
                 <SelectContent>
@@ -326,6 +350,11 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
                   ))}
                 </SelectContent>
               </Select>
+              {asset.symbol === 'USDC' && (
+                <p className="text-sm text-muted-foreground">
+                  Destination token is automatically set to USDC
+                </p>
+              )}
             </div>
           )}
 
