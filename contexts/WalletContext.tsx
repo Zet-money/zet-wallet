@@ -2,14 +2,13 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { HDNodeWallet } from 'ethers';
-import { getSolanaAddressFromMnemonic } from '@/lib/solana';
+// Solana wallet generation removed
 import { useBiometric } from '@/contexts/BiometricContext';
 
 export interface Wallet {
   address: string;
   mnemonic: string;
   isImported: boolean;
-  solanaAddress?: string;
 }
 
 interface WalletContextType {
@@ -70,21 +69,6 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     const session = loadSession();
     if (session) {
       const w = session.wallet as Wallet;
-      // Backfill solanaAddress if missing
-      if (!w.solanaAddress && w.mnemonic) {
-        getSolanaAddressFromMnemonic(w.mnemonic).then((addr) => {
-          const updated: Wallet = { ...w, solanaAddress: addr };
-          setWallet(updated);
-          saveSession(updated);
-          setIsWalletInitialized(true);
-          setIsLoading(false);
-        }).catch(() => {
-          setWallet(w);
-          setIsWalletInitialized(true);
-          setIsLoading(false);
-        });
-        return;
-      }
       setWallet(w);
       setIsWalletInitialized(true);
     }
@@ -98,14 +82,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       mnemonic: hd.mnemonic?.phrase ?? '',
       isImported: false,
     };
-    // Also derive Solana address
-    if (baseWallet.mnemonic) {
-      getSolanaAddressFromMnemonic(baseWallet.mnemonic).then((solAddr) => {
-        setWallet({ ...baseWallet, solanaAddress: solAddr });
-      }).catch(() => setWallet(baseWallet))
-    } else {
-      setWallet(baseWallet)
-    }
+    setWallet(baseWallet);
     // Wait for user confirmation before initializing app session
   };
 
@@ -116,17 +93,9 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       mnemonic: hd.mnemonic?.phrase ?? mnemonic.trim(),
       isImported: true,
     };
-    // Also derive Solana address
-    getSolanaAddressFromMnemonic(baseWallet.mnemonic).then((solAddr) => {
-      const newWallet: Wallet = { ...baseWallet, solanaAddress: solAddr }
-      setWallet(newWallet);
-      saveSession(newWallet);
-      setIsWalletInitialized(true);
-    }).catch(() => {
-      setWallet(baseWallet);
-      saveSession(baseWallet);
-      setIsWalletInitialized(true);
-    })
+    setWallet(baseWallet);
+    saveSession(baseWallet);
+    setIsWalletInitialized(true);
   };
 
   const confirmMnemonicSaved = async () => {
