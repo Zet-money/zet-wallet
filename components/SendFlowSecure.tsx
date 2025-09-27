@@ -93,7 +93,9 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
       console.log('[USDC Token Filter] Debug:', {
         destinationChain,
         assetChain: asset.chain,
-        availableTokens: tokens.map(t => t.symbol)
+        networkKey,
+        availableTokens: tokens.map(t => t.symbol),
+        usdcTokens: tokens.filter(t => t.symbol.includes('USDC'))
       });
       
       // Find USDC token with appropriate symbol for the destination chain
