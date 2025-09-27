@@ -90,7 +90,26 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
     
     // If source token is USDC, only show USDC as destination token
     if (asset.symbol === 'USDC') {
-      const usdcToken = tokens.find(token => token.symbol === 'USDC');
+      // Find USDC token with appropriate symbol for the destination chain
+      let usdcToken = tokens.find(token => token.symbol === 'USDC');
+      
+      // For ZetaChain, look for USDC with the source chain suffix
+      if (!usdcToken && destinationChain === 'zetachain') {
+        // Map source chains to their USDC symbols on ZetaChain
+        const usdcSymbolMap: { [key: string]: string } = {
+          'base': 'USDC.BASE',
+          'bsc': 'USDC.BSC',
+          'ethereum': 'USDC.ETH',
+          'polygon': 'USDC.POL',
+          'arbitrum': 'USDC.ARB',
+          'optimism': 'USDC.OP',
+          'avalanche': 'USDC.AVAX'
+        };
+        
+        const usdcSymbol = usdcSymbolMap[asset.chain] || 'USDC.BASE'; // Default to BASE if not found
+        usdcToken = tokens.find(token => token.symbol === usdcSymbol);
+      }
+      
       if (usdcToken) {
         return [{
           value: usdcToken.symbol,
@@ -112,9 +131,24 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
   // Auto-select USDC as destination token when source is USDC
   useEffect(() => {
     if (asset.symbol === 'USDC' && destinationChain) {
-      setDestinationToken('USDC');
+      // For ZetaChain, use the appropriate USDC symbol based on source chain
+      if (destinationChain === 'zetachain') {
+        const usdcSymbolMap: { [key: string]: string } = {
+          'base': 'USDC.BASE',
+          'bsc': 'USDC.BSC',
+          'ethereum': 'USDC.ETH',
+          'polygon': 'USDC.POL',
+          'arbitrum': 'USDC.ARB',
+          'optimism': 'USDC.OP',
+          'avalanche': 'USDC.AVAX'
+        };
+        const usdcSymbol = usdcSymbolMap[asset.chain] || 'USDC.BASE';
+        setDestinationToken(usdcSymbol);
+      } else {
+        setDestinationToken('USDC');
+      }
     }
-  }, [asset.symbol, destinationChain]);
+  }, [asset.symbol, destinationChain, asset.chain]);
 
   const handleSend = async () => {
     console.log('[UI][SEND] handleSend called', {
