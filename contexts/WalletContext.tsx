@@ -27,19 +27,21 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [isWalletInitialized, setIsWalletInitialized] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const { encryptNewMnemonic } = useBiometric();
+  const { encryptNewMnemonic, isAppUnlocked } = useBiometric();
 
-  // Session management functions
+  // Session management functions - NO LONGER STORING SENSITIVE DATA IN LOCALSTORAGE
   const saveSession = (walletData: Wallet) => {
+    // Only store non-sensitive session info in localStorage
     const sessionData = {
-      wallet: walletData,
+      hasWallet: true,
+      address: walletData.address, // Only store public address
       timestamp: Date.now(),
       sessionId: `zet_session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     };
     localStorage.setItem('zet_wallet_session', JSON.stringify(sessionData));
   };
 
-  const loadSession = (): { wallet: Wallet; sessionId: string } | null => {
+  const loadSession = (): { hasWallet: boolean; address: string; sessionId: string } | null => {
     try {
       const sessionData = localStorage.getItem('zet_wallet_session');
       if (sessionData) {
@@ -47,7 +49,11 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         // Check if session is not older than 30 days
         const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
         if (parsed.timestamp > thirtyDaysAgo) {
-          return { wallet: parsed.wallet, sessionId: parsed.sessionId };
+          return { 
+            hasWallet: parsed.hasWallet, 
+            address: parsed.address, 
+            sessionId: parsed.sessionId 
+          };
         } else {
           // Session expired, clear it
           localStorage.removeItem('zet_wallet_session');
@@ -64,22 +70,52 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem('zet_wallet_session');
   };
 
-  // Initialize wallet from session on mount
+  // Load wallet from biometric system when app is unlocked
+  const loadWalletFromBiometric = async () => {
+    try {
+      // This will be called by the biometric system when wallet is unlocked
+      // For now, we'll get the address from the session
+      const session = loadSession();
+      if (session?.address) {
+        // Create a wallet object with just the address (mnemonic stays encrypted)
+        const walletData: Wallet = {
+          address: session.address,
+          mnemonic: '', // Never store mnemonic in memory - it's encrypted in IndexedDB
+          isImported: false,
+        };
+        setWallet(walletData);
+      }
+    } catch (error) {
+      console.error('Error loading wallet from biometric system:', error);
+    }
+  };
+
+  // Initialize wallet from biometric system on mount
   useEffect(() => {
     const session = loadSession();
-    if (session) {
-      const w = session.wallet as Wallet;
-      setWallet(w);
+    if (session?.hasWallet) {
+      // We have a wallet session, but the actual wallet data is encrypted in IndexedDB
+      // The wallet will be loaded when the user unlocks with biometrics
       setIsWalletInitialized(true);
     }
     setIsLoading(false);
   }, []);
 
+  // Load wallet when app is unlocked
+  useEffect(() => {
+    if (isAppUnlocked) {
+      loadWalletFromBiometric();
+    } else {
+      // Clear wallet from memory when app is locked
+      setWallet(null);
+    }
+  }, [isAppUnlocked]);
+
   const createWallet = () => {
     const hd = HDNodeWallet.createRandom();
     const baseWallet: Wallet = {
       address: hd.address,
-      mnemonic: hd.mnemonic?.phrase ?? '',
+      mnemonic: hd.mnemonic?.phrase ?? '', // Temporarily store for encryption
       isImported: false,
     };
     setWallet(baseWallet);
@@ -90,12 +126,11 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     const hd = HDNodeWallet.fromPhrase(mnemonic.trim());
     const baseWallet: Wallet = {
       address: hd.address,
-      mnemonic: hd.mnemonic?.phrase ?? mnemonic.trim(),
+      mnemonic: hd.mnemonic?.phrase ?? mnemonic.trim(), // Temporarily store for encryption
       isImported: true,
     };
     setWallet(baseWallet);
-    saveSession(baseWallet);
-    setIsWalletInitialized(true);
+    // Wait for user confirmation before initializing app session
   };
 
   const confirmMnemonicSaved = async () => {
@@ -104,19 +139,38 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       try {
         const result = await encryptNewMnemonic(wallet.mnemonic);
         if (result.success) {
+          // Create wallet object without mnemonic for session storage
+          const walletForSession: Wallet = {
+            address: wallet.address,
+            mnemonic: '', // Never store mnemonic in memory
+            isImported: wallet.isImported,
+          };
           // Save session after successful encryption
-          saveSession(wallet);
+          saveSession(walletForSession);
+          setWallet(walletForSession); // Update wallet state without mnemonic
           setIsWalletInitialized(true);
         } else {
           console.error('Failed to encrypt mnemonic:', result.error);
           // Still save session but show error
-          saveSession(wallet);
+          const walletForSession: Wallet = {
+            address: wallet.address,
+            mnemonic: '', // Never store mnemonic in memory
+            isImported: wallet.isImported,
+          };
+          saveSession(walletForSession);
+          setWallet(walletForSession);
           setIsWalletInitialized(true);
         }
       } catch (error) {
         console.error('Error encrypting mnemonic:', error);
         // Still save session but show error
-        saveSession(wallet);
+        const walletForSession: Wallet = {
+          address: wallet.address,
+          mnemonic: '', // Never store mnemonic in memory
+          isImported: wallet.isImported,
+        };
+        saveSession(walletForSession);
+        setWallet(walletForSession);
         setIsWalletInitialized(true);
       }
     }
