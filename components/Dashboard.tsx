@@ -55,7 +55,7 @@ export default function Dashboard() {
     balance: '—',
     usdValue: '0.00',
     chain: 'Base',
-    logo: `https://assets.parqet.com/logos/crypto/${t.logo || t.symbol}?format=png`,
+    logo: t.symbol === 'ETH' ? 'base-logo' : `https://assets.parqet.com/logos/crypto/${t.logo || t.symbol}?format=png`,
   }))
 
   const [balances, setBalances] = useState<Record<string, string>>({})
@@ -384,18 +384,24 @@ export default function Dashboard() {
                     <CardContent className="p-3">
                       <div className="flex items-center space-x-3">
                         <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center overflow-hidden">
-                          <img 
-                            src={asset.logo} 
-                            alt={asset.symbol}
-                            className="w-6 h-6 object-contain"
-                            onError={(e) => {
-                              e.currentTarget.style.display = 'none';
-                              e.currentTarget.nextElementSibling?.classList.remove('hidden');
-                            }}
-                          />
-                          <div className="w-6 h-6 bg-muted rounded-full flex items-center justify-center text-xs font-semibold hidden">
-                            {asset.symbol}
-                          </div>
+                          {asset.logo === 'base-logo' ? (
+                            <BaseLogo size={24} />
+                          ) : (
+                            <>
+                              <img 
+                                src={asset.logo} 
+                                alt={asset.symbol}
+                                className="w-6 h-6 object-contain"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
+                                  e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                                }}
+                              />
+                              <div className="w-6 h-6 bg-muted rounded-full flex items-center justify-center text-xs font-semibold hidden">
+                                {asset.symbol}
+                              </div>
+                            </>
+                          )}
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center space-x-2">
@@ -424,7 +430,7 @@ export default function Dashboard() {
             balance: '0.00',
             usdValue: '0.00',
             chain: 'Base',
-            logo: 'https://assets.parqet.com/logos/crypto/ETH?format=png'
+            logo: 'base-logo'
           })}
           onClose={() => setShowReceiveModal(false)} 
         />
