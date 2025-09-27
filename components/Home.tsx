@@ -3,13 +3,17 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { WalletProvider, useWallet } from '@/contexts/WalletContext';
+import { useBiometric } from '@/contexts/BiometricContext';
 import SplashScreen from '@/components/SplashScreen';
 import WalletSetup from '@/components/WalletSetup';
 import Dashboard from '@/components/Dashboard';
+import BiometricLockScreen from '@/components/BiometricLockScreen';
+import BiometricSetup from '@/components/BiometricSetup';
 import PwaInstallBanner from '@/components/PwaInstallBanner';
 
 function AppContent() {
   const { isWalletInitialized, isLoading } = useWallet();
+  const { isAppUnlocked, isBiometricSupported, isEncrypted, isLoading: isBiometricLoading, needsBiometricSetup } = useBiometric();
   const searchParams = useSearchParams();
   const initParam = searchParams.get('init');
   const [showSplash, setShowSplash] = useState(() => initParam === 'false' ? false : true);
@@ -35,8 +39,8 @@ function AppContent() {
     );
   }
 
-  // Show loading while checking session
-  if (isLoading) {
+  // Show loading while checking session and biometric status
+  if (isLoading || isBiometricLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center space-y-4">
@@ -47,6 +51,26 @@ function AppContent() {
         </div>
         <PwaInstallBanner />
       </div>
+    );
+  }
+
+  // Show biometric setup if needed (first time users)
+  if (needsBiometricSetup) {
+    return (
+      <>
+        <BiometricSetup />
+        <PwaInstallBanner />
+      </>
+    );
+  }
+
+  // Show biometric lock screen if app is locked
+  if (isEncrypted && !isAppUnlocked) {
+    return (
+      <>
+        <BiometricLockScreen />
+        <PwaInstallBanner />
+      </>
     );
   }
 

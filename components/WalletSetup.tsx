@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Copy, Eye, EyeOff, Check } from 'lucide-react';
+import { Copy, Eye, EyeOff, Check, Shield } from 'lucide-react';
 import { useWallet } from '@/contexts/WalletContext';
 import { toast } from 'sonner';
 
@@ -36,6 +36,7 @@ export default function WalletSetup() {
     importWallet(importMnemonic.trim());
     toast.success('Wallet imported successfully!');
   };
+
 
   const copyToClipboard = async (text: string) => {
     try {
@@ -103,6 +104,21 @@ export default function WalletSetup() {
                 <strong>Important:</strong> If you lose your recovery phrase, you will lose access to your wallet forever. 
                 Make sure to store it in a secure location.
               </p>
+            </div>
+
+            {/* Biometric security is already set up before reaching this point */}
+            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <Shield className="h-5 w-5 text-green-600 mt-0.5" />
+                <div>
+                  <h4 className="font-medium text-green-900 dark:text-green-100">
+                    Biometric Security Enabled
+                  </h4>
+                  <p className="text-sm text-green-800 dark:text-green-200">
+                    Your wallet is protected by biometric authentication. Your recovery phrase is encrypted and secure.
+                  </p>
+                </div>
+              </div>
             </div>
             
             <Button onClick={confirmMnemonicSaved} className="w-full">

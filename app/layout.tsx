@@ -7,6 +7,7 @@ import { NetworkProvider } from "@/contexts/NetworkContext";
 import { registerServiceWorker, setupInstallPrompt } from "@/lib/pwa";
 import { useEffect } from "react";
 import { WalletProvider } from "@/contexts/WalletContext";
+import { BiometricProvider } from "@/contexts/BiometricContext";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -45,11 +46,13 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <NetworkProvider>
-            <WalletProvider>
-              {children}
-            </WalletProvider>
-          </NetworkProvider>
+          <BiometricProvider>
+            <NetworkProvider>
+              <WalletProvider>
+                {children}
+              </WalletProvider>
+            </NetworkProvider>
+          </BiometricProvider>
           <Toaster position="top-center" />
         </ThemeProvider>
       </body>

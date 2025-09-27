@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { HDNodeWallet } from 'ethers';
 import { getSolanaAddressFromMnemonic } from '@/lib/solana';
+import { useBiometric } from '@/contexts/BiometricContext';
 
 export interface Wallet {
   address: string;
@@ -27,6 +28,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [isWalletInitialized, setIsWalletInitialized] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const { encryptNewMnemonic } = useBiometric();
 
   // Session management functions
   const saveSession = (walletData: Wallet) => {
@@ -67,21 +69,21 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const session = loadSession();
     if (session) {
-      const w = session.wallet as Wallet
+      const w = session.wallet as Wallet;
       // Backfill solanaAddress if missing
       if (!w.solanaAddress && w.mnemonic) {
         getSolanaAddressFromMnemonic(w.mnemonic).then((addr) => {
-          const updated: Wallet = { ...w, solanaAddress: addr }
-          setWallet(updated)
-          saveSession(updated)
-          setIsWalletInitialized(true)
-          setIsLoading(false)
+          const updated: Wallet = { ...w, solanaAddress: addr };
+          setWallet(updated);
+          saveSession(updated);
+          setIsWalletInitialized(true);
+          setIsLoading(false);
         }).catch(() => {
-          setWallet(w)
-          setIsWalletInitialized(true)
-          setIsLoading(false)
-        })
-        return
+          setWallet(w);
+          setIsWalletInitialized(true);
+          setIsLoading(false);
+        });
+        return;
       }
       setWallet(w);
       setIsWalletInitialized(true);
@@ -127,11 +129,28 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     })
   };
 
-  const confirmMnemonicSaved = () => {
+  const confirmMnemonicSaved = async () => {
     if (wallet) {
-      saveSession(wallet);
+      // Encrypt the mnemonic with biometric authentication
+      try {
+        const result = await encryptNewMnemonic(wallet.mnemonic);
+        if (result.success) {
+          // Save session after successful encryption
+          saveSession(wallet);
+          setIsWalletInitialized(true);
+        } else {
+          console.error('Failed to encrypt mnemonic:', result.error);
+          // Still save session but show error
+          saveSession(wallet);
+          setIsWalletInitialized(true);
+        }
+      } catch (error) {
+        console.error('Error encrypting mnemonic:', error);
+        // Still save session but show error
+        saveSession(wallet);
+        setIsWalletInitialized(true);
+      }
     }
-    setIsWalletInitialized(true);
   };
 
   const clearWallet = () => {

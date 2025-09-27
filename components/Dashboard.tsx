@@ -6,11 +6,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Search, Send, Download, Settings, Copy, Check, X } from 'lucide-react';
+import { Search, Send, Download, Settings, Copy, Check, X, Lock } from 'lucide-react';
 import { useWallet } from '@/contexts/WalletContext';
+import { useBiometric } from '@/contexts/BiometricContext';
+import { useUserSettings } from '@/contexts/UserSettingsContext';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import ThemeToggle from './ThemeToggle';
+import UserSettingsModal from './UserSettingsModal';
 import { useNetwork } from '@/contexts/NetworkContext';
 import { getTokensFor } from '@/lib/tokens';
 import { fetchBalancesForChain } from '@/lib/balances';
@@ -33,6 +36,8 @@ const chains = [
 
 export default function Dashboard() {
   const { wallet } = useWallet();
+  const { lockApp, isEncrypted } = useBiometric();
+  const { profile } = useUserSettings();
   const { network, setNetwork } = useNetwork();
   const router = useRouter();
   const [selectedChain, setSelectedChain] = useState(() => {
@@ -49,6 +54,7 @@ export default function Dashboard() {
   const [copied, setCopied] = useState(false);
   const [showSendModal, setShowSendModal] = useState(false);
   const [showReceiveModal, setShowReceiveModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
   const handleChainChange = (value: string) => {
     setSelectedChain(value)
     try {
@@ -225,6 +231,21 @@ export default function Dashboard() {
             </div>
             
             <div className="flex items-center space-x-1 sm:space-x-2">
+              <BiometricStatus />
+              
+              {isEncrypted && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={lockApp}
+                  className="flex items-center space-x-1 p-2"
+                  title="Lock app"
+                >
+                  <Lock className="w-4 h-4" />
+                  <span className="hidden sm:inline">Lock</span>
+                </Button>
+              )}
+              
               <Button
                 variant="ghost"
                 size="sm"
