@@ -7,6 +7,7 @@
 
 import React, { useState } from 'react';
 import { useBiometric } from '@/contexts/BiometricContext';
+import { useUserSettings } from '@/contexts/UserSettingsContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -14,6 +15,7 @@ import { AlertCircle, Shield, Fingerprint, Lock, CheckCircle, XCircle, RefreshCw
 
 export default function BiometricLockScreen() {
   const { unlockApp, isBiometricSupported, isEncrypted, migrationStatus, clearBiometricCredentials } = useBiometric();
+  const { profile } = useUserSettings();
   const [isUnlocking, setIsUnlocking] = useState(false);
   const [unlockResult, setUnlockResult] = useState<string | null>(null);
   const [isClearing, setIsClearing] = useState(false);
@@ -23,7 +25,8 @@ export default function BiometricLockScreen() {
       setIsUnlocking(true);
       setUnlockResult(null);
       
-      const result = await unlockApp();
+      const timeoutMinutes = profile?.sessionTimeout || 5;
+      const result = await unlockApp(timeoutMinutes);
       
       if (result.success) {
         setUnlockResult('✅ Successfully unlocked with biometrics!');

@@ -19,7 +19,7 @@ export interface BiometricContextType {
     hasEncrypted: boolean;
     biometricSupported: boolean;
   } | null;
-  unlockApp: () => Promise<UnlockResult>;
+  unlockApp: (timeoutMinutes?: number) => Promise<UnlockResult>;
   lockApp: () => void;
   setupBiometric: () => Promise<MigrationResult>;
   encryptNewMnemonic: (mnemonic: string) => Promise<MigrationResult>;
@@ -83,17 +83,17 @@ export function BiometricProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // Session timeout management
-  const startSessionTimeout = () => {
+  const startSessionTimeout = (timeoutMinutes: number = 5) => {
     // Clear existing timeout
     if (sessionTimeout) {
       clearTimeout(sessionTimeout);
     }
 
-    // Set new timeout for 5 minutes
+    // Set timeout based on provided minutes
     const timeout = setTimeout(() => {
       setIsAppUnlocked(false);
       setSessionTimeout(null);
-    }, 5 * 60 * 1000); // 5 minutes
+    }, timeoutMinutes * 60 * 1000);
 
     setSessionTimeout(timeout);
   };
@@ -112,7 +112,7 @@ export function BiometricProvider({ children }: { children: React.ReactNode }) {
     };
   }, [sessionTimeout]);
 
-  const unlockApp = async (): Promise<UnlockResult> => {
+  const unlockApp = async (timeoutMinutes: number = 5): Promise<UnlockResult> => {
     try {
       if (!isEncrypted) {
         return {
@@ -124,7 +124,7 @@ export function BiometricProvider({ children }: { children: React.ReactNode }) {
       const result = await biometricMigration.unlockWalletWithBiometrics();
       if (result.success) {
         setIsAppUnlocked(true);
-        startSessionTimeout(); // Restart session timeout
+        startSessionTimeout(timeoutMinutes); // Restart session timeout
       }
       return result;
     } catch (error) {

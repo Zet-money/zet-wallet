@@ -203,36 +203,41 @@ export default function Dashboard() {
       <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-sm border-b">
         <div className="container mx-auto px-4 py-4 max-w-4xl">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
+            <div className="flex items-center space-x-3 sm:space-x-4 min-w-0 flex-1">
+              <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
                 <span className="text-sm font-bold text-primary">Z</span>
               </div>
-              <div>
-                <h1 className="font-semibold">Zet Wallet</h1>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <h1 className="font-semibold text-sm sm:text-base">Zet Wallet</h1>
+                  {profile?.name && (
+                    <span className="text-sm text-muted-foreground hidden sm:inline">
+                      Hi, {profile.name}
+                    </span>
+                  )}
+                </div>
                 <div className="mt-1 space-y-1">
                   <div className="flex items-center space-x-2 text-xs text-muted-foreground">
-                    <img src="https://assets.parqet.com/logos/crypto/ETH?format=png" alt="ETH" className="w-3 h-3" onError={(e) => { e.currentTarget.style.display = 'none' }} />
-                    <span>{wallet ? truncateAddress(wallet.address) : 'No EVM wallet'}</span>
+                    <img src="https://assets.parqet.com/logos/crypto/ETH?format=png" alt="ETH" className="w-3 h-3 flex-shrink-0" onError={(e) => { e.currentTarget.style.display = 'none' }} />
+                    <span className="truncate">{wallet ? truncateAddress(wallet.address) : 'No EVM wallet'}</span>
                     <button
                       onClick={async () => { if (wallet?.address) { await navigator.clipboard.writeText(wallet.address); toast.success('EVM address copied') } }}
-                      className="px-1 py-0.5 border rounded"
+                      className="px-1 py-0.5 border rounded text-xs flex-shrink-0"
                     >Copy</button>
                   </div>
                   <div className="flex items-center space-x-2 text-xs text-muted-foreground">
-                    <img src="https://assets.parqet.com/logos/crypto/SOL?format=png" alt="SOL" className="w-3 h-3" onError={(e) => { e.currentTarget.style.display = 'none' }} />
-                    <span>{wallet?.solanaAddress ? truncateAddress(wallet.solanaAddress) : 'No Solana wallet'}</span>
+                    <img src="https://assets.parqet.com/logos/crypto/SOL?format=png" alt="SOL" className="w-3 h-3 flex-shrink-0" onError={(e) => { e.currentTarget.style.display = 'none' }} />
+                    <span className="truncate">{wallet?.solanaAddress ? truncateAddress(wallet.solanaAddress) : 'No Solana wallet'}</span>
                     <button
                       onClick={async () => { if (wallet?.solanaAddress) { await navigator.clipboard.writeText(wallet.solanaAddress); toast.success('Solana address copied') } }}
-                      className="px-1 py-0.5 border rounded"
+                      className="px-1 py-0.5 border rounded text-xs flex-shrink-0"
                     >Copy</button>
                   </div>
                 </div>
               </div>
             </div>
             
-            <div className="flex items-center space-x-1 sm:space-x-2">
-              <BiometricStatus />
-              
+            <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
               {isEncrypted && (
                 <Button
                   variant="ghost"
@@ -249,15 +254,16 @@ export default function Dashboard() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setShowReceiveModal(true)}
+                onClick={() => setShowSettingsModal(true)}
                 className="flex items-center space-x-1 p-2"
+                title="Settings"
               >
-                <Download className="w-4 h-4" />
-                <span className="hidden sm:inline">Receive</span>
+                <Settings className="w-4 h-4" />
+                <span className="hidden sm:inline">Settings</span>
               </Button>
               
               <Select value={network} onValueChange={(v) => setNetwork(v as any)}>
-                <SelectTrigger className="w-20 sm:w-24">
+                <SelectTrigger className="w-16 sm:w-20">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -481,6 +487,12 @@ export default function Dashboard() {
           onClose={() => setShowReceiveModal(false)} 
         />
       )}
+
+      {/* Settings Modal */}
+      <UserSettingsModal 
+        isOpen={showSettingsModal} 
+        onClose={() => setShowSettingsModal(false)} 
+      />
     </div>
   );
 }
