@@ -155,7 +155,7 @@ const generateEvmDepositAndCallData = (params: {
   if (params.erc20) {
     // ERC20 deposit and call using the real ABI
     const amount = ethers.parseUnits(params.amount, params.decimals || 18);
-    callData = gatewayInterface.encodeFunctionData("depositAndCall", [
+    callData = gatewayInterface.encodeFunctionData("depositAndCall(address,uint256,address,bytes,(address,bool,address,bytes,uint256))", [
       params.receiver,
       amount,
       params.erc20,
@@ -165,7 +165,7 @@ const generateEvmDepositAndCallData = (params: {
   } else {
     // Native token deposit and call using the real ABI
     value = ethers.parseEther(params.amount);
-    callData = gatewayInterface.encodeFunctionData("depositAndCall", [
+    callData = gatewayInterface.encodeFunctionData("depositAndCall(address,bytes,(address,bool,address,bytes,uint256))", [
       params.receiver,
       zetaChainCallData,
       revertOptions
