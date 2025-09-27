@@ -7,7 +7,7 @@ import { ArrowLeft, Send, Download, TrendingUp, TrendingDown } from 'lucide-reac
 import { useEffect, useState } from 'react';
 import { getTokenChangeUSD24h } from '@/lib/prices';
 import { useRouter } from 'next/navigation';
-import SendFlow from './SendFlow';
+import SendFlowSecure from './SendFlowSecure';
 import ReceiveFlow from './ReceiveFlow';
 
 interface AssetDetailsProps {
@@ -164,7 +164,7 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
 
       {/* Send Flow */}
       {showSend && (
-        <SendFlow 
+        <SendFlowSecure 
           asset={asset} 
           onClose={() => setShowSend(false)} 
         />

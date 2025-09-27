@@ -70,7 +70,7 @@ export default function AssetPage() {
     balance: loading ? '—' : balance,
     usdValue: loading ? '0.00' : usdValue,
     chain: chainKey,
-    logo: `https://assets.parqet.com/logos/crypto/${token.logo || token.symbol}?format=png`,
+    logo: token.symbol === 'ETH' ? 'base-logo' : `https://assets.parqet.com/logos/crypto/${token.logo || token.symbol}?format=png`,
   } : null;
   
   if (!asset) {

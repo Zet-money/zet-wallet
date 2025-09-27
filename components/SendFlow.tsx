@@ -91,7 +91,6 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
   const [transactionReceiver, setTransactionReceiver] = useState<string>('');
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const startTimeRef = useRef<number | null>(null);
-  const { network } = useNetwork();
 
   // Timer effect for tracking transaction duration
   useEffect(() => {
