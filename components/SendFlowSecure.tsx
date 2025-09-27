@@ -240,6 +240,7 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
 
   const maxAmount = parseFloat(asset.balance.replace(/,/g, ''));
   const assetUsd = parseFloat(asset.usdValue.replace(/,/g, ''));
+  const usdAmount = amount ? (parseFloat(amount || '0') * (maxAmount > 0 ? assetUsd / maxAmount : 0)) : 0;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
@@ -299,10 +300,10 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
                 </Button>
               </div>
             </div>
-            {amount && !isNaN(parseFloat(amount)) && maxAmount > 0 && (
-              <div className="text-sm text-muted-foreground">
-                ≈ ${((parseFloat(amount) * assetUsd) / maxAmount).toFixed(2)} USD
-              </div>
+            {amount && (
+              <p className="text-sm text-muted-foreground">
+                ≈ ${usdAmount.toFixed(2)} USD
+              </p>
             )}
           </div>
 
