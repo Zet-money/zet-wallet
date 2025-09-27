@@ -116,26 +116,38 @@ const generateEvmDepositAndCallData = (params: {
   types?: string[];
   values?: any[];
 }) => {
+  console.log('[generateEvmDepositAndCallData] ===== GENERATING CALLDATA =====');
+  console.log('[generateEvmDepositAndCallData] Input params:', JSON.stringify(params, null, 2));
+  
   // Use the real ZetaChain Gateway ABI
   const gatewayInterface = new ethers.Interface(BASE_GATEWAY_ABI);
+  console.log('[generateEvmDepositAndCallData] Gateway interface created');
   
   // Generate the calldata for the function that will be called on ZetaChain
   let zetaChainCallData = "0x";
   
   if (params.types && params.values && params.types.length > 0 && params.values.length > 0) {
+    console.log('[generateEvmDepositAndCallData] Encoding ZetaChain function call...');
+    console.log('[generateEvmDepositAndCallData] Types:', params.types);
+    console.log('[generateEvmDepositAndCallData] Values:', params.values);
+    
     // If we have function call data to encode
     try {
       // Create interface for the target function on ZetaChain
       const functionSignature = `function execute(${params.types.join(', ')})`;
+      console.log('[generateEvmDepositAndCallData] Function signature:', functionSignature);
       const targetInterface = new ethers.Interface([functionSignature]);
       
       // Encode the function call data
       zetaChainCallData = targetInterface.encodeFunctionData("execute", params.values);
+      console.log('[generateEvmDepositAndCallData] Encoded ZetaChain call data:', zetaChainCallData);
     } catch (error) {
       console.warn("Failed to encode function call data:", error);
       // Fallback to empty data
       zetaChainCallData = "0x";
     }
+  } else {
+    console.log('[generateEvmDepositAndCallData] No ZetaChain function call data, using empty data');
   }
   
   // Default revert options if not provided
@@ -148,13 +160,26 @@ const generateEvmDepositAndCallData = (params: {
   };
   
   const revertOptions = params.revertOptions || defaultRevertOptions;
+  console.log('[generateEvmDepositAndCallData] Revert options:', JSON.stringify(revertOptions, null, 2));
   
   let callData: string;
   let value: bigint = BigInt(0);
   
   if (params.erc20) {
+    console.log('[generateEvmDepositAndCallData] ===== ERC20 FUNCTION SIGNATURE =====');
+    console.log('[generateEvmDepositAndCallData] Using function: depositAndCall(address,uint256,address,bytes,(address,bool,address,bytes,uint256))');
+    
     // ERC20 deposit and call using the real ABI
     const amount = ethers.parseUnits(params.amount, params.decimals || 18);
+    console.log('[generateEvmDepositAndCallData] Parsed amount:', amount.toString());
+    console.log('[generateEvmDepositAndCallData] Function parameters:', {
+      receiver: params.receiver,
+      amount: amount.toString(),
+      erc20: params.erc20,
+      zetaChainCallData: zetaChainCallData,
+      revertOptions: revertOptions
+    });
+    
     callData = gatewayInterface.encodeFunctionData("depositAndCall(address,uint256,address,bytes,(address,bool,address,bytes,uint256))", [
       params.receiver,
       amount,
@@ -163,14 +188,27 @@ const generateEvmDepositAndCallData = (params: {
       revertOptions
     ]);
   } else {
+    console.log('[generateEvmDepositAndCallData] ===== NATIVE TOKEN FUNCTION SIGNATURE =====');
+    console.log('[generateEvmDepositAndCallData] Using function: depositAndCall(address,bytes,(address,bool,address,bytes,uint256))');
+    
     // Native token deposit and call using the real ABI
     value = ethers.parseEther(params.amount);
+    console.log('[generateEvmDepositAndCallData] Parsed ETH amount:', value.toString());
+    console.log('[generateEvmDepositAndCallData] Function parameters:', {
+      receiver: params.receiver,
+      zetaChainCallData: zetaChainCallData,
+      revertOptions: revertOptions
+    });
+    
     callData = gatewayInterface.encodeFunctionData("depositAndCall(address,bytes,(address,bool,address,bytes,uint256))", [
       params.receiver,
       zetaChainCallData,
       revertOptions
     ]);
   }
+  
+  console.log('[generateEvmDepositAndCallData] Final calldata:', callData);
+  console.log('[generateEvmDepositAndCallData] Final value:', value.toString());
   
   return {
     data: callData,
@@ -195,7 +233,16 @@ const broadcastGatewayTx = async (params: {
     maxPriorityFeePerGas?: string;
   };
 }) => {
-  const tx = await params.signer.sendTransaction({
+  console.log('[broadcastGatewayTx] ===== BROADCASTING TRANSACTION =====');
+  console.log('[broadcastGatewayTx] Transaction data:', {
+    to: params.txData.to,
+    data: params.txData.data,
+    value: params.txData.value.toString(),
+    dataLength: params.txData.data.length
+  });
+  console.log('[broadcastGatewayTx] Transaction options:', params.txOptions);
+  
+  const txRequest = {
     to: params.txData.to,
     data: params.txData.data,
     value: params.txData.value,
@@ -203,9 +250,19 @@ const broadcastGatewayTx = async (params: {
     gasPrice: params.txOptions?.gasPrice ? BigInt(params.txOptions.gasPrice) : undefined,
     maxFeePerGas: params.txOptions?.maxFeePerGas ? BigInt(params.txOptions.maxFeePerGas) : undefined,
     maxPriorityFeePerGas: params.txOptions?.maxPriorityFeePerGas ? BigInt(params.txOptions.maxPriorityFeePerGas) : undefined,
-  });
+  };
   
-  return tx;
+  console.log('[broadcastGatewayTx] Final transaction request:', JSON.stringify(txRequest, (key, value) => 
+    typeof value === 'bigint' ? value.toString() : value, 2));
+  
+  try {
+    const tx = await params.signer.sendTransaction(txRequest);
+    console.log('[broadcastGatewayTx] Transaction sent successfully:', tx.hash);
+    return tx;
+  } catch (error) {
+    console.error('[broadcastGatewayTx] Transaction failed:', error);
+    throw error;
+  }
 };
 
 /**
@@ -238,17 +295,29 @@ export const evmDepositAndCall = async (
   params: EvmDepositAndCallParams,
   options: EvmOptions
 ) => {
+  console.log('[evmDepositAndCall] ===== STARTING TRANSACTION =====');
+  console.log('[evmDepositAndCall] Input params:', JSON.stringify(params, null, 2));
+  console.log('[evmDepositAndCall] Input options:', JSON.stringify(options, null, 2));
+  
   const validatedParams = validateAndParseSchema(
     params,
     evmDepositAndCallParamsSchema
   ) as EvmDepositAndCallParamsType;
   const validatedOptions = validateAndParseSchema(options, evmOptionsSchema) as EvmOptionsType;
 
+  console.log('[evmDepositAndCall] Validated params:', JSON.stringify(validatedParams, null, 2));
+  console.log('[evmDepositAndCall] Validated options:', JSON.stringify(validatedOptions, null, 2));
+
   const gatewayAddress =
     validatedOptions.gateway ||
     (await getGatewayAddressFromSigner(validatedOptions.signer));
+    
+  console.log('[evmDepositAndCall] Gateway address:', gatewayAddress);
 
   if (validatedParams.token) {
+    console.log('[evmDepositAndCall] ===== ERC20 TOKEN PATH =====');
+    console.log('[evmDepositAndCall] Token address:', validatedParams.token);
+    
     const erc20Contract = new ethers.Contract(
       validatedParams.token,
       ERC20_ABI,
@@ -257,12 +326,20 @@ export const evmDepositAndCall = async (
 
     const decimals = await erc20Contract.decimals();
     const value = ethers.parseUnits(validatedParams.amount, decimals);
+    
+    console.log('[evmDepositAndCall] Token decimals:', decimals);
+    console.log('[evmDepositAndCall] Parsed amount:', value.toString());
+    console.log('[evmDepositAndCall] Gateway address for approval:', gatewayAddress);
 
     // Approve the gateway to spend the tokens
+    console.log('[evmDepositAndCall] Approving gateway to spend tokens...');
     const approval = await erc20Contract.approve(gatewayAddress, value);
+    console.log('[evmDepositAndCall] Approval transaction hash:', approval.hash);
     await approval.wait();
+    console.log('[evmDepositAndCall] Approval confirmed');
 
     // Generate calldata for deposit and call
+    console.log('[evmDepositAndCall] Generating calldata for ERC20 deposit...');
     const callData = generateEvmDepositAndCallData({
       amount: validatedParams.amount,
       decimals: decimals,
@@ -272,7 +349,14 @@ export const evmDepositAndCall = async (
       types: validatedParams.types,
       values: validatedParams.values,
     });
+    
+    console.log('[evmDepositAndCall] Generated calldata:', {
+      data: callData.data,
+      value: callData.value.toString(),
+      dataLength: callData.data.length
+    });
 
+    console.log('[evmDepositAndCall] Broadcasting ERC20 gateway transaction...');
     const tx = await broadcastGatewayTx({
       signer: validatedOptions.signer,
       txData: {
@@ -282,9 +366,14 @@ export const evmDepositAndCall = async (
       },
       txOptions: validatedOptions.txOptions || {},
     });
+    
+    console.log('[evmDepositAndCall] ERC20 transaction hash:', tx.hash);
     return tx;
   } else {
     // Native token deposit and call
+    console.log('[evmDepositAndCall] ===== NATIVE TOKEN PATH =====');
+    console.log('[evmDepositAndCall] Amount:', validatedParams.amount);
+    
     const callData = generateEvmDepositAndCallData({
       amount: validatedParams.amount,
       receiver: validatedParams.receiver,
@@ -292,7 +381,14 @@ export const evmDepositAndCall = async (
       types: validatedParams.types,
       values: validatedParams.values,
     });
+    
+    console.log('[evmDepositAndCall] Generated calldata for native token:', {
+      data: callData.data,
+      value: callData.value.toString(),
+      dataLength: callData.data.length
+    });
 
+    console.log('[evmDepositAndCall] Broadcasting native token gateway transaction...');
     const tx = await broadcastGatewayTx({
       signer: validatedOptions.signer,
       txData: {
@@ -302,6 +398,8 @@ export const evmDepositAndCall = async (
       },
       txOptions: validatedOptions.txOptions || {},
     });
+    
+    console.log('[evmDepositAndCall] Native token transaction hash:', tx.hash);
     return tx;
   }
 };
