@@ -109,10 +109,16 @@ export class SecureTransactionService {
     receiver: string,
     rpcUrl: string
   ): Promise<ethers.TransactionResponse> {
+    // For ETH transfer, we need to build ZetProtocol payload
+    const recipientBytes = receiver.startsWith('0x') ? receiver : `0x${receiver}`;
+    const withdrawFlag = true; // Always withdraw for direct transfers
+    const targetTokenAddress = '0x0000000000000000000000000000000000000000'; // ETH on ZetaChain
+    
     return this.executeCrossChainTransaction({
       amount,
-      receiver,
-      // No types/values = simple transfer
+      receiver, // This will be overridden to ZetProtocol address in evmDepositAndCall
+      types: ['address', 'bytes', 'bool'],
+      values: [targetTokenAddress, recipientBytes, withdrawFlag],
     }, rpcUrl);
   }
 
@@ -125,10 +131,17 @@ export class SecureTransactionService {
     tokenAddress: string,
     rpcUrl: string
   ): Promise<ethers.TransactionResponse> {
+    // For ERC20 transfer, we need to build ZetProtocol payload
+    const recipientBytes = receiver.startsWith('0x') ? receiver : `0x${receiver}`;
+    const withdrawFlag = true; // Always withdraw for direct transfers
+    const targetTokenAddress = '0x0000000000000000000000000000000000000000'; // ETH on ZetaChain (for now)
+    
     return this.executeCrossChainTransaction({
       amount,
-      receiver,
+      receiver, // This will be overridden to ZetProtocol address in evmDepositAndCall
       token: tokenAddress,
+      types: ['address', 'bytes', 'bool'],
+      values: [targetTokenAddress, recipientBytes, withdrawFlag],
     }, rpcUrl);
   }
 
