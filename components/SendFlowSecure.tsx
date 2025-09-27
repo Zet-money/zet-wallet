@@ -318,79 +318,81 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
             />
           </div>
 
-          {/* Destination Chain */}
-          <div className="space-y-2">
-            <Label htmlFor="destination">Destination Chain</Label>
-            <Select value={destinationChain} onValueChange={(value) => {
-              setDestinationChain(value);
-              setDestinationToken(''); // Reset destination token when chain changes
-            }}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select destination chain" />
-              </SelectTrigger>
-              <SelectContent>
-                {destinationChains.map((chain) => (
-                  <SelectItem key={chain.value} value={chain.value}>
-                    <div className="flex items-center space-x-2">
-                      {chain.icon === 'base-logo' ? (
-                        <BaseLogo size={16} />
-                      ) : (
-                        <img
-                          src={chain.icon}
-                          alt={chain.label}
-                          className="w-4 h-4 object-contain"
-                          onError={(e) => { e.currentTarget.style.display = 'none' }}
-                        />
-                      )}
-                      <span>{chain.label}</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Destination Token */}
-          {destinationChain && (
+          {/* Destination Chain and Token */}
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="destinationToken">Destination Token</Label>
-              <Select 
-                value={destinationToken} 
-                onValueChange={setDestinationToken}
-                disabled={asset.symbol === 'USDC'}
-              >
-                <SelectTrigger className={asset.symbol === 'USDC' ? 'opacity-50 cursor-not-allowed' : ''}>
-                  <SelectValue placeholder="Select destination token" />
+              <Label htmlFor="destination">Destination Chain</Label>
+              <Select value={destinationChain} onValueChange={(value) => {
+                setDestinationChain(value);
+                setDestinationToken(''); // Reset destination token when chain changes
+              }}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select destination chain" />
                 </SelectTrigger>
                 <SelectContent>
-                  {destinationTokens.map((token) => (
-                    <SelectItem key={token.value} value={token.value}>
+                  {destinationChains.map((chain) => (
+                    <SelectItem key={chain.value} value={chain.value}>
                       <div className="flex items-center space-x-2">
-                        {token.logo === 'base-logo' ? (
+                        {chain.icon === 'base-logo' ? (
                           <BaseLogo size={16} />
                         ) : (
                           <img
-                            src={token.logo}
-                            alt={token.label}
+                            src={chain.icon}
+                            alt={chain.label}
                             className="w-4 h-4 object-contain"
                             onError={(e) => { e.currentTarget.style.display = 'none' }}
                           />
                         )}
-                        <div className="flex flex-col">
-                          <span className="font-medium">{token.label}</span>
-                          <span className="text-xs text-muted-foreground">{token.name}</span>
-                        </div>
+                        <span>{chain.label}</span>
                       </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              {asset.symbol === 'USDC' && (
-                <p className="text-sm text-muted-foreground">
-                  Destination token is automatically set to USDC
-                </p>
-              )}
             </div>
+
+            {destinationChain && (
+              <div className="space-y-2">
+                <Label htmlFor="destinationToken">Destination Token</Label>
+                <Select 
+                  value={destinationToken} 
+                  onValueChange={setDestinationToken}
+                  disabled={asset.symbol === 'USDC'}
+                >
+                  <SelectTrigger className={asset.symbol === 'USDC' ? 'opacity-50 cursor-not-allowed' : ''}>
+                    <SelectValue placeholder="Select destination token" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {destinationTokens.map((token) => (
+                      <SelectItem key={token.value} value={token.value}>
+                        <div className="flex items-center space-x-2">
+                          {token.logo === 'base-logo' ? (
+                            <BaseLogo size={16} />
+                          ) : (
+                            <img
+                              src={token.logo}
+                              alt={token.label}
+                              className="w-4 h-4 object-contain"
+                              onError={(e) => { e.currentTarget.style.display = 'none' }}
+                            />
+                          )}
+                          <div className="flex flex-col">
+                            <span className="font-medium">{token.label}</span>
+                            <span className="text-xs text-muted-foreground">{token.name}</span>
+                          </div>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+
+          {asset.symbol === 'USDC' && destinationChain && (
+            <p className="text-sm text-muted-foreground">
+              Destination token is automatically set to USDC
+            </p>
           )}
 
           {/* Transaction Status */}
