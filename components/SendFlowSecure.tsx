@@ -14,6 +14,10 @@ import { EVM_TOKENS, getTokensFor, type Network as TokenNetwork } from '@/lib/to
 import { IN_APP_RPC_MAP } from '@/lib/rpc';
 import BaseLogo from './BaseLogo';
 import { useSecureTransaction } from '@/hooks/useSecureTransaction';
+import { CctxProgress, trackCrossChainConfirmations as trackCrossChainTransaction } from '@/lib/zetachain-server';
+import CctxProgressComponent from '@/components/CctxProgress';
+import { waitForTxConfirmation, getTxStatus } from '@/lib/zetachain';
+import { explorerFor } from '@/lib/explorer';
 
 interface SendFlowProps {
   asset: {
@@ -69,8 +73,20 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
   const [destinationChain, setDestinationChain] = useState('');
   const [destinationToken, setDestinationToken] = useState('');
   const [txHash, setTxHash] = useState<string | null>(null);
-  const [txPhase, setTxPhase] = useState<'idle' | 'pending' | 'confirmed' | 'failed' | 'completed'>('idle');
+  const [txPhase, setTxPhase] = useState<'idle' | 'pending' | 'confirmed' | 'failed' | 'timeout' | 'completed'>('idle');
+  const [confirmations, setConfirmations] = useState<number>(0);
+  const [gasUsed, setGasUsed] = useState<string | undefined>(undefined);
+  const [blockNumber, setBlockNumber] = useState<number | undefined>(undefined);
+  const [cctxs, setCctxs] = useState<any[]>([]);
+  const [cctxProgress, setCctxProgress] = useState<CctxProgress | null>(null);
+  const [transactionDuration, setTransactionDuration] = useState<number>(0);
+  const [isTimerRunning, setIsTimerRunning] = useState<boolean>(false);
   const [transactionAmount, setTransactionAmount] = useState<string>('');
+  const [transactionToken, setTransactionToken] = useState<string>('');
+  const [transactionTargetChain, setTransactionTargetChain] = useState<string>('');
+  const [transactionReceiver, setTransactionReceiver] = useState<string>('');
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const startTimeRef = useRef<number | null>(null);
 
   // Destination chains
   const destinationChains = useMemo(() => {
@@ -172,6 +188,54 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
     }
   }, [asset.symbol, destinationChain, asset.chain]);
 
+  // Timer effect for tracking transaction duration
+  useEffect(() => {
+    if (isTimerRunning && startTimeRef.current) {
+      timerRef.current = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - startTimeRef.current!) / 1000);
+        setTransactionDuration(elapsed);
+        console.log('[UI][TIMER] Transaction duration updated', { elapsed, txPhase })
+      }, 1000);
+    } else {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    }
+
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, [isTimerRunning, txPhase]);
+
+  const startTimer = () => {
+    console.log('[UI][TIMER] Starting transaction timer')
+    startTimeRef.current = Date.now();
+    setTransactionDuration(0);
+    setIsTimerRunning(true);
+  };
+
+  const stopTimer = () => {
+    console.log('[UI][TIMER] Stopping transaction timer', { 
+      finalDuration: transactionDuration,
+      txPhase 
+    })
+    setIsTimerRunning(false);
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+  };
+
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
   const handleSend = async () => {
     console.log('[UI][SEND] handleSend called', {
       recipientAddress,
@@ -211,6 +275,15 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
     console.log('[UI][SEND] All validations passed, starting secure transfer process');
     
     try {
+      // Store transaction details for tracking
+      setTransactionAmount(amount);
+      setTransactionToken(asset.symbol);
+      setTransactionTargetChain(destinationChain);
+      setTransactionReceiver(recipientAddress);
+      
+      // Start transaction timer
+      startTimer();
+      
       // Get RPC URL for Base chain
       const rpcUrl = IN_APP_RPC_MAP['base']?.[network];
       if (!rpcUrl) {
@@ -245,18 +318,169 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
       if (tx) {
         setTxHash(tx.hash);
         setTxPhase('pending');
-        setTransactionAmount(amount);
         
         toast.success('Transaction submitted successfully!', {
           description: `Transaction ${tx.hash} has been submitted. Please wait for confirmation.`,
           duration: 5000
         });
+
+        // Track transaction status
+        try {
+          console.log('[UI][TRACKING] Starting transaction tracking', { hash: tx.hash });
+          
+          // Wait for transaction confirmation on origin chain
+          const originConfirmed = await waitForTxConfirmation(tx.hash, rpcUrl, 300);
+          
+          if (originConfirmed) {
+            toast.success('Transaction confirmed on origin chain!', {
+              description: `Now tracking cross-chain completion...`,
+              duration: 5000
+            });
+
+            // Immediately show CCTX tracker UI with pending state
+            console.log('[UI][CCTX] Setting up pending CCTX progress state', {
+              transactionAmount,
+              transactionToken,
+              transactionTargetChain,
+              transactionReceiver
+            })
+            setCctxProgress({
+              status: 'pending',
+              confirmations: 0,
+              statusText: 'Waiting for cross-chain transaction to be detected...',
+              amount: transactionAmount,
+              asset: transactionToken,
+              sender: '', // Will be filled when CCTX data is available
+              receiver: transactionReceiver,
+              targetChainId: transactionTargetChain
+            })
+            setTxPhase('pending')
+
+            // Track cross-chain transaction
+            try {
+              console.log('[UI][CCTX] Starting trackCrossChainTransaction', { 
+                hash: tx.hash, 
+                network, 
+                destinationChain,
+                originChain: (asset.chain || 'base').toLowerCase()
+              })
+              
+              const cctxResult = await trackCrossChainTransaction({
+                hash: tx.hash,
+                network,
+                timeoutSeconds: 300,
+                onProgress: ({ confirmations, status, progress }) => {
+                  console.log('[UI][CCTX] onProgress callback triggered', {
+                    hasProgress: !!progress,
+                    confirmations,
+                    status,
+                    progressStatus: progress?.status,
+                    progressConfirmations: progress?.confirmations
+                  })
+                  
+                  if (progress) {
+                    console.log('[UI][CCTX] Setting progress state', {
+                      status: progress.status,
+                      confirmations: progress.confirmations,
+                      statusText: progress.statusText,
+                      outboundHash: progress.outboundHash
+                    })
+                    // Always use stored transaction details instead of CCTX data
+                    const updatedProgress = {
+                      ...progress,
+                      amount: transactionAmount,
+                      asset: transactionToken,
+                      targetChainId: transactionTargetChain,
+                      receiver: transactionReceiver
+                    }
+                    setCctxProgress(updatedProgress)
+                    setTxPhase(progress.status === 'completed' ? 'completed' : progress.status === 'failed' ? 'failed' : 'pending')
+                    setConfirmations(progress.confirmations)
+                  }
+                  if (status) {
+                    console.log('[UI][CCTX] Status update received:', status)
+                  }
+                }
+              })
+              
+              console.log('[UI][CCTX] trackCrossChainTransaction completed', {
+                status: cctxResult.status,
+                hasProgress: !!cctxResult.progress,
+                hasCctx: !!cctxResult.cctx,
+                progressStatus: cctxResult.progress?.status,
+                progressConfirmations: cctxResult.progress?.confirmations
+              })
+              
+              setTxPhase(cctxResult.status as any);
+              if (cctxResult.progress) {
+                console.log('[UI][CCTX] Setting final progress state', cctxResult.progress)
+                // Always use stored transaction details instead of CCTX data
+                const finalProgress = {
+                  ...cctxResult.progress,
+                  amount: transactionAmount,
+                  asset: transactionToken,
+                  targetChainId: transactionTargetChain,
+                  receiver: transactionReceiver
+                }
+                setCctxProgress(finalProgress)
+              }
+              if (cctxResult.cctx) {
+                console.log('[UI][CCTX] Setting final CCTX state', { cctx: cctxResult.cctx })
+                setCctxs([cctxResult.cctx]);
+              }
+              
+              if (cctxResult.status === 'completed') {
+                console.log('[UI][CCTX] Showing success toast')
+                stopTimer(); // Stop timer on completion
+                toast.success('Cross-chain transfer completed!', { description: `Successfully transferred to ${destinationChain}`, duration: 10000 });
+              } else if (cctxResult.status === 'failed') {
+                console.log('[UI][CCTX] Showing failure toast')
+                stopTimer(); // Stop timer on failure
+                toast.error('Cross-chain transfer failed', { description: 'The transfer could not be completed. Please check the transaction details.', duration: 10000 });
+              } else if (cctxResult.status === 'timeout') {
+                console.log('[UI][CCTX] Showing timeout toast')
+                stopTimer(); // Stop timer on timeout
+                toast.warning('Cross-chain transfer timeout', { description: 'Transfer is taking longer than expected. Please check the blockchain explorer.', duration: 10000 });
+              }
+            } catch (cctxError) {
+              console.error('[UI][CCTX] Error tracking cross-chain transaction:', {
+                error: cctxError instanceof Error ? cctxError.message : String(cctxError),
+                stack: cctxError instanceof Error ? cctxError.stack : undefined,
+                hash: tx.hash,
+                network,
+                destinationChain
+              });
+              setTxPhase('pending');
+            }
+          } else if (txPhase === 'failed') {
+            stopTimer(); // Stop timer on origin chain failure
+            toast.error('Transaction failed on origin chain', {
+              description: `Transaction failed on origin chain`,
+              duration: 10000
+            });
+          } else if (txPhase === 'timeout') {
+            stopTimer(); // Stop timer on origin chain timeout
+            toast.warning('Transaction timeout on origin chain', {
+              description: 'Transaction is taking longer than expected. Please check the blockchain explorer.',
+              duration: 10000
+            });
+          }
+        } catch (error) {
+          console.error('Error tracking transaction:', error);
+          setTxPhase('failed');
+          stopTimer(); // Stop timer on error
+          toast.error('Error tracking transaction', {
+            description: 'Unable to track transaction status. Please check the blockchain explorer.',
+            duration: 10000
+          });
+        }
       }
     } catch (error) {
       console.error('[UI][SEND] Transfer error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       toast.error(`Transfer failed: ${errorMessage}`);
       setTxPhase('failed');
+      stopTimer(); // Stop timer on error
     }
   };
 
@@ -269,35 +493,168 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
       <Card className="w-full max-w-md max-h-[90vh] overflow-y-auto">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
           <div>
-            <CardTitle>Send {asset.symbol}</CardTitle>
-            <CardDescription>Transfer to another chain</CardDescription>
+            <CardTitle>{txHash ? 'Transaction Status' : `Send ${asset.symbol}`}</CardTitle>
+            <CardDescription>
+              {txHash ? 'Tracking your transaction. You can keep this open.' : `Transfer ${asset.symbol} to another wallet`}
+            </CardDescription>
           </div>
           <Button variant="ghost" size="sm" onClick={onClose}>
             <X className="w-4 h-4" />
           </Button>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Asset Info */}
-          <div className="flex items-center space-x-3 p-3 bg-muted/50 rounded-lg">
-            <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center overflow-hidden">
-              {asset.logo === 'base-logo' ? (
-                <BaseLogo size={24} />
-              ) : (
-                <img 
-                  src={asset.logo} 
-                  alt={asset.symbol}
-                  className="w-6 h-6 object-contain"
-                  onError={(e) => { e.currentTarget.style.display = 'none' }}
-                />
+        <CardContent className="space-y-6">
+          {txHash ? (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <div className="text-sm font-medium">Transaction Hash</div>
+                <div className="text-xs break-all font-mono bg-muted p-2 rounded">{txHash}</div>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Status</span>
+                <Badge variant={
+                  txPhase === 'completed' ? 'default' :
+                    txPhase === 'confirmed' ? 'default' :
+                      txPhase === 'failed' ? 'destructive' :
+                        txPhase === 'timeout' ? 'destructive' :
+                          'secondary'
+                }>
+                  {txPhase === 'pending' ? 'Pending' :
+                    txPhase === 'confirmed' ? 'Origin Confirmed' :
+                      txPhase === 'completed' ? 'Completed' :
+                        txPhase === 'failed' ? 'Failed' :
+                          txPhase === 'timeout' ? 'Timeout' : 'Unknown'}
+                </Badge>
+              </div>
+
+              {/* Transaction Details */}
+              {(txPhase === 'pending' || txPhase === 'confirmed' || txPhase === 'completed' || txPhase === 'failed' || txPhase === 'timeout') && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Duration</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-mono">
+                      {formatDuration(transactionDuration)}
+                    </span>
+                    {isTimerRunning && (
+                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    )}
+                  </div>
+                </div>
               )}
-            </div>
-            <div className="flex-1">
-              <div className="font-semibold">{asset.symbol}</div>
-              <div className="text-sm text-muted-foreground">
-                Balance: {asset.balance} {asset.symbol}
+
+              {(txPhase === 'confirmed' || txPhase === 'completed') && (
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Confirmations:</span>
+                    <span>{confirmations}</span>
+                  </div>
+                  {gasUsed && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Gas Used:</span>
+                      <span>{gasUsed}</span>
+                    </div>
+                  )}
+                  {blockNumber && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Block Number:</span>
+                      <span>{blockNumber}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* CCTX Progress Component */}
+              {cctxProgress && (
+                <div className="mt-4">
+                  <CctxProgressComponent
+                    progress={cctxProgress}
+                    originChain={(asset.chain || 'base').toLowerCase()}
+                    targetChain={destinationChain}
+                    duration={transactionDuration}
+                    isTimerRunning={isTimerRunning}
+                    receiver={transactionReceiver}
+                    onViewExplorer={(hash, chain) => {
+                      console.log('[UI][CCTX][EXPLORER] Explorer link clicked', { hash, chain })
+                      const explorerUrl = explorerFor(chain)
+                      console.log('[UI][CCTX][EXPLORER] Explorer URL resolved', { chain, explorerUrl })
+                      if (explorerUrl) {
+                        let fullUrl = `${explorerUrl}${hash}`
+                        if (chain.toLowerCase() === 'solana' && network !== 'mainnet') {
+                          fullUrl = `${explorerUrl}${hash}?cluster=devnet`
+                        }
+                        console.log('[UI][CCTX][EXPLORER] Opening explorer URL', { fullUrl })
+                        window.open(fullUrl, '_blank')
+                      }
+                    }}
+                  />
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex gap-2 pt-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const explorerUrl = explorerFor('base');
+                    if (explorerUrl) {
+                      const fullUrl = `${explorerUrl}${txHash}`;
+                      window.open(fullUrl, '_blank');
+                    }
+                  }}
+                  className="flex-1"
+                >
+                  View on Explorer
+                </Button>
+                {(txPhase === 'completed' || txPhase === 'failed' || txPhase === 'timeout') && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setTxHash(null);
+                      setTxPhase('idle');
+                      setCctxProgress(null);
+                      setCctxs([]);
+                      setConfirmations(0);
+                      setGasUsed(undefined);
+                      setBlockNumber(undefined);
+                      setTransactionDuration(0);
+                      setIsTimerRunning(false);
+                      setAmount('');
+                      setRecipientAddress('');
+                      setDestinationChain('');
+                      setDestinationToken('');
+                    }}
+                    className="flex-1"
+                  >
+                    New Transaction
+                  </Button>
+                )}
               </div>
             </div>
-          </div>
+          ) : (
+            <>
+              {/* Asset Info */}
+              <div className="flex items-center space-x-3 p-3 bg-muted/50 rounded-lg">
+                <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center overflow-hidden">
+                  {asset.logo === 'base-logo' ? (
+                    <BaseLogo size={24} />
+                  ) : (
+                    <img 
+                      src={asset.logo} 
+                      alt={asset.symbol}
+                      className="w-6 h-6 object-contain"
+                      onError={(e) => { e.currentTarget.style.display = 'none' }}
+                    />
+                  )}
+                </div>
+                <div className="flex-1">
+                  <div className="font-semibold">{asset.symbol}</div>
+                  <div className="text-sm text-muted-foreground">
+                    Balance: {asset.balance} {asset.symbol}
+                  </div>
+                </div>
+              </div>
 
           {/* Amount Input */}
           <div className="space-y-2">
@@ -411,25 +768,12 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
             )}
           </div>
 
-          {asset.symbol === 'USDC' && destinationChain && (
-            <p className="text-sm text-muted-foreground">
-              Destination token is automatically set to USDC
-            </p>
-          )}
-
-          {/* Transaction Status */}
-          {txHash && (
-            <div className="p-3 bg-muted/50 rounded-lg">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium">Transaction Status</span>
-                <Badge variant={txPhase === 'completed' ? 'default' : txPhase === 'failed' ? 'destructive' : 'secondary'}>
-                  {txPhase}
-                </Badge>
-              </div>
-              <div className="text-xs text-muted-foreground break-all">
-                {txHash}
-              </div>
-            </div>
+              {asset.symbol === 'USDC' && destinationChain && (
+                <p className="text-sm text-muted-foreground">
+                  Destination token is automatically set to USDC
+                </p>
+              )}
+            </>
           )}
 
           {/* Error Display */}
