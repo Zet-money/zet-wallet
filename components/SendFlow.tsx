@@ -19,7 +19,6 @@ import CctxProgressComponent from '@/components/CctxProgress';
 import { waitForSolTxConfirmation, getSolTxStatus } from '@/lib/solana';
 import { getZrcAddressFor } from '@/lib/zrc';
 import { IN_APP_RPC_MAP } from '@/lib/rpc';
-import BaseLogo from '@/components/BaseLogo';
 
 interface SendFlowProps {
   asset: {
@@ -156,7 +155,7 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
     // Use keys of EVM_TOKENS to represent supported EVM chains
     return Object.keys(EVM_TOKENS).map((key) => {
       const symbol = logoSymbolForChain(key)
-      const icon = `https://assets.parqet.com/logos/crypto/${symbol}?format=png`
+      const icon = key === 'base' ? 'base-logo' : `https://assets.parqet.com/logos/crypto/${symbol}?format=png`
       return { value: key, label: toLabel(key), icon }
     })
   }, [])
@@ -174,7 +173,7 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
         value: token.symbol,
         label: token.symbol,
         name: token.name,
-        logo: token.symbol === 'ETH' ? 'base-logo' : `https://assets.parqet.com/logos/crypto/${token.logo || token.symbol}?format=png`
+        logo: `https://assets.parqet.com/logos/crypto/${token.logo || token.symbol}?format=png`
       }))
     }
     
@@ -185,7 +184,7 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
       value: token.symbol,
       label: token.symbol,
       name: token.name,
-      logo: token.symbol === 'ETH' && destinationChain === 'base' ? 'base-logo' : `https://assets.parqet.com/logos/crypto/${token.logo || token.symbol}?format=png`
+      logo: `https://assets.parqet.com/logos/crypto/${token.logo || token.symbol}?format=png`
     }))
   }, [destinationChain, network])
 
@@ -746,12 +745,16 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
                       {destinationChains.map((chain) => (
                         <SelectItem key={chain.value} value={chain.value}>
                           <div className="flex items-center space-x-2">
-                            <img
-                              src={chain.icon}
-                              alt={chain.label}
-                              className="w-4 h-4 object-contain"
-                              onError={(e) => { e.currentTarget.style.display = 'none' }}
-                            />
+                            {chain.icon === 'base-logo' ? (
+                              <BaseLogo size={16} />
+                            ) : (
+                              <img
+                                src={chain.icon}
+                                alt={chain.label}
+                                className="w-4 h-4 object-contain"
+                                onError={(e) => { e.currentTarget.style.display = 'none' }}
+                              />
+                            )}
                             <span>{chain.label}</span>
                           </div>
                         </SelectItem>
@@ -772,16 +775,12 @@ export default function SendFlow({ asset, onClose }: SendFlowProps) {
                         {destinationTokens.map((token) => (
                           <SelectItem key={token.value} value={token.value}>
                             <div className="flex items-center space-x-2">
-                              {token.logo === 'base-logo' ? (
-                                <BaseLogo size={16} />
-                              ) : (
-                                <img
-                                  src={token.logo}
-                                  alt={token.label}
-                                  className="w-4 h-4 object-contain"
-                                  onError={(e) => { e.currentTarget.style.display = 'none' }}
-                                />
-                              )}
+                              <img
+                                src={token.logo}
+                                alt={token.label}
+                                className="w-4 h-4 object-contain"
+                                onError={(e) => { e.currentTarget.style.display = 'none' }}
+                              />
                               <div className="flex flex-col">
                                 <span className="font-medium">{token.label}</span>
                                 <span className="text-xs text-muted-foreground">{token.name}</span>
