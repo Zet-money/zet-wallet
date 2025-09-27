@@ -1,6 +1,8 @@
 import { ethers, HDNodeWallet } from "ethers";
 import { evmDepositAndCall, createDefaultRevertOptions, type EvmDepositAndCallParams } from "@/lib/crosschain/evm-deposit-and-call";
 import { BiometricMigration } from "@/lib/migration/biometric-migration";
+import { getZrcAddressFor } from "@/lib/zrc";
+import { type Network as TokenNetwork } from "@/lib/tokens";
 
 /**
  * Secure transaction service that handles mnemonic decryption and transaction execution
@@ -107,18 +109,32 @@ export class SecureTransactionService {
   async transferETH(
     amount: string,
     receiver: string,
-    rpcUrl: string
+    rpcUrl: string,
+    targetChain: string = 'base',
+    network: TokenNetwork = 'mainnet'
   ): Promise<ethers.TransactionResponse> {
     // For ETH transfer, we need to build ZetProtocol payload
-    const recipientBytes = receiver.startsWith('0x') ? receiver : `0x${receiver}`;
+    // Convert recipient to bytes (Ethereum address format) - same as zetprotocol.ts
+    const recipientBytes = receiver.startsWith('0x') ? receiver.slice(2) : receiver;
+    const recipientBuffer = Buffer.from(recipientBytes, 'hex');
     const withdrawFlag = true; // Always withdraw for direct transfers
-    const targetTokenAddress = '0x0000000000000000000000000000000000000000'; // ETH on ZetaChain
+    
+    // Get the correct ETH ZRC-20 address on ZetaChain for the target chain
+    const targetTokenAddress = getZrcAddressFor(targetChain as any, 'ETH', network);
+    
+    if (!targetTokenAddress) {
+      throw new Error(`Target token address not available for ETH on ${targetChain}`);
+    }
+    
+    console.log('[SecureTransaction] ETH transfer - targetTokenAddress:', targetTokenAddress);
+    console.log('[SecureTransaction] recipientBytes:', recipientBuffer);
+    console.log('[SecureTransaction] withdrawFlag:', withdrawFlag);
     
     return this.executeCrossChainTransaction({
       amount,
       receiver, // This will be overridden to ZetProtocol address in evmDepositAndCall
       types: ['address', 'bytes', 'bool'],
-      values: [targetTokenAddress, recipientBytes, withdrawFlag],
+      values: [targetTokenAddress, recipientBuffer, withdrawFlag],
     }, rpcUrl);
   }
 
@@ -129,19 +145,34 @@ export class SecureTransactionService {
     amount: string,
     receiver: string,
     tokenAddress: string,
-    rpcUrl: string
+    rpcUrl: string,
+    targetChain: string = 'base',
+    network: TokenNetwork = 'mainnet',
+    targetTokenSymbol: string = 'USDC'
   ): Promise<ethers.TransactionResponse> {
     // For ERC20 transfer, we need to build ZetProtocol payload
-    const recipientBytes = receiver.startsWith('0x') ? receiver : `0x${receiver}`;
+    // Convert recipient to bytes (Ethereum address format) - same as zetprotocol.ts
+    const recipientBytes = receiver.startsWith('0x') ? receiver.slice(2) : receiver;
+    const recipientBuffer = Buffer.from(recipientBytes, 'hex');
     const withdrawFlag = true; // Always withdraw for direct transfers
-    const targetTokenAddress = '0x0000000000000000000000000000000000000000'; // ETH on ZetaChain (for now)
+    
+    // Get the correct target token ZRC-20 address on ZetaChain for the target chain
+    const targetTokenAddress = getZrcAddressFor(targetChain as any, targetTokenSymbol, network);
+    
+    if (!targetTokenAddress) {
+      throw new Error(`Target token address not available for ${targetTokenSymbol} on ${targetChain}`);
+    }
+    
+    console.log('[SecureTransaction] ERC20 transfer - targetTokenAddress:', targetTokenAddress);
+    console.log('[SecureTransaction] recipientBytes:', recipientBuffer);
+    console.log('[SecureTransaction] withdrawFlag:', withdrawFlag);
     
     return this.executeCrossChainTransaction({
       amount,
       receiver, // This will be overridden to ZetProtocol address in evmDepositAndCall
       token: tokenAddress,
       types: ['address', 'bytes', 'bool'],
-      values: [targetTokenAddress, recipientBytes, withdrawFlag],
+      values: [targetTokenAddress, recipientBuffer, withdrawFlag],
     }, rpcUrl);
   }
 

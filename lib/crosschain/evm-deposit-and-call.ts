@@ -1,8 +1,112 @@
-import { ethers } from "ethers";
+import { ethers, AbiCoder, ZeroAddress } from "ethers";
 import { z } from "zod";
 import { BASE_GATEWAY_ABI } from "./base-gateway.abi";
 
 export const ZETPROTOCOL_ADDRESS = '0x7689b1a47fb4c5F16aBA476E4D315b8421CAebD2'
+
+// Revert options type matching the official implementation
+interface RevertOptions {
+  abortAddress?: string;
+  revertMessage?: string;
+}
+
+// Helper function to convert string to hex
+const toHexString = (str: string): string => {
+  return '0x' + Buffer.from(str, 'utf8').toString('hex');
+};
+
+// Creates a revert data object from revert options
+export const createRevertData = (revertOptions: RevertOptions): RevertOptions => {
+  return {
+    ...revertOptions,
+    abortAddress: revertOptions.abortAddress || ZeroAddress,
+    revertMessage: revertOptions.revertMessage ? toHexString(revertOptions.revertMessage) : '0x',
+  };
+};
+
+// Available gateway method names
+type GatewayMethodName =
+  | "call"
+  | "depositNative"
+  | "depositAndCallNative"
+  | "depositErc20"
+  | "depositAndCallErc20";
+
+// Interface for gateway contract using the imported ABI
+const gatewayInterface = new ethers.Interface(BASE_GATEWAY_ABI);
+
+/**
+ * Retrieves function fragments from the gateway interface by method name.
+ */
+export const getGatewayFunctionsByName = (
+  methodName: string
+): ethers.FunctionFragment[] => {
+  const gatewayInterfaceFragments =
+    gatewayInterface.fragments as ethers.FunctionFragment[];
+
+  const matchingFunctions = gatewayInterfaceFragments.filter(
+    (fragment) => fragment.type === "function" && fragment.name === methodName
+  );
+
+  return matchingFunctions;
+};
+
+/**
+ * Retrieves function signatures from the gateway interface
+ */
+export const getGatewayFunctionSignatureByName = (
+  methodName: GatewayMethodName
+): ethers.FunctionFragment | undefined => {
+  // Get functions by type
+  const callFunctions = getGatewayFunctionsByName("call");
+  const depositFunctions = getGatewayFunctionsByName("deposit");
+  const depositAndCallFunctions = getGatewayFunctionsByName("depositAndCall");
+
+  // Map of function signatures
+  const signatures = {
+    call: callFunctions[0],
+
+    depositAndCallErc20: depositAndCallFunctions.find((f) =>
+      f.inputs.some((i) => i.name === "asset")
+    ),
+
+    depositAndCallNative: depositAndCallFunctions.find((f) =>
+      f.inputs.every((i) => i.name !== "asset")
+    ),
+
+    depositErc20: depositFunctions.find((f) =>
+      f.inputs.some((i) => i.name === "asset")
+    ),
+    depositNative: depositFunctions.find((f) =>
+      f.inputs.every((i) => i.name !== "asset")
+    ),
+  };
+
+  return signatures[methodName];
+};
+
+/**
+ * Generates calldata for a specific gateway method
+ */
+export const generateGatewayCallData = (
+  methodName: GatewayMethodName,
+  args: unknown[]
+): string => {
+  try {
+    const signature = getGatewayFunctionSignatureByName(methodName);
+
+    if (!signature) {
+      throw new Error(`Invalid method name: ${methodName}`);
+    }
+
+    const encodedData = gatewayInterface.encodeFunctionData(signature, args);
+
+    return encodedData;
+  } catch (error) {
+    console.error(`Error encoding calldata for ${methodName}:`, error);
+    throw error;
+  }
+};
 
 // ERC20 ABI - simplified version
 const ERC20_ABI = [
@@ -19,13 +123,7 @@ interface ERC20Contract extends ethers.Contract {
   [key: string]: any; // Allow other properties
 }
 
-interface RevertOptions {
-  revertAddress: string;
-  callOnRevert: boolean;
-  abortAddress: string;
-  revertMessage: string;
-  onRevertGasLimit: string;
-}
+// Remove duplicate RevertOptions interface - using the official one above
 
 interface EvmDepositAndCallParams {
   amount: string;
@@ -107,117 +205,67 @@ const getGatewayAddressFromSigner = async (signer: ethers.Signer): Promise<strin
 };
 
 /**
- * Generate calldata for deposit and call
+ * Generates calldata for EVM deposit and call without broadcasting the transaction
+ * Following the official ZetaChain pattern
  */
-const generateEvmDepositAndCallData = (params: {
+export const generateEvmDepositAndCallData = (args: {
   amount: string;
   decimals?: number;
   erc20?: string;
   receiver: string;
-  revertOptions?: RevertOptions;
-  types?: string[];
-  values?: any[];
-}) => {
+  revertOptions: RevertOptions;
+  types: string[];
+  values: any[];
+}): {
+  data: string;
+  value?: string;
+} => {
   console.log('[generateEvmDepositAndCallData] ===== GENERATING CALLDATA =====');
-  console.log('[generateEvmDepositAndCallData] Input params:', JSON.stringify(params, (key, value) => 
+  console.log('[generateEvmDepositAndCallData] Input args:', JSON.stringify(args, (key, value) => 
     typeof value === 'bigint' ? value.toString() : value, 2));
   
-  // Use the real ZetaChain Gateway ABI
-  const gatewayInterface = new ethers.Interface(BASE_GATEWAY_ABI);
-  console.log('[generateEvmDepositAndCallData] Gateway interface created');
+  // Encode the ZetProtocol function call parameters
+  const abiCoder = AbiCoder.defaultAbiCoder();
+  const encodedParameters = abiCoder.encode(args.types, args.values);
+  console.log('[generateEvmDepositAndCallData] Encoded parameters:', encodedParameters);
   
-  // Generate the calldata for the function that will be called on ZetaChain
-  let zetaChainCallData = "0x";
+  // Create revert data
+  const revertData = createRevertData(args.revertOptions);
+  console.log('[generateEvmDepositAndCallData] Revert data:', revertData);
   
-  // Always encode ZetProtocol function call data
-  if (params.types && params.values && params.types.length > 0 && params.values.length > 0) {
-    console.log('[generateEvmDepositAndCallData] Encoding ZetProtocol function call...');
-    console.log('[generateEvmDepositAndCallData] Types:', params.types);
-    console.log('[generateEvmDepositAndCallData] Values:', params.values);
-    
-    try {
-      // Create interface for the ZetProtocol execute function: function execute(address,bytes,bool)
-      const functionSignature = `function execute(${params.types.join(', ')})`;
-      console.log('[generateEvmDepositAndCallData] Function signature:', functionSignature);
-      const targetInterface = new ethers.Interface([functionSignature]);
-      
-      // Encode the function call data
-      zetaChainCallData = targetInterface.encodeFunctionData("execute", params.values);
-      console.log('[generateEvmDepositAndCallData] Encoded ZetProtocol call data:', zetaChainCallData);
-    } catch (error) {
-      console.error("Failed to encode ZetProtocol function call data:", error);
-      throw error; // Don't fallback, this is critical
-    }
-  } else {
-    console.error('[generateEvmDepositAndCallData] ERROR: No ZetProtocol function call data provided!');
-    throw new Error('ZetProtocol function call data (types/values) is required');
-  }
-  
-  // Default revert options if not provided
-  const defaultRevertOptions: RevertOptions = {
-    revertAddress: ethers.ZeroAddress,
-    callOnRevert: false,
-    abortAddress: ethers.ZeroAddress,
-    revertMessage: "0x",
-    onRevertGasLimit: "0"
-  };
-  
-  const revertOptions = params.revertOptions || defaultRevertOptions;
-  console.log('[generateEvmDepositAndCallData] Revert options:', JSON.stringify(revertOptions, (key, value) => 
-    typeof value === 'bigint' ? value.toString() : value, 2));
-  
-  let callData: string;
-  let value: bigint = BigInt(0);
-  
-  if (params.erc20) {
-    console.log('[generateEvmDepositAndCallData] ===== ERC20 FUNCTION SIGNATURE =====');
-    console.log('[generateEvmDepositAndCallData] Using function: depositAndCall(address,uint256,address,bytes,(address,bool,address,bytes,uint256))');
-    
-    // ERC20 deposit and call using the real ABI
-    const amount = ethers.parseUnits(params.amount, params.decimals || 18);
-    console.log('[generateEvmDepositAndCallData] Parsed amount:', amount.toString());
-    console.log('[generateEvmDepositAndCallData] Function parameters:', {
-      receiver: params.receiver,
-      amount: amount.toString(),
-      erc20: params.erc20,
-      zetaChainCallData: zetaChainCallData,
-      revertOptions: revertOptions
-    });
-    
-    callData = gatewayInterface.encodeFunctionData("depositAndCall(address,uint256,address,bytes,(address,bool,address,bytes,uint256))", [
-      params.receiver,
-      amount,
-      params.erc20,
-      zetaChainCallData,
-      revertOptions
+  const decimals = args.decimals || 18; // Default to 18 if not specified
+
+  if (args.erc20) {
+    const value = ethers.parseUnits(args.amount, decimals);
+    console.log('[generateEvmDepositAndCallData] ERC20 amount:', value.toString());
+
+    const data = generateGatewayCallData("depositAndCallErc20", [
+      args.receiver,
+      value,
+      args.erc20,
+      encodedParameters,
+      revertData,
     ]);
+    
+    return {
+      data,
+      value: value.toString(),
+    };
   } else {
-    console.log('[generateEvmDepositAndCallData] ===== NATIVE TOKEN FUNCTION SIGNATURE =====');
-    console.log('[generateEvmDepositAndCallData] Using function: depositAndCall(address,bytes,(address,bool,address,bytes,uint256))');
-    
-    // Native token deposit and call using the real ABI
-    value = ethers.parseEther(params.amount);
-    console.log('[generateEvmDepositAndCallData] Parsed ETH amount:', value.toString());
-    console.log('[generateEvmDepositAndCallData] Function parameters:', {
-      receiver: params.receiver,
-      zetaChainCallData: zetaChainCallData,
-      revertOptions: revertOptions
-    });
-    
-    callData = gatewayInterface.encodeFunctionData("depositAndCall(address,bytes,(address,bool,address,bytes,uint256))", [
-      params.receiver,
-      zetaChainCallData,
-      revertOptions
+    const value = ethers.parseEther(args.amount);
+    console.log('[generateEvmDepositAndCallData] Native amount:', value.toString());
+
+    const data = generateGatewayCallData("depositAndCallNative", [
+      args.receiver,
+      encodedParameters,
+      revertData,
     ]);
+    
+    return {
+      data,
+      value: value.toString(),
+    };
   }
-  
-  console.log('[generateEvmDepositAndCallData] Final calldata:', callData);
-  console.log('[generateEvmDepositAndCallData] Final value:', value.toString());
-  
-  return {
-    data: callData,
-    value: value,
-  };
 };
 
 /**
@@ -346,6 +394,11 @@ export const evmDepositAndCall = async (
   console.log('[evmDepositAndCall] Types:', validatedParams.types);
   console.log('[evmDepositAndCall] Values:', validatedParams.values);
 
+  // Validate that types and values are provided for ZetProtocol calls
+  if (!validatedParams.types || !validatedParams.values) {
+    throw new Error('Types and values are required for ZetProtocol calls');
+  }
+
   if (validatedParams.token) {
     console.log('[evmDepositAndCall] ===== ERC20 TOKEN PATH =====');
     console.log('[evmDepositAndCall] Token address:', validatedParams.token);
@@ -377,14 +430,14 @@ export const evmDepositAndCall = async (
       decimals: decimals,
       erc20: validatedParams.token,
       receiver: ZETPROTOCOL_ADDRESS, // Always use ZetProtocol contract as receiver
-      revertOptions: validatedParams.revertOptions,
+      revertOptions: validatedParams.revertOptions || createDefaultRevertOptions(),
       types: validatedParams.types,
       values: validatedParams.values,
     });
     
     console.log('[evmDepositAndCall] Generated calldata:', {
       data: callData.data,
-      value: callData.value.toString(),
+      value: callData.value?.toString() || '0',
       dataLength: callData.data.length
     });
 
@@ -402,7 +455,7 @@ export const evmDepositAndCall = async (
           txData: {
             data: callData.data,
             to: gatewayAddress,
-            value: callData.value,
+            value: callData.value ? BigInt(callData.value) : BigInt(0),
           },
           txOptions: validatedOptions.txOptions || {},
         });
@@ -433,14 +486,14 @@ export const evmDepositAndCall = async (
     const callData = generateEvmDepositAndCallData({
       amount: validatedParams.amount,
       receiver: ZETPROTOCOL_ADDRESS, // Always use ZetProtocol contract as receiver
-      revertOptions: validatedParams.revertOptions,
+      revertOptions: validatedParams.revertOptions || createDefaultRevertOptions(),
       types: validatedParams.types,
       values: validatedParams.values,
     });
     
     console.log('[evmDepositAndCall] Generated calldata for native token:', {
       data: callData.data,
-      value: callData.value.toString(),
+      value: callData.value?.toString() || '0',
       dataLength: callData.data.length
     });
 
@@ -458,7 +511,7 @@ export const evmDepositAndCall = async (
           txData: {
             data: callData.data,
             to: gatewayAddress,
-            value: callData.value,
+            value: callData.value ? BigInt(callData.value) : BigInt(0),
           },
           txOptions: validatedOptions.txOptions || {},
         });
@@ -489,11 +542,8 @@ export const evmDepositAndCall = async (
  */
 export const createDefaultRevertOptions = (): RevertOptions => {
   return {
-    revertAddress: ethers.ZeroAddress,
-    callOnRevert: false,
-    abortAddress: ethers.ZeroAddress,
-    revertMessage: "0x",
-    onRevertGasLimit: "0"
+    abortAddress: ZeroAddress,
+    revertMessage: "0x"
   };
 };
 
@@ -501,18 +551,12 @@ export const createDefaultRevertOptions = (): RevertOptions => {
  * Helper function to create custom revert options
  */
 export const createRevertOptions = (
-  revertAddress: string = ethers.ZeroAddress,
-  callOnRevert: boolean = false,
-  abortAddress: string = ethers.ZeroAddress,
-  revertMessage: string = "0x",
-  onRevertGasLimit: string = "0"
+  abortAddress: string = ZeroAddress,
+  revertMessage: string = "0x"
 ): RevertOptions => {
   return {
-    revertAddress,
-    callOnRevert,
     abortAddress,
-    revertMessage,
-    onRevertGasLimit
+    revertMessage
   };
 };
 
@@ -552,4 +596,4 @@ export const createSwapCall = (
   };
 };
 
-export type { EvmDepositAndCallParams, EvmOptions, RevertOptions };
+export type { EvmDepositAndCallParams, EvmOptions };

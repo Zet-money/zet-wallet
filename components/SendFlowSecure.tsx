@@ -297,7 +297,7 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
       if (isNativeToken) {
         // Native ETH transfer to ZetaChain
         console.log('[UI][SEND] Executing native ETH transfer');
-        tx = await transferETH(amount, recipientAddress, rpcUrl);
+        tx = await transferETH(amount, recipientAddress, rpcUrl, destinationChain, network);
       } else {
         // ERC20 token transfer to ZetaChain
         console.log('[UI][SEND] Executing ERC20 token transfer');
@@ -312,7 +312,7 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
           throw new Error(`Token address not found for ${asset.symbol}`);
         }
         
-        tx = await transferERC20(amount, recipientAddress, tokenAddress, rpcUrl);
+        tx = await transferERC20(amount, recipientAddress, tokenAddress, rpcUrl, destinationChain, network, destinationToken);
       }
 
       if (tx) {
