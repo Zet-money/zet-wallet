@@ -129,29 +129,28 @@ const generateEvmDepositAndCallData = (params: {
   // Generate the calldata for the function that will be called on ZetaChain
   let zetaChainCallData = "0x";
   
+  // Always encode ZetProtocol function call data
   if (params.types && params.values && params.types.length > 0 && params.values.length > 0) {
-    console.log('[generateEvmDepositAndCallData] Encoding ZetaChain function call...');
+    console.log('[generateEvmDepositAndCallData] Encoding ZetProtocol function call...');
     console.log('[generateEvmDepositAndCallData] Types:', params.types);
     console.log('[generateEvmDepositAndCallData] Values:', params.values);
     
-    // If we have function call data to encode
     try {
-      // Create interface for the target function on ZetaChain
-      // The function signature should be: function execute(address,bytes,bool)
+      // Create interface for the ZetProtocol execute function: function execute(address,bytes,bool)
       const functionSignature = `function execute(${params.types.join(', ')})`;
       console.log('[generateEvmDepositAndCallData] Function signature:', functionSignature);
       const targetInterface = new ethers.Interface([functionSignature]);
       
       // Encode the function call data
       zetaChainCallData = targetInterface.encodeFunctionData("execute", params.values);
-      console.log('[generateEvmDepositAndCallData] Encoded ZetaChain call data:', zetaChainCallData);
+      console.log('[generateEvmDepositAndCallData] Encoded ZetProtocol call data:', zetaChainCallData);
     } catch (error) {
-      console.warn("Failed to encode function call data:", error);
-      // Fallback to empty data
-      zetaChainCallData = "0x";
+      console.error("Failed to encode ZetProtocol function call data:", error);
+      throw error; // Don't fallback, this is critical
     }
   } else {
-    console.log('[generateEvmDepositAndCallData] No ZetaChain function call data, using empty data');
+    console.error('[generateEvmDepositAndCallData] ERROR: No ZetProtocol function call data provided!');
+    throw new Error('ZetProtocol function call data (types/values) is required');
   }
   
   // Default revert options if not provided
@@ -339,25 +338,13 @@ export const evmDepositAndCall = async (
     
   console.log('[evmDepositAndCall] Gateway address:', gatewayAddress);
 
-  // Check if this is a ZetProtocol call (has types and values)
-  const isZetProtocolCall = validatedParams.types && validatedParams.values && 
-    validatedParams.types.length > 0 && validatedParams.values.length > 0;
-  
-  if (isZetProtocolCall) {
-    console.log('[evmDepositAndCall] ===== ZETPROTOCOL CALL DETECTED =====');
-    console.log('[evmDepositAndCall] Using ZetProtocol contract as receiver:', ZETPROTOCOL_ADDRESS);
-    console.log('[evmDepositAndCall] User recipient will be in payload data');
-    
-    // For ZetProtocol calls, we need to restructure the parameters
-    // The receiver should be the ZetProtocol contract, not the user's address
-    const zetProtocolParams = {
-      ...validatedParams,
-      receiver: ZETPROTOCOL_ADDRESS, // Override receiver to ZetProtocol contract
-    };
-    
-    console.log('[evmDepositAndCall] ZetProtocol params:', JSON.stringify(zetProtocolParams, (key, value) => 
-      typeof value === 'bigint' ? value.toString() : value, 2));
-  }
+  // For ZetProtocol calls, ALWAYS use ZetProtocol contract as receiver
+  // The user's recipient address goes in the payload data (types/values)
+  console.log('[evmDepositAndCall] ===== ZETPROTOCOL CALL =====');
+  console.log('[evmDepositAndCall] Using ZetProtocol contract as receiver:', ZETPROTOCOL_ADDRESS);
+  console.log('[evmDepositAndCall] User recipient will be in payload data');
+  console.log('[evmDepositAndCall] Types:', validatedParams.types);
+  console.log('[evmDepositAndCall] Values:', validatedParams.values);
 
   if (validatedParams.token) {
     console.log('[evmDepositAndCall] ===== ERC20 TOKEN PATH =====');
@@ -389,7 +376,7 @@ export const evmDepositAndCall = async (
       amount: validatedParams.amount,
       decimals: decimals,
       erc20: validatedParams.token,
-      receiver: isZetProtocolCall ? ZETPROTOCOL_ADDRESS : validatedParams.receiver,
+      receiver: ZETPROTOCOL_ADDRESS, // Always use ZetProtocol contract as receiver
       revertOptions: validatedParams.revertOptions,
       types: validatedParams.types,
       values: validatedParams.values,
@@ -445,7 +432,7 @@ export const evmDepositAndCall = async (
     
     const callData = generateEvmDepositAndCallData({
       amount: validatedParams.amount,
-      receiver: isZetProtocolCall ? ZETPROTOCOL_ADDRESS : validatedParams.receiver,
+      receiver: ZETPROTOCOL_ADDRESS, // Always use ZetProtocol contract as receiver
       revertOptions: validatedParams.revertOptions,
       types: validatedParams.types,
       values: validatedParams.values,
