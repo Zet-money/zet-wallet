@@ -19,6 +19,7 @@ import CctxProgressComponent from '@/components/CctxProgress';
 import { waitForSolTxConfirmation, getSolTxStatus } from '@/lib/solana';
 import { getZrcAddressFor } from '@/lib/zrc';
 import { IN_APP_RPC_MAP } from '@/lib/rpc';
+import BaseLogo from './BaseLogo';
 
 interface SendFlowProps {
   asset: {
