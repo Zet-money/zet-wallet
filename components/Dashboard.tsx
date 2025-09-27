@@ -425,11 +425,11 @@ export default function Dashboard() {
         <ReceiveFlow 
           asset={(networkTokens[0] || {
             id: `${chainKey}-NATIVE-0`,
-            symbol: chains.find(c => c.value === selectedChain)?.label === 'BNB Chain' ? 'BNB' : (chains.find(c => c.value === selectedChain)?.label === 'Polygon' ? 'MATIC' : 'ETH'),
-            name: chains.find(c => c.value === selectedChain)?.label || 'Ethereum',
+            symbol: 'ETH', // Base chain uses ETH as native token
+            name: 'Ethereum',
             balance: '0.00',
             usdValue: '0.00',
-            chain: chains.find(c => c.value === selectedChain)?.label || 'Ethereum',
+            chain: 'Base',
             logo: 'https://assets.parqet.com/logos/crypto/ETH?format=png'
           })}
           onClose={() => setShowReceiveModal(false)} 
