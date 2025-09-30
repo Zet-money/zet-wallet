@@ -166,7 +166,7 @@ export default function BiometricLockScreen() {
             )}
           </Button>
 
-          {/* Clear Credentials Button (Debug) */}
+          {/* Clear Credentials Button (Debug)
           <Button
             onClick={handleClearCredentials}
             disabled={isClearing}
@@ -184,7 +184,7 @@ export default function BiometricLockScreen() {
                 Clear Biometric Credentials (Debug)
               </>
             )}
-          </Button>
+          </Button> */}
 
           {/* Result Message */}
           {unlockResult && (
