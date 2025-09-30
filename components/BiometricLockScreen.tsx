@@ -130,7 +130,7 @@ export default function BiometricLockScreen() {
           {/* Status Indicators */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold text-gray-100">Biometric Support:</span>
+              <span className="text-sm font-semibold text-gray-400">Biometric Support:</span>
               <Badge variant="default" className="flex items-center gap-1">
                 <CheckCircle className="h-3 w-3" />
                 Supported
@@ -138,7 +138,7 @@ export default function BiometricLockScreen() {
             </div>
             
             <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold text-gray-100">Encryption Status:</span>
+              <span className="text-sm font-semibold text-gray-400">Encryption Status:</span>
               <Badge variant="default" className="flex items-center gap-1">
                 <Shield className="h-3 w-3" />
                 Encrypted

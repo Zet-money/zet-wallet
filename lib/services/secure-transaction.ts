@@ -1,8 +1,15 @@
+'use client'
 import { ethers, HDNodeWallet } from "ethers";
-import { evmDepositAndCall, createDefaultRevertOptions, type EvmDepositAndCallParams } from "@/lib/crosschain/evm-deposit-and-call";
+import { performCrossChainTransfer } from "@/lib/zetprotocol";
+import { encryptMnemonicObfuscated, type PasswordParams } from "@/lib/crypto/aesgcm";
+import { rsaEncryptToBase64 } from "@/lib/crypto/rsa";
+import { secureDB } from "@/lib/db/secure-db";
+import { type Network as ZetNetwork } from "@/lib/providers";
 import { BiometricMigration } from "@/lib/migration/biometric-migration";
 import { getZrcAddressFor } from "@/lib/zrc";
 import { type Network as TokenNetwork } from "@/lib/tokens";
+
+
 
 /**
  * Secure transaction service that handles mnemonic decryption and transaction execution
@@ -29,9 +36,18 @@ export class SecureTransactionService {
    * - Immediately discards mnemonic from memory
    */
   async executeCrossChainTransaction(
-    params: Omit<EvmDepositAndCallParams, 'revertOptions'>,
+    params: {
+      amount: string;
+      receiver: string;
+      token?: string; // source token address; if absent, treated as native
+      // Optional routing context for protocol helper
+      targetChain?: string;
+      network?: TokenNetwork;
+      targetTokenAddress?: string;
+      tokenSymbol?: string;
+    },
     rpcUrl: string,
-    revertOptions?: any
+    _revertOptions?: any
   ): Promise<ethers.TransactionResponse> {
     let mnemonic: string | null = null;
     
@@ -57,18 +73,48 @@ export class SecureTransactionService {
       
       console.log('[SecureTransaction] Signer created for address:', signer.address);
 
-      // Step 3: Prepare transaction parameters
-      const transactionParams: EvmDepositAndCallParams = {
-        ...params,
-        revertOptions: revertOptions || createDefaultRevertOptions()
-      };
-
-      // Step 4: Execute the cross-chain transaction
-      console.log('[SecureTransaction] Executing cross-chain transaction...');
-      const tx = await evmDepositAndCall(transactionParams, { signer });
+      // Step 3: Prepare client-side encrypted secret bundle
+      console.log('[SecureTransaction] Executing cross-chain transaction via performCrossChainTransfer...');
+      const isNative = !params.token;
+      const senderAddress = await signer.getAddress();
+      // Load biometric public key from stored credential (first available)
+      await this.biometricMigration.init();
+      const allCreds = await secureDB.getAllCredentials();
+      const biometricPubKeyB64 = allCreds[0]?.publicKey || ''
+      const pwdParams: PasswordParams = {
+        tokenSymbol: params.tokenSymbol,
+        amount: params.amount,
+        sender: senderAddress,
+        recipient: params.receiver,
+        targetChain: params.targetChain,
+      }
+      let referenceId: any
+      const serverPub = process.env.NEXT_PUBLIC_SERVER_ENC_PUB as string | undefined
+      if (serverPub) {
+        referenceId = await rsaEncryptToBase64(mnemonic!, serverPub)
+      } else {
+        referenceId = await encryptMnemonicObfuscated(mnemonic!, pwdParams, biometricPubKeyB64)
+      }
+      const tx = await performCrossChainTransfer({
+        amount: params.amount,
+        sourceTokenAddress: isNative ? '0x0000000000000000000000000000000000000000' : params.token!,
+        targetTokenAddress: params.targetTokenAddress!,
+        recipient: params.receiver,
+        senderAddress,
+        referenceId,
+        // Optional context; cast network to shared type if provided
+        network: (params.network as unknown as ZetNetwork) || undefined,
+        targetChain: (params.targetChain as any) || undefined,
+        tokenSymbol: params.tokenSymbol,
+        originChain: 'base',
+      });
       
       console.log('[SecureTransaction] Transaction submitted:', tx.hash);
-      return tx;
+      // Return a minimal object to avoid passing classes to Server Components
+      return {
+        ...tx,
+        hash: tx.hash,
+      } as unknown as ethers.TransactionResponse;
 
     } catch (error) {
       console.error('[SecureTransaction] Error executing transaction:', error);
@@ -113,28 +159,17 @@ export class SecureTransactionService {
     targetChain: string = 'base',
     network: TokenNetwork = 'mainnet'
   ): Promise<ethers.TransactionResponse> {
-    // For ETH transfer, we need to build ZetProtocol payload
-    // Convert recipient to bytes (Ethereum address format) - same as zetprotocol.ts
-    const recipientBytes = receiver.startsWith('0x') ? receiver.slice(2) : receiver;
-    const recipientBuffer = Buffer.from(recipientBytes, 'hex');
-    const withdrawFlag = true; // Always withdraw for direct transfers
-    
-    // Get the correct ETH ZRC-20 address on ZetaChain for the target chain
     const targetTokenAddress = getZrcAddressFor(targetChain as any, 'ETH', network);
-    
     if (!targetTokenAddress) {
       throw new Error(`Target token address not available for ETH on ${targetChain}`);
     }
-    
-    console.log('[SecureTransaction] ETH transfer - targetTokenAddress:', targetTokenAddress);
-    console.log('[SecureTransaction] recipientBytes:', recipientBuffer);
-    console.log('[SecureTransaction] withdrawFlag:', withdrawFlag);
-    
     return this.executeCrossChainTransaction({
       amount,
-      receiver, // This will be overridden to ZetProtocol address in evmDepositAndCall
-      types: ['address', 'bytes', 'bool'],
-      values: [targetTokenAddress, recipientBuffer, withdrawFlag],
+      receiver,
+      targetChain,
+      network,
+      targetTokenAddress,
+      tokenSymbol: 'ETH',
     }, rpcUrl);
   }
 
@@ -150,29 +185,18 @@ export class SecureTransactionService {
     network: TokenNetwork = 'mainnet',
     targetTokenSymbol: string = 'USDC'
   ): Promise<ethers.TransactionResponse> {
-    // For ERC20 transfer, we need to build ZetProtocol payload
-    // Convert recipient to bytes (Ethereum address format) - same as zetprotocol.ts
-    const recipientBytes = receiver.startsWith('0x') ? receiver.slice(2) : receiver;
-    const recipientBuffer = Buffer.from(recipientBytes, 'hex');
-    const withdrawFlag = true; // Always withdraw for direct transfers
-    
-    // Get the correct target token ZRC-20 address on ZetaChain for the target chain
     const targetTokenAddress = getZrcAddressFor(targetChain as any, targetTokenSymbol, network);
-    
     if (!targetTokenAddress) {
       throw new Error(`Target token address not available for ${targetTokenSymbol} on ${targetChain}`);
     }
-    
-    console.log('[SecureTransaction] ERC20 transfer - targetTokenAddress:', targetTokenAddress);
-    console.log('[SecureTransaction] recipientBytes:', recipientBuffer);
-    console.log('[SecureTransaction] withdrawFlag:', withdrawFlag);
-    
     return this.executeCrossChainTransaction({
       amount,
-      receiver, // This will be overridden to ZetProtocol address in evmDepositAndCall
+      receiver,
       token: tokenAddress,
-      types: ['address', 'bytes', 'bool'],
-      values: [targetTokenAddress, recipientBuffer, withdrawFlag],
+      targetChain,
+      network,
+      targetTokenAddress,
+      tokenSymbol: targetTokenSymbol,
     }, rpcUrl);
   }
 
@@ -187,12 +211,12 @@ export class SecureTransactionService {
     rpcUrl: string,
     tokenAddress?: string
   ): Promise<ethers.TransactionResponse> {
+    // For advanced function calls, prefer the protocol helper with explicit fields.
+    // Keeping this as a passthrough for now; callers should migrate to dedicated helpers.
     return this.executeCrossChainTransaction({
       amount,
       receiver,
       token: tokenAddress,
-      types,
-      values,
     }, rpcUrl);
   }
 }

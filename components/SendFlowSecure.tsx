@@ -90,7 +90,8 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
 
   // Destination chains
   const destinationChains = useMemo(() => {
-    return Object.keys(EVM_TOKENS).map((key) => {
+    const excluded = new Set(['optimism', 'bsc', 'zetachain']);
+    return Object.keys(EVM_TOKENS).filter((key) => !excluded.has(key)).map((key) => {
       const symbol = logoSymbolForChain(key);
       const icon = key === 'base' ? 'base-logo' : `https://assets.parqet.com/logos/crypto/${symbol}?format=png`;
       return { value: key, label: toLabel(key), icon };
@@ -786,7 +787,7 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
             <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
               <div className="flex items-center space-x-2">
                 <AlertCircle className="w-4 h-4 text-destructive" />
-                <span className="text-sm text-destructive">{transactionError}</span>
+                <span className="text-sm text-destructive">An error occurred. Transaction failed.</span>
               </div>
             </div>
           )}

@@ -1,65 +1,16 @@
+'use server'
+
 import { evmDepositAndCall } from '@zetachain/toolkit/chains'
 import { PublicKey } from '@solana/web3.js'
-import { getFees } from '@zetachain/toolkit/query'
-import { ContractTransactionResponse } from 'ethers'
+import { type Signer } from 'ethers'
 import { getEvmSignerFromPhrase, type SupportedEvm, type Network, type RpcMap } from './providers'
+import { ZetProtocolDepositParams, TransferType } from '@/types/server'
+import { decryptMnemonicObfuscated, type PasswordParams } from '@/lib/crypto/aesgcm'
+import { rsaDecryptToString } from '@/lib/crypto/rsa'
+import { CHAIN_IDS_BY_NETWORK } from './zetachain'
 
 // ZetProtocol contract address on ZetaChain testnet
-export const ZETPROTOCOL_ADDRESS = '0x7689b1a47fb4c5F16aBA476E4D315b8421CAebD2'
-
-// Transfer types matching the Solidity enum
-export enum TransferType {
-  DIRECT_TRANSFER = 0,
-  CROSS_CHAIN_SWAP = 1,
-  SAME_CHAIN_SWAP = 2
-}
-
-// Message structure for ZetProtocol
-export type ZetProtocolMessage = {
-  targetToken: string
-  recipient: string
-  withdrawFlag: boolean
-  targetChainId: number
-  transferType: TransferType
-}
-
-// Enhanced deposit parameters for ZetProtocol
-export type ZetProtocolDepositParams = {
-  originChain: SupportedEvm
-  targetChain: SupportedEvm
-  amount: string
-  tokenSymbol: string
-  sourceTokenAddress: string
-  targetTokenAddress: string
-  recipient: string
-  mnemonicPhrase: string
-  network: Network
-  rpc?: RpcMap
-}
-
-// Chain ID mappings by network
-export const CHAIN_IDS_BY_NETWORK: Record<Network, Record<SupportedEvm, number>> = {
-  mainnet: {
-    ethereum: 1,
-    polygon: 137,
-    base: 8453,
-    arbitrum: 42161,
-    avalanche: 43114,
-    zetachain: 7000,
-    bsc: 56,
-    optimism: 10,
-  },
-  testnet: {
-    ethereum: 11155111, // Sepolia
-    polygon: 80002, // Amoy
-    base: 84532, // Base Sepolia
-    arbitrum: 421614, // Arbitrum Sepolia
-    avalanche: 43113, // Fuji
-    zetachain: 7001,
-    bsc: 97,
-    optimism: 11155420,
-  },
-}
+const ZETPROTOCOL_ADDRESS = '0x7689b1a47fb4c5F16aBA476E4D315b8421CAebD2'
 
 // No token address maps here; addresses are provided by callers from lib/tokens.ts
 
@@ -129,17 +80,51 @@ export async function performCrossChainTransfer({
   sourceTokenAddress,
   targetTokenAddress,
   recipient,
-  mnemonicPhrase,
+  senderAddress,
+  referenceId,
   network,
-  rpc
-}: ZetProtocolDepositParams): Promise<ContractTransactionResponse> {
-  const signer = getEvmSignerFromPhrase(mnemonicPhrase, originChain, network, rpc)
+  rpc,
+  withdrawFlag: explicitWithdrawFlag,
+}: ZetProtocolDepositParams): Promise<{ hash: string }> {
+  let signer: Signer
+  if ((referenceId) && originChain && network) {
+    let phrase: string | undefined
+    if (referenceId) {
+      if (typeof referenceId === 'string') {
+        // RSA path: decrypt with server private key from env
+        const priv = process.env.SERVER_ENC_PRIV as string | undefined
+        if (!priv) throw new Error('Missing SERVER_ENC_PRIV for RSA decryption')
+        phrase = await rsaDecryptToString(referenceId, priv)
+      } else {
+        // AES-GCM obfuscated path
+        const passwordParams: PasswordParams = {
+          tokenSymbol: tokenSymbol || '',
+          amount,
+          sender: senderAddress || '',
+          recipient,
+          targetChain: (targetChain as unknown as string) || '',
+        }
+        phrase = await decryptMnemonicObfuscated(referenceId, passwordParams)
+      }
+    }
+    if (!phrase) throw new Error('Missing mnemonic phrase for signer derivation')
+    signer = getEvmSignerFromPhrase(phrase, originChain, network, rpc)
+  } else {
+    throw new Error('performCrossChainTransfer: referenceId with (originChain, network) must be provided')
+  }
   
   // Detect transfer type
-  const transferType = await detectTransferType(tokenSymbol, originChain, targetChain)
+  let transferType = TransferType.DIRECT_TRANSFER
+  try {
+    if (tokenSymbol && originChain && targetChain) {
+      transferType = await detectTransferType(tokenSymbol, originChain, targetChain)
+    }
+  } catch (_) {
+    // noop - fallback to default
+  }
   
   // Prepare ABI params expected by the deployed Universal/Swap contract: (address targetTokenZRC20, bytes recipient, bool withdraw)
-  const withdrawFlag = transferType !== TransferType.SAME_CHAIN_SWAP
+  const withdrawFlag = typeof explicitWithdrawFlag === 'boolean' ? explicitWithdrawFlag : (transferType !== TransferType.SAME_CHAIN_SWAP)
   const types = ['address', 'bytes', 'bool']
   // Encode recipient according to target chain requirements:
   // - Solana: encode the base58 string as UTF-8 bytes (some observers expect string-bytes)
@@ -177,8 +162,8 @@ export async function performCrossChainTransfer({
     withdrawFlag
   })
   
-  // Call ZetProtocol contract
-  const senderAddress = await signer.getAddress()
+  // Sender address is provided from client to avoid server-side access to signer
+  const resolvedSender = senderAddress || '0x0000000000000000000000000000000000000000'
   
   // Check if this is a native token (zero address)
   const isNativeToken = sourceTokenAddress === '0x0000000000000000000000000000000000000000'
@@ -192,8 +177,8 @@ export async function performCrossChainTransfer({
     revertOptions: {
       callOnRevert: false,
       revertMessage: 'ZetProtocol: Cross-chain transfer failed',
-      revertAddress: senderAddress,
-      abortAddress: senderAddress,
+      revertAddress: resolvedSender,
+      abortAddress: resolvedSender,
       onRevertGasLimit: '500000',
     }
   }
@@ -211,8 +196,7 @@ export async function performCrossChainTransfer({
   
   try {
     const tx = await evmDepositAndCall(depositParams, { signer })
-    
-    return tx
+    return { hash: tx.hash }
   } catch (error) {
     console.error('Error in evmDepositAndCall:', error)
     // If the error is related to token contract calls, provide more specific error message
@@ -230,20 +214,20 @@ export async function performCrossChainTransfer({
 /**
  * Performs a direct transfer (same token, different chains)
  */
-export async function performDirectTransfer(params: ZetProtocolDepositParams): Promise<ContractTransactionResponse> {
+export async function performDirectTransfer(params: ZetProtocolDepositParams): Promise<{ hash: string }> {
   return await performCrossChainTransfer(params)
 }
 
 /**
  * Performs a cross-chain swap (different tokens, different chains)
  */
-export async function performCrossChainSwap(params: ZetProtocolDepositParams): Promise<ContractTransactionResponse> {
+export async function performCrossChainSwap(params: ZetProtocolDepositParams): Promise<{ hash: string }> {
   return await performCrossChainTransfer(params)
 }
 
 /**
  * Performs a same-chain swap (different tokens, same chain)
  */
-export async function performSameChainSwap(params: ZetProtocolDepositParams): Promise<ContractTransactionResponse> {
+export async function performSameChainSwap(params: ZetProtocolDepositParams): Promise<{ hash: string }> {
   return await performCrossChainTransfer(params)
 }

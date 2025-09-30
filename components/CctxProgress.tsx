@@ -339,7 +339,7 @@ export default function CctxProgressComponent({
               <div>
                 <p className="text-sm font-medium text-red-800">Error Details</p>
                 <p className="text-xs text-red-600 mt-1 break-all">
-                  {progress.errorMessage}
+                  An error occurred: Transaction failed.
                 </p>
               </div>
             </div>

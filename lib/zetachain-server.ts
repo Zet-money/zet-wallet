@@ -160,8 +160,9 @@ export async function parseCctxProgress(cctx: any, apiUrl: string): Promise<Cctx
     console.log('[ZETA][CCTX][PARSE] Status: OutboundMined -> completed')
   } else if (status === 'Aborted' || status === 'Reverted') {
     progressStatus = 'failed'
-    statusText = `Transfer ${status.toLowerCase()}: ${cctx.cctx_status?.error_message || cctx.cctx_status?.status_message || 'Unknown error'}`
-    console.log('[ZETA][CCTX][PARSE] Status: Failed', { status, statusText })
+    // Do not surface raw error details to the UI
+    statusText = 'Cross-chain transfer failed'
+    console.log('[ZETA][CCTX][PARSE] Status: Failed', { status })
   } else if (outboundParams.hash) {
     progressStatus = 'outbound_broadcasted'
     statusText = 'Outbound transaction broadcasted'

@@ -1,17 +1,10 @@
-"use server";
 import { type SupportedEvm, type Network, type RpcMap } from './providers'
-import { 
-  performDirectTransfer, 
-  performCrossChainSwap, 
-  performSameChainSwap,
-  TransferType,
-  detectTransferType
-} from './zetprotocol'
-import { solanaDepositAndCall } from '@zetachain/toolkit/chains'
-import { ZETPROTOCOL_ADDRESS } from './zetprotocol'
-import { solanaMnemonicToKeypairForRetrieval } from './solana'
+// import { ZETPROTOCOL_ADDRESS } from './zetprotocol'
+// import { solanaMnemonicToKeypairForRetrieval } from './solana'
 import { solanaDepositAndCallServer } from './solana-deposit-server'
 import { JsonRpcProvider } from 'ethers'
+
+
 
 export type Erc20Token = {
   symbol: string
@@ -43,136 +36,136 @@ export type ZetProtocolTransferParams = {
   rpc?: RpcMap
 }
 
-/**
- * Smart cross-chain transfer using ZetProtocol
- * Automatically detects transfer type and executes appropriate function
- */
-export async function smartCrossChainTransfer(params: ZetProtocolTransferParams): Promise<{ hash: string }> {
-  const { originChain, targetChain, amount, tokenSymbol, sourceTokenAddress, targetTokenAddress, recipient, mnemonicPhrase, network, rpc } = params
-  if ((originChain as any) === 'solana') {
-    console.log('[ZETA][SOL] Starting solanaDepositAndCall', {
-      amount,
-      tokenSymbol,
-      targetZrc20: targetTokenAddress,
-      recipient,
-      network
-    })
-    // Use server-side function to avoid client fs issues
-    const types = ['address', 'bytes', 'bool']
-    const recipientBytes = recipient.startsWith('0x') ? recipient : `0x${recipient}`
-    const values = [targetTokenAddress, recipientBytes, true]
-    const tokenMintAddress = sourceTokenAddress && sourceTokenAddress.startsWith('0x') ? undefined : sourceTokenAddress
-    const signature = await solanaDepositAndCallServer({
-      amount,
-      receiver: ZETPROTOCOL_ADDRESS,
-      token: tokenMintAddress,
-      types,
-      values,
-      revertOptions: {
-        callOnRevert: false,
-        revertMessage: 'ZetProtocol: Cross-chain transfer failed',
-        revertAddress: undefined,
-        abortAddress: undefined,
-        onRevertGasLimit: '500000'
-      },
-      mnemonicPhrase,
-      network
-    })
-    console.log('[ZETA][SOL] Submitted solanaDepositAndCall signature', signature)
-    return { hash: signature }
-  }
+// /**
+//  * Smart cross-chain transfer using ZetProtocol
+//  * Automatically detects transfer type and executes appropriate function
+//  */
+// export async function smartCrossChainTransfer(params: ZetProtocolTransferParams): Promise<{ hash: string }> {
+//   const { originChain, targetChain, amount, tokenSymbol, sourceTokenAddress, targetTokenAddress, recipient, mnemonicPhrase, network, rpc } = params
+//   if ((originChain as any) === 'solana') {
+//     console.log('[ZETA][SOL] Starting solanaDepositAndCall', {
+//       amount,
+//       tokenSymbol,
+//       targetZrc20: targetTokenAddress,
+//       recipient,
+//       network
+//     })
+//     // Use server-side function to avoid client fs issues
+//     const types = ['address', 'bytes', 'bool']
+//     const recipientBytes = recipient.startsWith('0x') ? recipient : `0x${recipient}`
+//     const values = [targetTokenAddress, recipientBytes, true]
+//     const tokenMintAddress = sourceTokenAddress && sourceTokenAddress.startsWith('0x') ? undefined : sourceTokenAddress
+//     const signature = await solanaDepositAndCallServer({
+//       amount,
+//       receiver: ZETPROTOCOL_ADDRESS,
+//       token: tokenMintAddress,
+//       types,
+//       values,
+//       revertOptions: {
+//         callOnRevert: false,
+//         revertMessage: 'ZetProtocol: Cross-chain transfer failed',
+//         revertAddress: undefined,
+//         abortAddress: undefined,
+//         onRevertGasLimit: '500000'
+//       },
+//       mnemonicPhrase,
+//       network
+//     })
+//     console.log('[ZETA][SOL] Submitted solanaDepositAndCall signature', signature)
+//     return { hash: signature }
+//   }
   
-  // Detect transfer type
-  const transferType = await detectTransferType(tokenSymbol, originChain, targetChain)
+//   // Detect transfer type
+//   const transferType = await detectTransferType(tokenSymbol, originChain, targetChain)
   
-  console.log('Smart Transfer Detection:', {
-    tokenSymbol,
-    sourceTokenAddress,
-    targetTokenAddress,
-    originChain,
-    targetChain,
-    transferType: TransferType[transferType as unknown as keyof typeof TransferType]
-  })
+//   console.log('Smart Transfer Detection:', {
+//     tokenSymbol,
+//     sourceTokenAddress,
+//     targetTokenAddress,
+//     originChain,
+//     targetChain,
+//     transferType: TransferType[transferType as unknown as keyof typeof TransferType]
+//   })
   
-  // Execute based on transfer type
-  switch (transferType) {
-    case TransferType.DIRECT_TRANSFER: {
-      const tx = await performDirectTransfer({
-        originChain,
-        amount,
-        targetChain,
-        tokenSymbol,
-        sourceTokenAddress,
-        targetTokenAddress,
-        recipient,
-        mnemonicPhrase,
-        network,
-        rpc
-      })
-      console.log('Direct Transfer:', { tx })
-      return { hash: tx.hash }
-    }
+//   // Execute based on transfer type
+//   switch (transferType) {
+//     case TransferType.DIRECT_TRANSFER: {
+//       const tx = await performDirectTransfer({
+//         originChain,
+//         amount,
+//         targetChain,
+//         tokenSymbol,
+//         sourceTokenAddress,
+//         targetTokenAddress,
+//         recipient,
+//         mnemonicPhrase,
+//         network,
+//         rpc
+//       })
+//       console.log('Direct Transfer:', { tx })
+//       return { hash: tx.hash }
+//     }
       
-    case TransferType.CROSS_CHAIN_SWAP: {
-      const tx = await performCrossChainSwap({
-        originChain,
-        amount,
-        targetChain,
-        tokenSymbol,
-        sourceTokenAddress,
-        targetTokenAddress,
-        recipient,
-        mnemonicPhrase,
-        network,
-        rpc
-      })
-      return { hash: tx.hash }
-    }
+//     case TransferType.CROSS_CHAIN_SWAP: {
+//       const tx = await performCrossChainSwap({
+//         originChain,
+//         amount,
+//         targetChain,
+//         tokenSymbol,
+//         sourceTokenAddress,
+//         targetTokenAddress,
+//         recipient,
+//         mnemonicPhrase,
+//         network,
+//         rpc
+//       })
+//       return { hash: tx.hash }
+//     }
       
-    case TransferType.SAME_CHAIN_SWAP: {
-      const tx = await performSameChainSwap({
-        originChain,
-        amount,
-        targetChain,
-        tokenSymbol,
-        sourceTokenAddress,
-        targetTokenAddress,
-        recipient,
-        mnemonicPhrase,
-        network,
-        rpc
-      })
-      return { hash: tx.hash }
-    }
+//     case TransferType.SAME_CHAIN_SWAP: {
+//       const tx = await performSameChainSwap({
+//         originChain,
+//         amount,
+//         targetChain,
+//         tokenSymbol,
+//         sourceTokenAddress,
+//         targetTokenAddress,
+//         recipient,
+//         mnemonicPhrase,
+//         network,
+//         rpc
+//       })
+//       return { hash: tx.hash }
+//     }
       
-    default:
-      throw new Error(`Unsupported transfer type: ${transferType}`)
-  }
-}
+//     default:
+//       throw new Error(`Unsupported transfer type: ${transferType}`)
+//   }
+// }
 
-/**
- * Direct transfer (same token, different chains)
- */
-export async function directTransfer(params: ZetProtocolTransferParams): Promise<{ hash: string }> {
-  const tx = await performDirectTransfer(params)
-  return { hash: tx.hash }
-}
+// /**
+//  * Direct transfer (same token, different chains)
+//  */
+// export async function directTransfer(params: ZetProtocolTransferParams): Promise<{ hash: string }> {
+//   const tx = await performDirectTransfer(params)
+//   return { hash: tx.hash }
+// }
 
-/**
- * Cross-chain swap (different tokens, different chains)
- */
-export async function crossChainSwap(params: ZetProtocolTransferParams): Promise<{ hash: string }> {
-  const tx = await performCrossChainSwap(params)
-  return { hash: tx.hash }
-}
+// /**
+//  * Cross-chain swap (different tokens, different chains)
+//  */
+// export async function crossChainSwap(params: ZetProtocolTransferParams): Promise<{ hash: string }> {
+//   const tx = await performCrossChainSwap(params)
+//   return { hash: tx.hash }
+// }
 
-/**
- * Same-chain swap (different tokens, same chain)
- */
-export async function sameChainSwap(params: ZetProtocolTransferParams): Promise<{ hash: string }> {
-  const tx = await performSameChainSwap(params)
-  return { hash: tx.hash }
-}
+// /**
+//  * Same-chain swap (different tokens, same chain)
+//  */
+// export async function sameChainSwap(params: ZetProtocolTransferParams): Promise<{ hash: string }> {
+//   const tx = await performSameChainSwap(params)
+//   return { hash: tx.hash }
+// }
 
 export async function getTxStatus(params: {
   originChain: SupportedEvm
@@ -265,5 +258,26 @@ export async function waitForTxConfirmation(params: {
 }
 
 
-
-
+// Chain ID mappings by network
+export const CHAIN_IDS_BY_NETWORK: Record<Network, Record<SupportedEvm, number>> = {
+  mainnet: {
+    ethereum: 1,
+    polygon: 137,
+    base: 8453,
+    arbitrum: 42161,
+    avalanche: 43114,
+    zetachain: 7000,
+    bsc: 56,
+    optimism: 10,
+  },
+  testnet: {
+    ethereum: 11155111, // Sepolia
+    polygon: 80002, // Amoy
+    base: 84532, // Base Sepolia
+    arbitrum: 421614, // Arbitrum Sepolia
+    avalanche: 43113, // Fuji
+    zetachain: 7001,
+    bsc: 97,
+    optimism: 11155420,
+  },
+}

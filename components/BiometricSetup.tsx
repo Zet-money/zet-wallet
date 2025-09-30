@@ -104,7 +104,7 @@ export default function BiometricSetup() {
           {/* Benefits */}
           <div className="space-y-3">
             <h4 className="font-semibold text-gray-900">Why biometric security is required:</h4>
-            <ul className="text-sm text-gray-100 space-y-2">
+            <ul className="text-sm text-gray-400 space-y-2">
               <li className="flex items-start gap-2">
                 <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
                 <span>Your recovery phrase is encrypted and protected by your biometrics</span>
