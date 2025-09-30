@@ -49,7 +49,8 @@ export default function WalletSetup() {
     }
   };
 
-  if (wallet && !wallet.isImported) {
+  // Show backup confirmation screen whenever we have a mnemonic in memory (new or imported)
+  if (wallet && wallet.mnemonic) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="w-full max-w-2xl">
