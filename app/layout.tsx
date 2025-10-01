@@ -52,13 +52,13 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <BiometricProvider>
-            <UserSettingsProvider>
-              <NetworkProvider>
-                <WalletProvider>
+            <NetworkProvider>
+              <WalletProvider>
+                <UserSettingsProvider>
                   {children}
-                </WalletProvider>
-              </NetworkProvider>
-            </UserSettingsProvider>
+                </UserSettingsProvider>
+              </WalletProvider>
+            </NetworkProvider>
           </BiometricProvider>
           <Toaster position="top-center" />
         </ThemeProvider>
