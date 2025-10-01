@@ -100,8 +100,27 @@ export function UserSettingsProvider({ children }: { children: React.ReactNode }
               username: updatedProfile.username,
             });
           }
-        } catch (error) {
-          console.warn('Failed to sync profile with backend:', error);
+        } catch (error: any) {
+          // If user doesn't exist (401), create them automatically
+          if (error?.status === 401 || error?.message?.includes('401')) {
+            try {
+              const biometricPublicKey = await getBiometricPublicKey();
+              if (biometricPublicKey) {
+                await backendApi.createUser({
+                  walletAddress: wallet.address,
+                  biometricPublicKey,
+                  name: updatedProfile.name,
+                  email: updatedProfile.email,
+                  username: updatedProfile.username,
+                });
+                console.log('User created automatically after 401 error');
+              }
+            } catch (createError) {
+              console.warn('Failed to create user after 401 error:', createError);
+            }
+          } else {
+            console.warn('Failed to sync profile with backend:', error);
+          }
           // Don't throw error - local update succeeded
         }
       }
@@ -148,8 +167,37 @@ export function UserSettingsProvider({ children }: { children: React.ReactNode }
           });
         }
       }
-    } catch (error) {
-      console.warn('Failed to sync with backend:', error);
+    } catch (error: any) {
+      // If user doesn't exist (401), create them automatically
+      if (error?.status === 401 || error?.message?.includes('401')) {
+        try {
+          const biometricPublicKey = await getBiometricPublicKey();
+          if (biometricPublicKey && profile) {
+            await backendApi.createUser({
+              walletAddress: wallet.address,
+              biometricPublicKey,
+              name: profile.name,
+              email: profile.email,
+              username: profile.username,
+            });
+            console.log('User created automatically during sync after 401 error');
+            setBackendUser({
+              walletAddress: wallet.address,
+              biometricPublicKey,
+              name: profile.name,
+              email: profile.email,
+              username: profile.username,
+              isActive: true,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            });
+          }
+        } catch (createError) {
+          console.warn('Failed to create user during sync after 401 error:', createError);
+        }
+      } else {
+        console.warn('Failed to sync with backend:', error);
+      }
       // Don't throw error - this is a background sync
     }
   };
