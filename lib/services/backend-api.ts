@@ -127,6 +127,12 @@ export interface CreateVisitorRequest {
   referrer?: string;
 }
 
+export interface UpdateTransactionRequest {
+  status?: 'pending' | 'completed' | 'failed';
+  transactionHash?: string;
+  errorMessage?: string;
+}
+
 class BackendApiService {
   private async makeRequest<T>(
     endpoint: string,
@@ -226,6 +232,13 @@ class BackendApiService {
     return this.makeRequest(`/transactions/user/${walletAddress}/stats`, {
       method: 'GET',
       body: JSON.stringify({ walletAddress, biometricPublicKey }),
+    });
+  }
+
+  async updateTransaction(transactionId: string, data: UpdateTransactionRequest): Promise<Transaction> {
+    return this.makeRequest<Transaction>(`/transactions/${transactionId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
     });
   }
 

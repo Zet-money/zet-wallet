@@ -69,7 +69,7 @@ function logoSymbolForChain(key: string) {
 export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
   const { network } = useNetwork();
   const { wallet } = useWallet();
-  const { transferETH, transferERC20, transferSameChain, isExecuting, error: transactionError } = useSecureTransaction();
+  const { transferETH, transferERC20, transferSameChain, isExecuting, error: transactionError, updateTransactionStatus } = useSecureTransaction();
   const [recipientAddress, setRecipientAddress] = useState('');
   const [amount, setAmount] = useState('');
   const [destinationChain, setDestinationChain] = useState('');
@@ -415,6 +415,9 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
           });
           
           if (originConfirmed) {
+            // Update transaction status to completed on origin chain
+            await updateTransactionStatus('completed');
+            
             toast.success('Transaction confirmed on origin chain!', {
               description: `Now tracking cross-chain completion...`,
               duration: 5000
@@ -519,10 +522,12 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
               } else if (cctxResult.status === 'failed') {
                 console.log('[UI][CCTX] Showing failure toast')
                 stopTimer(); // Stop timer on failure
+                await updateTransactionStatus('failed', 'Cross-chain transfer failed');
                 toast.error('Cross-chain transfer failed', { description: 'The transfer could not be completed. Please check the transaction details.', duration: 10000 });
               } else if (cctxResult.status === 'timeout') {
                 console.log('[UI][CCTX] Showing timeout toast')
                 stopTimer(); // Stop timer on timeout
+                await updateTransactionStatus('failed', 'Cross-chain transfer timeout');
                 toast.warning('Cross-chain transfer timeout', { description: 'Transfer is taking longer than expected. Please check the blockchain explorer.', duration: 10000 });
               }
             } catch (cctxError) {
@@ -537,12 +542,14 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
             }
           } else if (txPhase === 'failed') {
             stopTimer(); // Stop timer on origin chain failure
+            await updateTransactionStatus('failed', 'Transaction failed on origin chain');
             toast.error('Transaction failed on origin chain', {
               description: `Transaction failed on origin chain`,
               duration: 10000
             });
           } else if (txPhase === 'timeout') {
             stopTimer(); // Stop timer on origin chain timeout
+            await updateTransactionStatus('failed', 'Transaction timeout on origin chain');
             toast.warning('Transaction timeout on origin chain', {
               description: 'Transaction is taking longer than expected. Please check the blockchain explorer.',
               duration: 10000
@@ -552,6 +559,7 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
           console.error('Error tracking transaction:', error);
           setTxPhase('failed');
           stopTimer(); // Stop timer on error
+          await updateTransactionStatus('failed', 'Error tracking transaction');
           toast.error('Error tracking transaction', {
             description: 'Unable to track transaction status. Please check the blockchain explorer.',
             duration: 10000

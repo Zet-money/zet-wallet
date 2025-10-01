@@ -11,6 +11,7 @@ interface TransactionState {
   isExecuting: boolean;
   error: string | null;
   lastTransaction: ethers.TransactionResponse | null;
+  lastTransactionId: string | null;
 }
 
 interface UseSecureTransactionReturn {
@@ -18,12 +19,14 @@ interface UseSecureTransactionReturn {
   isExecuting: boolean;
   error: string | null;
   lastTransaction: ethers.TransactionResponse | null;
+  lastTransactionId: string | null;
   
   // Actions
   transferETH: (amount: string, receiver: string, rpcUrl: string, targetChain?: string, network?: string, targetTokenSymbol?: string) => Promise<ethers.TransactionResponse | null>;
   transferERC20: (amount: string, receiver: string, tokenAddress: string, rpcUrl: string, targetChain?: string, network?: string, targetTokenSymbol?: string) => Promise<ethers.TransactionResponse | null>;
   transferSameChain: (amount: string, receiver: string, tokenAddress: string, chain: string, network: string) => Promise<{ hash: string } | null>;
   executeFunction: (amount: string, receiver: string, types: string[], values: any[], rpcUrl: string, tokenAddress?: string) => Promise<ethers.TransactionResponse | null>;
+  updateTransactionStatus: (status: 'pending' | 'completed' | 'failed', errorMessage?: string) => Promise<void>;
   clearError: () => void;
   clearLastTransaction: () => void;
 }
@@ -38,6 +41,7 @@ export const useSecureTransaction = (): UseSecureTransactionReturn => {
     isExecuting: false,
     error: null,
     lastTransaction: null,
+    lastTransactionId: null,
   });
 
   const executeWithErrorHandling = useCallback(async <T>(
@@ -89,7 +93,7 @@ export const useSecureTransaction = (): UseSecureTransactionReturn => {
         try {
           const biometricPublicKey = await getBiometricPublicKey();
           if (biometricPublicKey) {
-            await backendApi.createBlockchainTransaction({
+            const transaction = await backendApi.createBlockchainTransaction({
               walletAddress: wallet.address,
               type: 'blockchain',
               amount,
@@ -99,6 +103,7 @@ export const useSecureTransaction = (): UseSecureTransactionReturn => {
               recipientAddress: receiver,
               senderAddress: wallet.address,
             });
+            setState(prev => ({ ...prev, lastTransactionId: transaction.id }));
           }
         } catch (error) {
           console.warn('Failed to track transaction in backend:', error);
@@ -234,8 +239,25 @@ export const useSecureTransaction = (): UseSecureTransactionReturn => {
     setState(prev => ({ ...prev, error: null }));
   }, []);
 
+  const updateTransactionStatus = useCallback(async (status: 'pending' | 'completed' | 'failed', errorMessage?: string) => {
+    if (!state.lastTransactionId) {
+      console.warn('No transaction ID available for status update');
+      return;
+    }
+
+    try {
+      await backendApi.updateTransaction(state.lastTransactionId, {
+        status,
+        errorMessage,
+      });
+      console.log(`Transaction ${state.lastTransactionId} status updated to ${status}`);
+    } catch (error) {
+      console.error('Failed to update transaction status:', error);
+    }
+  }, [state.lastTransactionId]);
+
   const clearLastTransaction = useCallback(() => {
-    setState(prev => ({ ...prev, lastTransaction: null }));
+    setState(prev => ({ ...prev, lastTransaction: null, lastTransactionId: null }));
   }, []);
 
   return {
@@ -243,12 +265,14 @@ export const useSecureTransaction = (): UseSecureTransactionReturn => {
     isExecuting: state.isExecuting,
     error: state.error,
     lastTransaction: state.lastTransaction,
+    lastTransactionId: state.lastTransactionId,
     
     // Actions
     transferETH,
     transferERC20,
     transferSameChain,
     executeFunction,
+    updateTransactionStatus,
     clearError,
     clearLastTransaction,
   };
