@@ -14,6 +14,7 @@ export interface User {
   sessionTimeout?: number;
   isActive: boolean;
   lastLoginAt?: Date;
+  lastActive?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -187,6 +188,16 @@ class BackendApiService {
     return this.makeRequest<User>('/users/me', {
       method: 'PATCH',
       body: JSON.stringify({ walletAddress, biometricPublicKey, ...data }),
+    });
+  }
+
+  async updateLastActive(walletAddress: string, biometricPublicKey: string): Promise<void> {
+    const params = new URLSearchParams({
+      walletAddress,
+      biometricPublicKey,
+    });
+    return this.makeRequest<void>(`/users/me/active?${params}`, {
+      method: 'POST',
     });
   }
 

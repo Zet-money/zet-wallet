@@ -8,6 +8,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { biometricMigration, type MigrationResult, type UnlockResult } from '@/lib/migration/biometric-migration';
 import { secureDB } from '@/lib/db/secure-db';
+import { backendApi } from '@/lib/services/backend-api';
+import { useWallet } from './WalletContext';
 
 export interface BiometricContextType {
   isAppUnlocked: boolean;
@@ -44,6 +46,21 @@ export function BiometricProvider({ children }: { children: React.ReactNode }) {
   const [sessionTimeout, setSessionTimeout] = useState<NodeJS.Timeout | null>(null);
   const [needsBiometricSetup, setNeedsBiometricSetup] = useState(false);
 
+  // Helper function to update lastActive timestamp
+  const updateLastActive = async () => {
+    try {
+      const wallet = JSON.parse(localStorage.getItem('walletForSession') || '{}');
+      if (wallet?.address) {
+        const biometricPublicKey = await getBiometricPublicKey();
+        if (biometricPublicKey) {
+          await backendApi.updateLastActive(wallet.address, biometricPublicKey);
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to update lastActive timestamp:', error);
+    }
+  };
+
   // Initialize biometric system
   useEffect(() => {
     const initializeBiometric = async () => {
@@ -68,6 +85,8 @@ export function BiometricProvider({ children }: { children: React.ReactNode }) {
           if (unlockResult.success) {
             setIsAppUnlocked(true);
             startSessionTimeout();
+            // Update lastActive timestamp
+            await updateLastActive();
           }
         } else if (status.hasUnencrypted && !status.hasEncrypted) {
           // If we have unencrypted data but no encrypted data, unlock the app
@@ -127,6 +146,8 @@ export function BiometricProvider({ children }: { children: React.ReactNode }) {
       if (result.success) {
         setIsAppUnlocked(true);
         startSessionTimeout(timeoutMinutes); // Restart session timeout
+        // Update lastActive timestamp
+        await updateLastActive();
       }
       return result;
     } catch (error) {
