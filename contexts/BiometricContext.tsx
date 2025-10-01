@@ -49,7 +49,7 @@ export function BiometricProvider({ children }: { children: React.ReactNode }) {
   // Helper function to update lastActive timestamp
   const updateLastActive = async () => {
     try {
-      const wallet = JSON.parse(localStorage.getItem('walletForSession') || '{}');
+      const wallet = JSON.parse(localStorage.getItem('zet_wallet_session') || '{}');
       if (wallet?.address) {
         const biometricPublicKey = await getBiometricPublicKey();
         if (biometricPublicKey) {
