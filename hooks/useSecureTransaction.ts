@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { ethers } from 'ethers';
 import { secureTransactionService } from '@/lib/services/secure-transaction';
 import { transferERC20Token } from '@/lib/erc20-transfer';
@@ -45,6 +45,9 @@ export const useSecureTransaction = (): UseSecureTransactionReturn => {
     lastTransaction: null,
     lastTransactionId: null,
   });
+
+  // Use ref to store latest transaction ID to avoid stale closure issues
+  const lastTransactionIdRef = useRef<string | null>(null);
 
   const executeWithErrorHandling = useCallback(async <T>(
     operation: () => Promise<T>
@@ -108,6 +111,8 @@ export const useSecureTransaction = (): UseSecureTransactionReturn => {
             });
             console.log('Transaction ID:', transaction._id);
             setState(prev => ({ ...prev, lastTransactionId: transaction._id }));
+            // Also update the ref to avoid stale closure issues
+            lastTransactionIdRef.current = transaction._id;
           }
         } catch (error) {
           console.warn('Failed to track transaction in backend:', error);
@@ -220,6 +225,8 @@ export const useSecureTransaction = (): UseSecureTransactionReturn => {
                 console.log('Setting lastTransactionId in state:', newState.lastTransactionId);
                 return newState;
               });
+              // Also update the ref to avoid stale closure issues
+              lastTransactionIdRef.current = transaction._id;
             }
           } catch (error) {
             console.warn('Failed to track transaction in backend:', error);
@@ -257,30 +264,33 @@ export const useSecureTransaction = (): UseSecureTransactionReturn => {
   }, []);
 
   const updateTransactionStatus = useCallback(async (status: 'pending' | 'completed' | 'failed', errorMessage?: string) => {
-    console.log('updateTransactionStatus called with:', { status, errorMessage, lastTransactionId: state.lastTransactionId });
+    const transactionId = lastTransactionIdRef.current;
+    console.log('updateTransactionStatus called with:', { status, errorMessage, lastTransactionId: transactionId });
     console.log('Current state in updateTransactionStatus:', state);
-    if (!state.lastTransactionId) {
+    if (!transactionId) {
       console.warn('No transaction ID available for status update');
       return;
     }
 
     try {
-      await backendApi.updateTransaction(state.lastTransactionId, {
+      await backendApi.updateTransaction(transactionId, {
         status,
         errorMessage,
       });
-      console.log(`Transaction ${state.lastTransactionId} status updated to ${status}`);
+      console.log(`Transaction ${transactionId} status updated to ${status}`);
     } catch (error) {
       console.error('Failed to update transaction status:', error);
     }
-  }, [state.lastTransactionId]);
+  }, []);
 
   const setLastTransactionId = useCallback((id: string) => {
     setState(prev => ({ ...prev, lastTransactionId: id }));
+    lastTransactionIdRef.current = id;
   }, []);
 
   const clearLastTransaction = useCallback(() => {
     setState(prev => ({ ...prev, lastTransaction: null, lastTransactionId: null }));
+    lastTransactionIdRef.current = null;
   }, []);
 
   return {
