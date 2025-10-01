@@ -34,6 +34,7 @@ export default function Dashboard() {
   const { network, setNetwork } = useNetwork();
   const { transferETH, transferERC20, isExecuting } = useSecureTransaction();
   const router = useRouter();
+  const isMainnet = network === 'mainnet';
   const [selectedChain, setSelectedChain] = useState('base'); // Only support Base chain
   const [searchQuery, setSearchQuery] = useState('');
   const [copied, setCopied] = useState(false);
@@ -271,24 +272,26 @@ export default function Dashboard() {
           </Button>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-6">
-          <Button 
-            onClick={() => setShowSellModal(true)}
-            variant="outline" 
-            className="h-12 sm:h-10 flex items-center justify-center space-x-2"
-          >
-            <TrendingDown className="w-4 h-4" />
-            <span>Sell Crypto</span>
-          </Button>
-          <Button 
-            onClick={() => setShowBuyModal(true)}
-            variant="outline" 
-            className="h-12 sm:h-10 flex items-center justify-center space-x-2"
-          >
-            <TrendingUp className="w-4 h-4" />
-            <span>Buy Crypto</span>
-          </Button>
-        </div>
+        {isMainnet && (
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-6">
+            <Button 
+              onClick={() => setShowSellModal(true)}
+              variant="outline" 
+              className="h-12 sm:h-10 flex items-center justify-center space-x-2"
+            >
+              <TrendingDown className="w-4 h-4" />
+              <span>Sell Crypto</span>
+            </Button>
+            <Button 
+              onClick={() => setShowBuyModal(true)}
+              variant="outline" 
+              className="h-12 sm:h-10 flex items-center justify-center space-x-2"
+            >
+              <TrendingUp className="w-4 h-4" />
+              <span>Buy Crypto</span>
+            </Button>
+          </div>
+        )}
 
         {/* Search */}
         <div className="relative mb-6">
@@ -455,13 +458,15 @@ export default function Dashboard() {
       )}
 
       {/* Sell Crypto Modal */}
-      <SellCryptoModal 
-        isOpen={showSellModal} 
-        onClose={() => setShowSellModal(false)} 
-      />
+      {isMainnet && (
+        <SellCryptoModal 
+          isOpen={showSellModal} 
+          onClose={() => setShowSellModal(false)} 
+        />
+      )}
 
       {/* Buy Crypto Modal - Placeholder */}
-      {showBuyModal && (
+      {isMainnet && showBuyModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <Card className="w-full max-w-md">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">

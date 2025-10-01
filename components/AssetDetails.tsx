@@ -26,12 +26,14 @@ interface AssetDetailsProps {
 
 export default function AssetDetails({ asset }: AssetDetailsProps) {
   const router = useRouter();
+  const { network } = useNetwork();
   const [showSend, setShowSend] = useState(false);
   const [showReceive, setShowReceive] = useState(false);
   const [showSell, setShowSell] = useState(false);
   const [showBuy, setShowBuy] = useState(false);
   const [priceChange, setPriceChange] = useState<number | null>(null)
   const isPositive = (priceChange ?? 0) > 0;
+  const isMainnet = network === 'mainnet';
 
   // Display helper: truncate without rounding to N decimal places
   function truncateBalance(value: string, decimals: number): string {
@@ -135,24 +137,26 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
           </Button>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          <Button 
-            variant="outline"
-            onClick={() => setShowSell(true)}
-            className="h-16"
-          >
-            <TrendingDown className="w-6 h-6" />
-            <span>Sell Crypto</span>
-          </Button>
-          <Button 
-            variant="outline"
-            onClick={() => setShowBuy(true)}
-            className="h-16"
-          >
-            <TrendingUp className="w-6 h-6" />
-            <span>Buy Crypto</span>
-          </Button>
-        </div>
+        {isMainnet && (
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            <Button 
+              variant="outline"
+              onClick={() => setShowSell(true)}
+              className="h-16"
+            >
+              <TrendingDown className="w-6 h-6" />
+              <span>Sell Crypto</span>
+            </Button>
+            <Button 
+              variant="outline"
+              onClick={() => setShowBuy(true)}
+              className="h-16"
+            >
+              <TrendingUp className="w-6 h-6" />
+              <span>Buy Crypto</span>
+            </Button>
+          </div>
+        )}
 
         {/* Asset Info */}
         <Card>
@@ -202,13 +206,15 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
       )}
 
       {/* Sell Crypto Modal */}
-      <SellCryptoModal 
-        isOpen={showSell} 
-        onClose={() => setShowSell(false)} 
-      />
+      {isMainnet && (
+        <SellCryptoModal 
+          isOpen={showSell} 
+          onClose={() => setShowSell(false)} 
+        />
+      )}
 
       {/* Buy Crypto Modal - Placeholder */}
-      {showBuy && (
+      {isMainnet && showBuy && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <Card className="w-full max-w-md">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
