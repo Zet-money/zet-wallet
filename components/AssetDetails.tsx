@@ -3,12 +3,13 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Send, Download, TrendingUp, TrendingDown } from 'lucide-react';
+import { ArrowLeft, Send, Download, TrendingUp, TrendingDown, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { getTokenChangeUSD24h } from '@/lib/prices';
 import { useRouter } from 'next/navigation';
 import SendFlowSecure from './SendFlowSecure';
 import ReceiveFlow from './ReceiveFlow';
+import SellCryptoModal from './SellCryptoModal';
 
 interface AssetDetailsProps {
   asset: {
@@ -26,6 +27,8 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
   const router = useRouter();
   const [showSend, setShowSend] = useState(false);
   const [showReceive, setShowReceive] = useState(false);
+  const [showSell, setShowSell] = useState(false);
+  const [showBuy, setShowBuy] = useState(false);
   const [priceChange, setPriceChange] = useState<number | null>(null)
   const isPositive = (priceChange ?? 0) > 0;
 
@@ -131,6 +134,25 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
           </Button>
         </div>
 
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          <Button 
+            variant="outline"
+            onClick={() => setShowSell(true)}
+            className="h-16"
+          >
+            <TrendingDown className="w-6 h-6" />
+            <span>Sell Crypto</span>
+          </Button>
+          <Button 
+            variant="outline"
+            onClick={() => setShowBuy(true)}
+            className="h-16"
+          >
+            <TrendingUp className="w-6 h-6" />
+            <span>Buy Crypto</span>
+          </Button>
+        </div>
+
         {/* Asset Info */}
         <Card>
           <CardHeader>
@@ -176,6 +198,38 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
           asset={asset} 
           onClose={() => setShowReceive(false)} 
         />
+      )}
+
+      {/* Sell Crypto Modal */}
+      <SellCryptoModal 
+        isOpen={showSell} 
+        onClose={() => setShowSell(false)} 
+      />
+
+      {/* Buy Crypto Modal - Placeholder */}
+      {showBuy && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <Card className="w-full max-w-md">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+              <div>
+                <CardTitle>Buy Crypto</CardTitle>
+                <CardDescription>Coming soon</CardDescription>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => setShowBuy(false)}>
+                <X className="w-4 h-4" />
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-8">
+                <TrendingUp className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold mb-2">Buy Crypto</h3>
+                <p className="text-muted-foreground">
+                  This feature is coming soon. You'll be able to buy crypto directly with your bank account.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       )}
     </div>
   );

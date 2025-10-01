@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Search, Send, Download, Settings, Copy, Check, X, Lock } from 'lucide-react';
+import { Search, Send, Download, Settings, Copy, Check, X, Lock, TrendingUp, TrendingDown } from 'lucide-react';
 import { useWallet } from '@/contexts/WalletContext';
 import { useBiometric } from '@/contexts/BiometricContext';
 import { useUserSettings } from '@/contexts/UserSettingsContext';
@@ -21,6 +21,7 @@ import { fetchBalancesForChain } from '@/lib/balances';
 import { IN_APP_RPC_MAP } from '@/lib/rpc';
 import { getTokenPriceUSD, getTokenChangeUSD24h } from '@/lib/prices';
 import ReceiveFlow from './ReceiveFlow';
+import SellCryptoModal from './SellCryptoModal';
 import { useSecureTransaction } from '@/hooks/useSecureTransaction';
 // Solana imports removed - only Base chain supported
 
@@ -38,6 +39,8 @@ export default function Dashboard() {
   const [copied, setCopied] = useState(false);
   const [showSendModal, setShowSendModal] = useState(false);
   const [showReceiveModal, setShowReceiveModal] = useState(false);
+  const [showSellModal, setShowSellModal] = useState(false);
+  const [showBuyModal, setShowBuyModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   // Chain selection is disabled - only Base is supported
 
@@ -268,6 +271,25 @@ export default function Dashboard() {
           </Button>
         </div>
 
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-6">
+          <Button 
+            onClick={() => setShowSellModal(true)}
+            variant="outline" 
+            className="h-12 sm:h-10 flex items-center justify-center space-x-2"
+          >
+            <TrendingDown className="w-4 h-4" />
+            <span>Sell Crypto</span>
+          </Button>
+          <Button 
+            onClick={() => setShowBuyModal(true)}
+            variant="outline" 
+            className="h-12 sm:h-10 flex items-center justify-center space-x-2"
+          >
+            <TrendingUp className="w-4 h-4" />
+            <span>Buy Crypto</span>
+          </Button>
+        </div>
+
         {/* Search */}
         <div className="relative mb-6">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
@@ -419,17 +441,49 @@ export default function Dashboard() {
       {/* Receive Modal */}
       {showReceiveModal && (
         <ReceiveFlow 
-          asset={(networkTokens[0] || {
-            id: `${chainKey}-NATIVE-0`,
-            symbol: 'ETH', // Base chain uses ETH as native token
-            name: 'Ethereum',
+          asset={(networkTokens.find(t => t.symbol === 'USDC') || networkTokens[0] || {
+            id: `${chainKey}-USDC-0`,
+            symbol: 'USDC',
+            name: 'USD Coin',
             balance: '0.00',
             usdValue: '0.00',
             chain: 'Base',
-            logo: 'https://assets.parqet.com/logos/crypto/ETH?format=png'
+            logo: 'https://assets.parqet.com/logos/crypto/USDC?format=png'
           })}
           onClose={() => setShowReceiveModal(false)} 
         />
+      )}
+
+      {/* Sell Crypto Modal */}
+      <SellCryptoModal 
+        isOpen={showSellModal} 
+        onClose={() => setShowSellModal(false)} 
+      />
+
+      {/* Buy Crypto Modal - Placeholder */}
+      {showBuyModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <Card className="w-full max-w-md">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+              <div>
+                <CardTitle>Buy Crypto</CardTitle>
+                <CardDescription>Coming soon</CardDescription>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => setShowBuyModal(false)}>
+                <X className="w-4 h-4" />
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-8">
+                <TrendingUp className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold mb-2">Buy Crypto</h3>
+                <p className="text-muted-foreground">
+                  This feature is coming soon. You'll be able to buy crypto directly with your bank account.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       {/* Settings Modal */}
