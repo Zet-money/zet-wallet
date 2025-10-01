@@ -1,6 +1,6 @@
 import { Contract, JsonRpcProvider, Wallet, formatUnits, parseUnits } from 'ethers';
 import { getEvmProvider } from './providers';
-import type { Network, SupportedEvm } from './providers';
+import type { Network, SupportedEvm, RpcMap } from './providers';
 
 // Standard ERC-20 ABI for transfer functionality
 const ERC20_ABI = [
@@ -21,6 +21,7 @@ export interface TransferParams {
   chain: SupportedEvm;
   network: Network;
   rpcUrl?: string;
+  rpcMap?: RpcMap;
 }
 
 export interface TransferResult {
@@ -42,13 +43,14 @@ export async function transferERC20Token(params: TransferParams): Promise<Transf
       senderPrivateKey,
       chain,
       network,
-      rpcUrl
+      rpcUrl,
+      rpcMap
     } = params;
 
     // Create provider
     const provider = rpcUrl 
       ? new JsonRpcProvider(rpcUrl)
-      : getEvmProvider(chain, network);
+      : getEvmProvider(chain, network, rpcMap);
 
     // Create wallet from private key
     const wallet = new Wallet(senderPrivateKey, provider);
@@ -101,12 +103,13 @@ export async function getERC20Balance(
   walletAddress: string,
   chain: SupportedEvm,
   network: Network,
-  rpcUrl?: string
+  rpcUrl?: string,
+  rpcMap?: RpcMap
 ): Promise<string> {
   try {
     const provider = rpcUrl 
       ? new JsonRpcProvider(rpcUrl)
-      : getEvmProvider(chain, network);
+      : getEvmProvider(chain, network, rpcMap);
 
     const tokenContract = new Contract(tokenAddress, ERC20_ABI, provider);
     const balance = await tokenContract.balanceOf(walletAddress);
@@ -126,12 +129,13 @@ export async function getERC20TokenInfo(
   tokenAddress: string,
   chain: SupportedEvm,
   network: Network,
-  rpcUrl?: string
+  rpcUrl?: string,
+  rpcMap?: RpcMap
 ): Promise<{ name: string; symbol: string; decimals: number } | null> {
   try {
     const provider = rpcUrl 
       ? new JsonRpcProvider(rpcUrl)
-      : getEvmProvider(chain, network);
+      : getEvmProvider(chain, network, rpcMap);
 
     const tokenContract = new Contract(tokenAddress, ERC20_ABI, provider);
     

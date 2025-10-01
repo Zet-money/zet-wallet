@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { ethers } from 'ethers';
 import { secureTransactionService } from '@/lib/services/secure-transaction';
 import { transferERC20Token } from '@/lib/erc20-transfer';
+import { IN_APP_RPC_MAP } from '@/lib/rpc';
 import { backendApi } from '@/lib/services/backend-api';
 import { useWallet } from '@/contexts/WalletContext';
 import { useBiometric } from '@/contexts/BiometricContext';
@@ -181,7 +182,8 @@ export const useSecureTransaction = (): UseSecureTransactionReturn => {
           amount,
           senderPrivateKey: hdWallet.privateKey,
           chain: chain as 'base',
-          network: network as 'mainnet' | 'testnet'
+          network: network as 'mainnet' | 'testnet',
+          rpcMap: IN_APP_RPC_MAP
         });
   
         if (!result.success) {
