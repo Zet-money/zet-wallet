@@ -267,7 +267,7 @@ export default function SellCryptoModal({ isOpen, onClose }: SellCryptoModalProp
                   </div>
                   <div className="flex items-center space-x-2 p-2 bg-muted/50 rounded">
                     <img 
-                      src="https://assets.parqet.com/logos/crypto/cNGN?format=png" 
+                      src="/cngn.svg" 
                       alt="cNGN" 
                       className="w-6 h-6"
                     />
@@ -316,7 +316,7 @@ export default function SellCryptoModal({ isOpen, onClose }: SellCryptoModalProp
                       <SelectItem value="cNGN">
                         <div className="flex items-center space-x-2">
                           <img 
-                            src="https://assets.parqet.com/logos/crypto/cNGN?format=png" 
+                            src="/cngn.svg" 
                             alt="cNGN" 
                             className="w-4 h-4"
                           />
