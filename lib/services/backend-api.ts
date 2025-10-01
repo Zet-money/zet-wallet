@@ -11,6 +11,7 @@ export interface User {
   name?: string;
   email?: string;
   username?: string;
+  sessionTimeout?: number;
   isActive: boolean;
   lastLoginAt?: Date;
   createdAt: Date;
@@ -23,12 +24,14 @@ export interface CreateUserRequest {
   name?: string;
   email?: string;
   username?: string;
+  sessionTimeout?: number;
 }
 
 export interface UpdateUserRequest {
   name?: string;
   email?: string;
   username?: string;
+  sessionTimeout?: number;
 }
 
 export interface PaycrestOrder {

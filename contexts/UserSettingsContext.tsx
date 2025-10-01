@@ -98,6 +98,7 @@ export function UserSettingsProvider({ children }: { children: React.ReactNode }
               name: updatedProfile.name,
               email: updatedProfile.email,
               username: updatedProfile.username,
+              sessionTimeout: updatedProfile.sessionTimeout,
             });
           }
         } catch (error: any) {
@@ -112,6 +113,7 @@ export function UserSettingsProvider({ children }: { children: React.ReactNode }
                   name: updatedProfile.name,
                   email: updatedProfile.email,
                   username: updatedProfile.username,
+                  sessionTimeout: updatedProfile.sessionTimeout,
                 });
                 console.log('User created automatically after 401 error');
               }
@@ -179,6 +181,7 @@ export function UserSettingsProvider({ children }: { children: React.ReactNode }
               name: profile.name,
               email: profile.email,
               username: profile.username,
+              sessionTimeout: profile.sessionTimeout,
             });
             console.log('User created automatically during sync after 401 error');
             setBackendUser({
@@ -187,6 +190,7 @@ export function UserSettingsProvider({ children }: { children: React.ReactNode }
               name: profile.name,
               email: profile.email,
               username: profile.username,
+              sessionTimeout: profile.sessionTimeout,
               isActive: true,
               createdAt: new Date(),
               updatedAt: new Date(),

@@ -157,6 +157,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
                 name: '',
                 email: '',
                 username: '',
+                sessionTimeout: 30, // Default 30 minutes
               });
               console.log('User registered with backend successfully');
             }
