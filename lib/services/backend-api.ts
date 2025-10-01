@@ -74,7 +74,7 @@ export interface CreateOrderRequest {
 }
 
 export interface Transaction {
-  id: string;
+  _id: string;
   walletAddress: string;
   type: 'blockchain' | 'ramp';
   status: 'pending' | 'completed' | 'failed' | 'cancelled';

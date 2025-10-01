@@ -105,7 +105,7 @@ export const useSecureTransaction = (): UseSecureTransactionReturn => {
               network: network as 'mainnet' | 'testnet',
               transactionHash: tx.hash,
             });
-            setState(prev => ({ ...prev, lastTransactionId: transaction.id }));
+            setState(prev => ({ ...prev, lastTransactionId: transaction._id }));
           }
         } catch (error) {
           console.warn('Failed to track transaction in backend:', error);
@@ -208,7 +208,7 @@ export const useSecureTransaction = (): UseSecureTransactionReturn => {
                 isSameChain: true,
                 transactionHash: result.hash,
               });
-              setState(prev => ({ ...prev, lastTransactionId: transaction.id }));
+              setState(prev => ({ ...prev, lastTransactionId: transaction._id }));
             }
           } catch (error) {
             console.warn('Failed to track transaction in backend:', error);
