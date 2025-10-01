@@ -60,7 +60,7 @@ export default function Dashboard() {
     balance: '—',
     usdValue: '0.00',
     chain: 'Base',
-    logo: `https://assets.parqet.com/logos/crypto/${t.logo || t.symbol}?format=png`,
+    logo: `${t.symbol === 'cNGN' ? '/cngn.svg' : `https://assets.parqet.com/logos/crypto/${t.logo || t.symbol}?format=png`}`,
   }))
 
   const [balances, setBalances] = useState<Record<string, string>>({})

@@ -17,7 +17,7 @@ const sizeClasses = {
 export default function CryptoLogo({ symbol, size = 'md', className = '' }: CryptoLogoProps) {
   const [imageError, setImageError] = useState(false);
   
-  const logoUrl = `https://assets.parqet.com/logos/crypto/${symbol}?format=png`;
+  const logoUrl = symbol === 'cNGN' ? '/cngn.svg' : `https://assets.parqet.com/logos/crypto/${symbol}?format=png`;
   
   if (imageError) {
     return (

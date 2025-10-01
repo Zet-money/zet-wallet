@@ -14,6 +14,7 @@ import { EVM_TOKENS, getTokensFor, type Network as TokenNetwork } from '@/lib/to
 import { IN_APP_RPC_MAP } from '@/lib/rpc';
 import BaseLogo from './BaseLogo';
 import { useSecureTransaction } from '@/hooks/useSecureTransaction';
+import { useWallet } from '@/contexts/WalletContext';
 import { CctxProgress, trackCrossChainConfirmations as trackCrossChainTransaction } from '@/lib/zetachain-server';
 import CctxProgressComponent from '@/components/CctxProgress';
 import { waitForTxConfirmation, getTxStatus } from '@/lib/zetachain';
@@ -67,6 +68,7 @@ function logoSymbolForChain(key: string) {
 
 export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
   const { network } = useNetwork();
+  const { wallet } = useWallet();
   const { transferETH, transferERC20, isExecuting, error: transactionError } = useSecureTransaction();
   const [recipientAddress, setRecipientAddress] = useState('');
   const [amount, setAmount] = useState('');
@@ -91,11 +93,20 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
   // Destination chains
   const destinationChains = useMemo(() => {
     const excluded = new Set(['optimism', 'bsc', 'zetachain']);
-    return Object.keys(EVM_TOKENS).filter((key) => !excluded.has(key)).map((key) => {
+    const chains = Object.keys(EVM_TOKENS).filter((key) => !excluded.has(key)).map((key) => {
       const symbol = logoSymbolForChain(key);
       const icon = key === 'base' ? 'base-logo' : `https://assets.parqet.com/logos/crypto/${symbol}?format=png`;
       return { value: key, label: toLabel(key), icon };
     });
+    
+    // Add Base as an option for same-chain transfers
+    chains.unshift({
+      value: 'base-same',
+      label: 'Base (Same Chain)',
+      icon: 'base-logo'
+    });
+    
+    return chains;
   }, []);
 
   // Get available tokens for the selected destination chain
@@ -105,48 +116,57 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
     const networkKey = (network === 'mainnet' ? 'mainnet' : 'testnet') as TokenNetwork;
     const tokens = getTokensFor(destinationChain, networkKey);
     
-    // If source token is USDC, only show USDC as destination token
-    if (asset.symbol === 'USDC') {
-      console.log('[USDC Token Filter] Debug:', {
+    // If source token is USDC or cNGN, only show matching token as destination token
+    if (asset.symbol === 'USDC' || asset.symbol === 'cNGN') {
+      console.log('[Token Filter] Debug:', {
         destinationChain,
+        assetSymbol: asset.symbol,
         assetChain: asset.chain,
         networkKey,
         availableTokens: tokens.map(t => t.symbol),
-        usdcTokens: tokens.filter(t => t.symbol.includes('USDC'))
+        matchingTokens: tokens.filter(t => t.symbol.includes(asset.symbol))
       });
       
-      // Find USDC token with appropriate symbol for the destination chain
-      let usdcToken = tokens.find(token => token.symbol === 'USDC');
+      // Find matching token with appropriate symbol for the destination chain
+      let matchingToken = tokens.find(token => token.symbol === asset.symbol);
       
-      // For ZetaChain, look for USDC with the source chain suffix
-      if (!usdcToken && destinationChain === 'zetachain') {
-        // Map source chains to their USDC symbols on ZetaChain
-        const usdcSymbolMap: { [key: string]: string } = {
-          'base': 'USDC.BASE',
-          'bsc': 'USDC.BSC',
-          'ethereum': 'USDC.ETH',
-          'polygon': 'USDC.POL',
-          'arbitrum': 'USDC.ARB',
-          'optimism': 'USDC.OP',
-          'avalanche': 'USDC.AVAX'
+      // For ZetaChain, look for token with the source chain suffix
+      if (!matchingToken && destinationChain === 'zetachain') {
+        // Map source chains to their token symbols on ZetaChain
+        const tokenSymbolMap: { [key: string]: { [key: string]: string } } = {
+          'USDC': {
+            'base': 'USDC.BASE',
+            'bsc': 'USDC.BSC',
+            'ethereum': 'USDC.ETH',
+            'polygon': 'USDC.POL',
+            'arbitrum': 'USDC.ARB',
+            'optimism': 'USDC.OP',
+            'avalanche': 'USDC.AVAX'
+          },
+          'cNGN': {
+            'base': 'cNGN.BASE' // Add cNGN mapping if it exists on ZetaChain
+          }
         };
         
-        const usdcSymbol = usdcSymbolMap[asset.chain] || 'USDC.BASE'; // Default to BASE if not found
-        console.log('[USDC Token Filter] Looking for USDC symbol:', usdcSymbol);
-        usdcToken = tokens.find(token => token.symbol === usdcSymbol);
-        console.log('[USDC Token Filter] Found USDC token:', usdcToken);
+        const symbolMap = tokenSymbolMap[asset.symbol];
+        if (symbolMap) {
+          const tokenSymbol = symbolMap[asset.chain] || `${asset.symbol}.BASE`; // Default to BASE if not found
+          console.log('[Token Filter] Looking for token symbol:', tokenSymbol);
+          matchingToken = tokens.find(token => token.symbol === tokenSymbol);
+          console.log('[Token Filter] Found token:', matchingToken);
+        }
       }
       
-      if (usdcToken) {
-        console.log('[USDC Token Filter] Returning USDC token:', usdcToken.symbol);
+      if (matchingToken) {
+        console.log('[Token Filter] Returning token:', matchingToken.symbol);
         return [{
-          value: usdcToken.symbol,
-          label: usdcToken.symbol,
-          name: usdcToken.name,
-          logo: usdcToken.symbol === 'ETH' ? 'base-logo' : `https://assets.parqet.com/logos/crypto/${usdcToken.logo || usdcToken.symbol}?format=png`
+          value: matchingToken.symbol,
+          label: matchingToken.symbol,
+          name: matchingToken.name,
+          logo: asset.symbol === 'cNGN' ? '/cngn.svg' : (matchingToken.symbol === 'ETH' ? 'base-logo' : `https://assets.parqet.com/logos/crypto/${matchingToken.logo || matchingToken.symbol}?format=png`)
         }];
       } else {
-        console.log('[USDC Token Filter] No USDC token found, returning all tokens');
+        console.log('[Token Filter] No matching token found, returning all tokens');
       }
     }
     
@@ -154,37 +174,46 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
       value: token.symbol,
       label: token.symbol,
       name: token.name,
-      logo: token.symbol === 'ETH' ? 'base-logo' : `https://assets.parqet.com/logos/crypto/${token.logo || token.symbol}?format=png`
+      logo: token.symbol === 'ETH' ? 'base-logo' : (token.symbol === 'cNGN' ? '/cngn.svg' : `https://assets.parqet.com/logos/crypto/${token.logo || token.symbol}?format=png`)
     }));
   }, [destinationChain, network, asset.symbol]);
 
-  // Auto-select USDC as destination token when source is USDC
+  // Auto-select matching token as destination token when source is USDC or cNGN
   useEffect(() => {
-    console.log('[USDC Auto-select] Debug:', {
+    console.log('[Token Auto-select] Debug:', {
       assetSymbol: asset.symbol,
       destinationChain,
       assetChain: asset.chain,
       currentDestinationToken: destinationToken
     });
     
-    if (asset.symbol === 'USDC' && destinationChain) {
-      // For ZetaChain, use the appropriate USDC symbol based on source chain
+    if ((asset.symbol === 'USDC' || asset.symbol === 'cNGN') && destinationChain) {
+      // For ZetaChain, use the appropriate token symbol based on source chain
       if (destinationChain === 'zetachain') {
-        const usdcSymbolMap: { [key: string]: string } = {
-          'base': 'USDC.BASE',
-          'bsc': 'USDC.BSC',
-          'ethereum': 'USDC.ETH',
-          'polygon': 'USDC.POL',
-          'arbitrum': 'USDC.ARB',
-          'optimism': 'USDC.OP',
-          'avalanche': 'USDC.AVAX'
+        const tokenSymbolMap: { [key: string]: { [key: string]: string } } = {
+          'USDC': {
+            'base': 'USDC.BASE',
+            'bsc': 'USDC.BSC',
+            'ethereum': 'USDC.ETH',
+            'polygon': 'USDC.POL',
+            'arbitrum': 'USDC.ARB',
+            'optimism': 'USDC.OP',
+            'avalanche': 'USDC.AVAX'
+          },
+          'cNGN': {
+            'base': 'cNGN.BASE'
+          }
         };
-        const usdcSymbol = usdcSymbolMap[asset.chain] || 'USDC.BASE';
-        console.log('[USDC Auto-select] Setting ZetaChain USDC symbol:', usdcSymbol);
-        setDestinationToken(usdcSymbol);
+        
+        const symbolMap = tokenSymbolMap[asset.symbol];
+        if (symbolMap) {
+          const tokenSymbol = symbolMap[asset.chain] || `${asset.symbol}.BASE`;
+          console.log('[Token Auto-select] Setting ZetaChain token symbol:', tokenSymbol);
+          setDestinationToken(tokenSymbol);
+        }
       } else {
-        console.log('[USDC Auto-select] Setting standard USDC for chain:', destinationChain);
-        setDestinationToken('USDC');
+        console.log('[Token Auto-select] Setting standard token for chain:', destinationChain);
+        setDestinationToken(asset.symbol);
       }
     }
   }, [asset.symbol, destinationChain, asset.chain]);
@@ -291,16 +320,25 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
         throw new Error(`RPC URL not available for Base ${network}`);
       }
 
-      // Determine if this is a native ETH transfer or ERC20 transfer
+      // Determine if this is a native ETH transfer, ERC20 transfer, or same-chain transfer
       const isNativeToken = asset.symbol === 'ETH';
+      const isSameChainTransfer = destinationChain === 'base-same';
       
       let tx;
       if (isNativeToken) {
-        // Native ETH transfer to ZetaChain
-        console.log('[UI][SEND] Executing native ETH transfer');
-        tx = await transferETH(amount, recipientAddress, rpcUrl, destinationChain, network);
+        if (isSameChainTransfer) {
+          // Native ETH transfer on same chain (Base to Base)
+          console.log('[UI][SEND] Executing same-chain native ETH transfer');
+          // For same-chain ETH transfers, we'll use the existing transferETH function
+          // but we need to modify it to handle same-chain transfers
+          tx = await transferETH(amount, recipientAddress, rpcUrl, destinationChain, network);
+        } else {
+          // Native ETH transfer to ZetaChain
+          console.log('[UI][SEND] Executing native ETH transfer');
+          tx = await transferETH(amount, recipientAddress, rpcUrl, destinationChain, network);
+        }
       } else {
-        // ERC20 token transfer to ZetaChain
+        // ERC20 token transfer
         console.log('[UI][SEND] Executing ERC20 token transfer');
         
         // Get token address for the asset
@@ -313,7 +351,39 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
           throw new Error(`Token address not found for ${asset.symbol}`);
         }
         
-        tx = await transferERC20(amount, recipientAddress, tokenAddress, rpcUrl, destinationChain, network, destinationToken);
+        if (isSameChainTransfer) {
+          // Same-chain ERC20 transfer (Base to Base)
+          console.log('[UI][SEND] Executing same-chain ERC20 transfer');
+          // Import and use the generic ERC20 transfer function
+          const { transferERC20Token } = await import('@/lib/erc20-transfer');
+          
+          // Get wallet from context
+          if (!wallet) {
+            throw new Error('Wallet not available');
+          }
+          
+          // Create HDNodeWallet from mnemonic to get private key
+          const { HDNodeWallet } = await import('ethers');
+          const hdWallet = HDNodeWallet.fromPhrase(wallet.mnemonic);
+          
+          const result = await transferERC20Token({
+            tokenAddress,
+            recipientAddress,
+            amount,
+            senderPrivateKey: hdWallet.privateKey,
+            chain: 'base',
+            network
+          });
+          
+          if (!result.success) {
+            throw new Error(result.error || 'Transfer failed');
+          }
+          
+          tx = { hash: result.hash };
+        } else {
+          // Cross-chain ERC20 transfer to ZetaChain
+          tx = await transferERC20(amount, recipientAddress, tokenAddress, rpcUrl, destinationChain, network, destinationToken);
+        }
       }
 
       if (tx) {
@@ -742,9 +812,9 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
                 <Select 
                   value={destinationToken} 
                   onValueChange={setDestinationToken}
-                  disabled={asset.symbol === 'USDC'}
+                  disabled={asset.symbol === 'USDC' || asset.symbol === 'cNGN'}
                 >
-                  <SelectTrigger className={asset.symbol === 'USDC' ? 'opacity-50 cursor-not-allowed' : ''}>
+                  <SelectTrigger className={(asset.symbol === 'USDC' || asset.symbol === 'cNGN') ? 'opacity-50 cursor-not-allowed' : ''}>
                     <SelectValue placeholder="Select destination token" />
                   </SelectTrigger>
                   <SelectContent>
@@ -774,9 +844,9 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
             )}
           </div>
 
-              {asset.symbol === 'USDC' && destinationChain && (
+              {(asset.symbol === 'USDC' || asset.symbol === 'cNGN') && destinationChain && (
                 <p className="text-sm text-muted-foreground">
-                  Destination token is automatically set to USDC
+                  Destination token is automatically set to {asset.symbol}
                 </p>
               )}
             </>
