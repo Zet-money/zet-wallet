@@ -150,7 +150,9 @@ class BackendApiService {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+      const error = new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+      (error as any).status = response.status;
+      throw error;
     }
 
     return response.json();
@@ -165,9 +167,12 @@ class BackendApiService {
   }
 
   async getUserProfile(walletAddress: string, biometricPublicKey: string): Promise<User> {
-    return this.makeRequest<User>('/users/me', {
+    const params = new URLSearchParams({
+      walletAddress,
+      biometricPublicKey,
+    });
+    return this.makeRequest<User>(`/users/me?${params}`, {
       method: 'GET',
-      body: JSON.stringify({ walletAddress, biometricPublicKey }),
     });
   }
 
