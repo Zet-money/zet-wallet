@@ -69,7 +69,7 @@ function logoSymbolForChain(key: string) {
 export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
   const { network } = useNetwork();
   const { wallet } = useWallet();
-  const { transferETH, transferERC20, transferSameChain, isExecuting, error: transactionError, updateTransactionStatus } = useSecureTransaction();
+  const { transferETH, transferERC20, transferSameChain, isExecuting, error: transactionError, updateTransactionStatus, setLastTransactionId } = useSecureTransaction();
   const [recipientAddress, setRecipientAddress] = useState('');
   const [amount, setAmount] = useState('');
   const [destinationChain, setDestinationChain] = useState('');
@@ -387,6 +387,10 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
           }
           
           tx = result;
+          // Store transaction ID for status updates
+          if (result.transactionId) {
+            setLastTransactionId(result.transactionId);
+          }
         } else {
           // Cross-chain ERC20 transfer to ZetaChain
           tx = await transferERC20(amount, recipientAddress, tokenAddress, rpcUrl, destinationChain, network, destinationToken);

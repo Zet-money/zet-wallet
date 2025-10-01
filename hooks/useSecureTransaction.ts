@@ -25,9 +25,10 @@ interface UseSecureTransactionReturn {
   // Actions
   transferETH: (amount: string, receiver: string, rpcUrl: string, targetChain?: string, network?: string, targetTokenSymbol?: string) => Promise<ethers.TransactionResponse | null>;
   transferERC20: (amount: string, receiver: string, tokenAddress: string, rpcUrl: string, targetChain?: string, network?: string, targetTokenSymbol?: string) => Promise<ethers.TransactionResponse | null>;
-  transferSameChain: (amount: string, receiver: string, tokenAddress: string, chain: string, network: string) => Promise<{ hash: string } | null>;
+  transferSameChain: (amount: string, receiver: string, tokenAddress: string, chain: string, network: string) => Promise<{ hash: string; transactionId?: string } | null>;
   executeFunction: (amount: string, receiver: string, types: string[], values: any[], rpcUrl: string, tokenAddress?: string) => Promise<ethers.TransactionResponse | null>;
   updateTransactionStatus: (status: 'pending' | 'completed' | 'failed', errorMessage?: string) => Promise<void>;
+  setLastTransactionId: (id: string) => void;
   clearError: () => void;
   clearLastTransaction: () => void;
 }
@@ -105,6 +106,7 @@ export const useSecureTransaction = (): UseSecureTransactionReturn => {
               network: network as 'mainnet' | 'testnet',
               transactionHash: tx.hash,
             });
+            console.log('Transaction ID:', transaction._id);
             setState(prev => ({ ...prev, lastTransactionId: transaction._id }));
           }
         } catch (error) {
@@ -193,6 +195,7 @@ export const useSecureTransaction = (): UseSecureTransactionReturn => {
         }
 
         // Track transaction in backend
+        let transactionId: string | undefined;
         if (wallet?.address) {
           try {
             const biometricPublicKey = await getBiometricPublicKey();
@@ -208,6 +211,9 @@ export const useSecureTransaction = (): UseSecureTransactionReturn => {
                 isSameChain: true,
                 transactionHash: result.hash,
               });
+              console.log('Same-chain transaction created:', transaction);
+              console.log('Transaction ID:', transaction._id);
+              transactionId = transaction._id;
               setState(prev => ({ ...prev, lastTransactionId: transaction._id }));
             }
           } catch (error) {
@@ -216,7 +222,7 @@ export const useSecureTransaction = (): UseSecureTransactionReturn => {
         }
   
         toast.success(`Transfer submitted: ${result.hash}`);
-        return { hash: result.hash };
+        return { hash: result.hash, transactionId };
       } finally {
         // Mnemonic is automatically discarded when unlockResult goes out of scope
         // The biometric session will timeout after 5 minutes
@@ -246,6 +252,7 @@ export const useSecureTransaction = (): UseSecureTransactionReturn => {
   }, []);
 
   const updateTransactionStatus = useCallback(async (status: 'pending' | 'completed' | 'failed', errorMessage?: string) => {
+    console.log('updateTransactionStatus called with:', { status, errorMessage, lastTransactionId: state.lastTransactionId });
     if (!state.lastTransactionId) {
       console.warn('No transaction ID available for status update');
       return;
@@ -261,6 +268,10 @@ export const useSecureTransaction = (): UseSecureTransactionReturn => {
       console.error('Failed to update transaction status:', error);
     }
   }, [state.lastTransactionId]);
+
+  const setLastTransactionId = useCallback((id: string) => {
+    setState(prev => ({ ...prev, lastTransactionId: id }));
+  }, []);
 
   const clearLastTransaction = useCallback(() => {
     setState(prev => ({ ...prev, lastTransaction: null, lastTransactionId: null }));
@@ -279,6 +290,7 @@ export const useSecureTransaction = (): UseSecureTransactionReturn => {
     transferSameChain,
     executeFunction,
     updateTransactionStatus,
+    setLastTransactionId,
     clearError,
     clearLastTransaction,
   };
