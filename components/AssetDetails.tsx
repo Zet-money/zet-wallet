@@ -7,6 +7,7 @@ import { ArrowLeft, Send, Download, TrendingUp, TrendingDown, X } from 'lucide-r
 import { useEffect, useState } from 'react';
 import { getTokenChangeUSD24h } from '@/lib/prices';
 import { useRouter } from 'next/navigation';
+import { useNetwork } from '@/contexts/NetworkContext';
 import SendFlowSecure from './SendFlowSecure';
 import ReceiveFlow from './ReceiveFlow';
 import SellCryptoModal from './SellCryptoModal';

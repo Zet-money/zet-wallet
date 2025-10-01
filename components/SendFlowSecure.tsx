@@ -122,8 +122,10 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
   const destinationTokens = useMemo(() => {
     if (!destinationChain) return [];
     
+    // For same-chain transfers, use the source chain
+    const chainForTokens = destinationChain === 'base-same' ? 'base' : destinationChain;
     const networkKey = (network === 'mainnet' ? 'mainnet' : 'testnet') as TokenNetwork;
-    const tokens = getTokensFor(destinationChain, networkKey);
+    const tokens = getTokensFor(chainForTokens, networkKey);
     
     // If source token is USDC or cNGN, only show matching token as destination token
     if (asset.symbol === 'USDC' || asset.symbol === 'cNGN') {
@@ -826,6 +828,11 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
                   <SelectTrigger className={(asset.symbol === 'USDC' || asset.symbol === 'cNGN') ? 'opacity-50 cursor-not-allowed' : ''}>
                     <SelectValue placeholder="Select destination token" />
                   </SelectTrigger>
+                  {(asset.symbol === 'USDC' || asset.symbol === 'cNGN') && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      You will be able to select destination tokens soon
+                    </p>
+                  )}
                   <SelectContent>
                     {destinationTokens.map((token) => (
                       <SelectItem key={token.value} value={token.value}>
