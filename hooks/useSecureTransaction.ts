@@ -1,6 +1,8 @@
 import { useState, useCallback } from 'react';
 import { ethers } from 'ethers';
 import { secureTransactionService } from '@/lib/services/secure-transaction';
+import { transferERC20Token } from '@/lib/erc20-transfer';
+import { useBiometric } from '@/contexts/BiometricContext';
 import { toast } from 'sonner';
 
 interface TransactionState {
@@ -18,6 +20,7 @@ interface UseSecureTransactionReturn {
   // Actions
   transferETH: (amount: string, receiver: string, rpcUrl: string, targetChain?: string, network?: string) => Promise<ethers.TransactionResponse | null>;
   transferERC20: (amount: string, receiver: string, tokenAddress: string, rpcUrl: string, targetChain?: string, network?: string, targetTokenSymbol?: string) => Promise<ethers.TransactionResponse | null>;
+  transferSameChain: (amount: string, receiver: string, tokenAddress: string, chain: string, network: string) => Promise<{ hash: string } | null>;
   executeFunction: (amount: string, receiver: string, types: string[], values: any[], rpcUrl: string, tokenAddress?: string) => Promise<ethers.TransactionResponse | null>;
   clearError: () => void;
   clearLastTransaction: () => void;
@@ -27,6 +30,7 @@ interface UseSecureTransactionReturn {
  * Hook for secure cross-chain transactions with biometric authentication
  */
 export const useSecureTransaction = (): UseSecureTransactionReturn => {
+  const { unlockApp } = useBiometric();
   const [state, setState] = useState<TransactionState>({
     isExecuting: false,
     error: null,
@@ -99,6 +103,49 @@ export const useSecureTransaction = (): UseSecureTransactionReturn => {
     });
   }, [executeWithErrorHandling]);
 
+  const transferSameChain = useCallback(async (
+    amount: string,
+    receiver: string,
+    tokenAddress: string,
+    chain: string,
+    network: string
+  ): Promise<{ hash: string } | null> => {
+    return executeWithErrorHandling(async () => {
+      console.log('[useSecureTransaction] Same-chain transfer:', { amount, receiver, tokenAddress, chain, network });
+      
+      // Unlock app to get mnemonic temporarily
+      const unlockResult = await unlockApp(5); // 5 minute timeout
+      if (!unlockResult.success || !unlockResult.mnemonic) {
+        throw new Error(unlockResult.error || 'Failed to unlock app for transaction');
+      }
+
+      try {
+        // Import HDNodeWallet dynamically to avoid server-side issues
+        const { HDNodeWallet } = await import('ethers');
+        const hdWallet = HDNodeWallet.fromPhrase(unlockResult.mnemonic);
+        
+        const result = await transferERC20Token({
+          tokenAddress,
+          recipientAddress: receiver,
+          amount,
+          senderPrivateKey: hdWallet.privateKey,
+          chain: chain as 'base',
+          network: network as 'mainnet' | 'testnet'
+        });
+
+        if (!result.success) {
+          throw new Error(result.error || 'Transfer failed');
+        }
+
+        toast.success(`Transfer submitted: ${result.hash}`);
+        return { hash: result.hash };
+      } finally {
+        // Mnemonic is automatically discarded when unlockResult goes out of scope
+        // The biometric session will timeout after 5 minutes
+      }
+    });
+  }, [executeWithErrorHandling, unlockApp]);
+
   const executeFunction = useCallback(async (
     amount: string,
     receiver: string,
@@ -133,6 +180,7 @@ export const useSecureTransaction = (): UseSecureTransactionReturn => {
     // Actions
     transferETH,
     transferERC20,
+    transferSameChain,
     executeFunction,
     clearError,
     clearLastTransaction,

@@ -69,7 +69,7 @@ function logoSymbolForChain(key: string) {
 export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
   const { network } = useNetwork();
   const { wallet } = useWallet();
-  const { transferETH, transferERC20, isExecuting, error: transactionError } = useSecureTransaction();
+  const { transferETH, transferERC20, transferSameChain, isExecuting, error: transactionError } = useSecureTransaction();
   const [recipientAddress, setRecipientAddress] = useState('');
   const [amount, setAmount] = useState('');
   const [destinationChain, setDestinationChain] = useState('');
@@ -365,32 +365,20 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
         if (isSameChainTransfer) {
           // Same-chain ERC20 transfer (Base to Base)
           console.log('[UI][SEND] Executing same-chain ERC20 transfer');
-          // Import and use the generic ERC20 transfer function
-          const { transferERC20Token } = await import('@/lib/erc20-transfer');
           
-          // Get wallet from context
-          if (!wallet) {
-            throw new Error('Wallet not available');
-          }
-          
-          // Create HDNodeWallet from mnemonic to get private key
-          const { HDNodeWallet } = await import('ethers');
-          const hdWallet = HDNodeWallet.fromPhrase(wallet.mnemonic);
-          
-          const result = await transferERC20Token({
-            tokenAddress,
-            recipientAddress,
+          const result = await transferSameChain(
             amount,
-            senderPrivateKey: hdWallet.privateKey,
-            chain: 'base',
+            recipientAddress,
+            tokenAddress,
+            'base',
             network
-          });
+          );
           
-          if (!result.success) {
-            throw new Error(result.error || 'Transfer failed');
+          if (!result) {
+            throw new Error('Transfer failed');
           }
           
-          tx = { hash: result.hash };
+          tx = result;
         } else {
           // Cross-chain ERC20 transfer to ZetaChain
           tx = await transferERC20(amount, recipientAddress, tokenAddress, rpcUrl, destinationChain, network, destinationToken);
