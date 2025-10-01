@@ -159,7 +159,18 @@ class BackendApiService {
       throw error;
     }
 
-    return response.json();
+    // Handle empty responses (e.g., void endpoints)
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      return undefined as T;
+    }
+
+    const text = await response.text();
+    if (!text) {
+      return undefined as T;
+    }
+
+    return JSON.parse(text);
   }
 
   // User endpoints
