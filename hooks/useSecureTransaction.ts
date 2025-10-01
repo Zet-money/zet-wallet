@@ -197,7 +197,7 @@ export const useSecureTransaction = (): UseSecureTransactionReturn => {
           try {
             const biometricPublicKey = await getBiometricPublicKey();
             if (biometricPublicKey) {
-              await backendApi.createBlockchainTransaction({
+              const transaction = await backendApi.createBlockchainTransaction({
                 walletAddress: wallet.address,
                 biometricPublicKey,
                 amount,
@@ -208,6 +208,7 @@ export const useSecureTransaction = (): UseSecureTransactionReturn => {
                 isSameChain: true,
                 transactionHash: result.hash,
               });
+              setState(prev => ({ ...prev, lastTransactionId: transaction.id }));
             }
           } catch (error) {
             console.warn('Failed to track transaction in backend:', error);
