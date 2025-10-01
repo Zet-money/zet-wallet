@@ -418,127 +418,140 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
             // Update transaction status to completed on origin chain
             await updateTransactionStatus('completed');
             
-            toast.success('Transaction confirmed on origin chain!', {
-              description: `Now tracking cross-chain completion...`,
-              duration: 5000
-            });
-
-            // Immediately show CCTX tracker UI with pending state
-            console.log('[UI][CCTX] Setting up pending CCTX progress state', {
-              transactionAmount,
-              transactionToken,
-              transactionTargetChain,
-              transactionReceiver
-            })
-            setCctxProgress({
-              status: 'pending',
-              confirmations: 0,
-              statusText: 'Waiting for cross-chain transaction to be detected...',
-              amount: transactionAmount,
-              asset: transactionToken,
-              sender: '', // Will be filled when CCTX data is available
-              receiver: transactionReceiver,
-              targetChainId: transactionTargetChain
-            })
-            setTxPhase('pending')
-
-            // Track cross-chain transaction
-            try {
-              console.log('[UI][CCTX] Starting trackCrossChainTransaction', { 
-                hash: tx.hash, 
-                network, 
-                destinationChain,
-                originChain: (asset.chain || 'base').toLowerCase()
-              })
-              
-              const cctxResult = await trackCrossChainTransaction({
-                hash: tx.hash,
-                network,
-                timeoutSeconds: 300,
-                onProgress: ({ confirmations, status, progress }) => {
-                  console.log('[UI][CCTX] onProgress callback triggered', {
-                    hasProgress: !!progress,
-                    confirmations,
-                    status,
-                    progressStatus: progress?.status,
-                    progressConfirmations: progress?.confirmations
-                  })
-                  
-                  if (progress) {
-                    console.log('[UI][CCTX] Setting progress state', {
-                      status: progress.status,
-                      confirmations: progress.confirmations,
-                      statusText: progress.statusText,
-                      outboundHash: progress.outboundHash
-                    })
-                    // Always use stored transaction details instead of CCTX data
-                    const updatedProgress = {
-                      ...progress,
-                      amount: transactionAmount,
-                      asset: transactionToken,
-                      targetChainId: transactionTargetChain,
-                      receiver: transactionReceiver
-                    }
-                    setCctxProgress(updatedProgress)
-                    setTxPhase(progress.status === 'completed' ? 'completed' : progress.status === 'failed' ? 'failed' : 'pending')
-                    setConfirmations(progress.confirmations)
-                  }
-                  if (status) {
-                    console.log('[UI][CCTX] Status update received:', status)
-                  }
-                }
-              })
-              
-              console.log('[UI][CCTX] trackCrossChainTransaction completed', {
-                status: cctxResult.status,
-                hasProgress: !!cctxResult.progress,
-                hasCctx: !!cctxResult.cctx,
-                progressStatus: cctxResult.progress?.status,
-                progressConfirmations: cctxResult.progress?.confirmations
-              })
-              
-              setTxPhase(cctxResult.status as any);
-              if (cctxResult.progress) {
-                console.log('[UI][CCTX] Setting final progress state', cctxResult.progress)
-                // Always use stored transaction details instead of CCTX data
-                const finalProgress = {
-                  ...cctxResult.progress,
-                  amount: transactionAmount,
-                  asset: transactionToken,
-                  targetChainId: transactionTargetChain,
-                  receiver: transactionReceiver
-                }
-                setCctxProgress(finalProgress)
-              }
-              if (cctxResult.cctx) {
-                console.log('[UI][CCTX] Setting final CCTX state', { cctx: cctxResult.cctx })
-                setCctxs([cctxResult.cctx]);
-              }
-              
-              if (cctxResult.status === 'completed') {
-                console.log('[UI][CCTX] Showing success toast')
-                stopTimer(); // Stop timer on completion
-                toast.success('Cross-chain transfer completed!', { description: `Successfully transferred to ${destinationChain}`, duration: 10000 });
-              } else if (cctxResult.status === 'failed') {
-                console.log('[UI][CCTX] Showing failure toast')
-                stopTimer(); // Stop timer on failure
-                await updateTransactionStatus('failed', 'Cross-chain transfer failed');
-                toast.error('Cross-chain transfer failed', { description: 'The transfer could not be completed. Please check the transaction details.', duration: 10000 });
-              } else if (cctxResult.status === 'timeout') {
-                console.log('[UI][CCTX] Showing timeout toast')
-                stopTimer(); // Stop timer on timeout
-                await updateTransactionStatus('failed', 'Cross-chain transfer timeout');
-                toast.warning('Cross-chain transfer timeout', { description: 'Transfer is taking longer than expected. Please check the blockchain explorer.', duration: 10000 });
-              }
-            } catch (cctxError) {
-              console.error('[UI][CCTX] Error tracking cross-chain transaction:', {
-                error: cctxError instanceof Error ? cctxError.message : String(cctxError),
-                stack: cctxError instanceof Error ? cctxError.stack : undefined,
-                hash: tx.hash,
-                network,
-                destinationChain
+            // Check if this is a same-chain transfer
+            if (isSameChainTransfer) {
+              // Same-chain transfer completed
+              console.log('[UI][SEND] Same-chain transfer completed');
+              stopTimer();
+              setTxPhase('completed');
+              toast.success('Transfer completed!', { 
+                description: `Successfully transferred ${amount} ${asset.symbol} to ${recipientAddress}`, 
+                duration: 10000 
               });
-              setTxPhase('pending');
+            } else {
+              // Cross-chain transfer - continue with CCTX tracking
+              toast.success('Transaction confirmed on origin chain!', {
+                description: `Now tracking cross-chain completion...`,
+                duration: 5000
+              });
+
+              // Immediately show CCTX tracker UI with pending state
+              console.log('[UI][CCTX] Setting up pending CCTX progress state', {
+                transactionAmount,
+                transactionToken,
+                transactionTargetChain,
+                transactionReceiver
+              })
+              setCctxProgress({
+                status: 'pending',
+                confirmations: 0,
+                statusText: 'Waiting for cross-chain transaction to be detected...',
+                amount: transactionAmount,
+                asset: transactionToken,
+                sender: '', // Will be filled when CCTX data is available
+                receiver: transactionReceiver,
+                targetChainId: transactionTargetChain
+              })
+              setTxPhase('pending')
+
+              // Track cross-chain transaction
+              try {
+                console.log('[UI][CCTX] Starting trackCrossChainTransaction', { 
+                  hash: tx.hash, 
+                  network, 
+                  destinationChain,
+                  originChain: (asset.chain || 'base').toLowerCase()
+                })
+                
+                const cctxResult = await trackCrossChainTransaction({
+                  hash: tx.hash,
+                  network,
+                  timeoutSeconds: 300,
+                  onProgress: ({ confirmations, status, progress }) => {
+                    console.log('[UI][CCTX] onProgress callback triggered', {
+                      hasProgress: !!progress,
+                      confirmations,
+                      status,
+                      progressStatus: progress?.status,
+                      progressConfirmations: progress?.confirmations
+                    })
+                    
+                    if (progress) {
+                      console.log('[UI][CCTX] Setting progress state', {
+                        status: progress.status,
+                        confirmations: progress.confirmations,
+                        statusText: progress.statusText,
+                        outboundHash: progress.outboundHash
+                      })
+                      // Always use stored transaction details instead of CCTX data
+                      const updatedProgress = {
+                        ...progress,
+                        amount: transactionAmount,
+                        asset: transactionToken,
+                        targetChainId: transactionTargetChain,
+                        receiver: transactionReceiver
+                      }
+                      setCctxProgress(updatedProgress)
+                      setTxPhase(progress.status === 'completed' ? 'completed' : progress.status === 'failed' ? 'failed' : 'pending')
+                      setConfirmations(progress.confirmations)
+                    }
+                    if (status) {
+                      console.log('[UI][CCTX] Status update received:', status)
+                    }
+                  }
+                })
+                
+                console.log('[UI][CCTX] trackCrossChainTransaction completed', {
+                  status: cctxResult.status,
+                  hasProgress: !!cctxResult.progress,
+                  hasCctx: !!cctxResult.cctx,
+                  progressStatus: cctxResult.progress?.status,
+                  progressConfirmations: cctxResult.progress?.confirmations
+                })
+                
+                setTxPhase(cctxResult.status as any);
+                if (cctxResult.progress) {
+                  console.log('[UI][CCTX] Setting final progress state', cctxResult.progress)
+                  // Always use stored transaction details instead of CCTX data
+                  const finalProgress = {
+                    ...cctxResult.progress,
+                    amount: transactionAmount,
+                    asset: transactionToken,
+                    targetChainId: transactionTargetChain,
+                    receiver: transactionReceiver
+                  }
+                  setCctxProgress(finalProgress)
+                }
+                if (cctxResult.cctx) {
+                  console.log('[UI][CCTX] Setting final CCTX state', { cctx: cctxResult.cctx })
+                  setCctxs([cctxResult.cctx]);
+                }
+                
+                if (cctxResult.status === 'completed') {
+                  console.log('[UI][CCTX] Showing success toast')
+                  stopTimer(); // Stop timer on completion
+                  toast.success('Cross-chain transfer completed!', { description: `Successfully transferred to ${destinationChain}`, duration: 10000 });
+                } else if (cctxResult.status === 'failed') {
+                  console.log('[UI][CCTX] Showing failure toast')
+                  stopTimer(); // Stop timer on failure
+                  await updateTransactionStatus('failed', 'Cross-chain transfer failed');
+                  toast.error('Cross-chain transfer failed', { description: 'The transfer could not be completed. Please check the transaction details.', duration: 10000 });
+                } else if (cctxResult.status === 'timeout') {
+                  console.log('[UI][CCTX] Showing timeout toast')
+                  stopTimer(); // Stop timer on timeout
+                  await updateTransactionStatus('failed', 'Cross-chain transfer timeout');
+                  toast.warning('Cross-chain transfer timeout', { description: 'Transfer is taking longer than expected. Please check the blockchain explorer.', duration: 10000 });
+                }
+              } catch (cctxError) {
+                console.error('[UI][CCTX] Error tracking cross-chain transaction:', {
+                  error: cctxError instanceof Error ? cctxError.message : String(cctxError),
+                  stack: cctxError instanceof Error ? cctxError.stack : undefined,
+                  hash: tx.hash,
+                  network,
+                  destinationChain
+                });
+                setTxPhase('pending');
+              }
             }
           } else if (txPhase === 'failed') {
             stopTimer(); // Stop timer on origin chain failure
