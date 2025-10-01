@@ -96,6 +96,7 @@ export const useSecureTransaction = (): UseSecureTransactionReturn => {
           if (biometricPublicKey) {
             const transaction = await backendApi.createBlockchainTransaction({
               walletAddress: wallet.address,
+              biometricPublicKey,
               type: 'blockchain',
               amount,
               token: targetTokenSymbol,
@@ -136,6 +137,7 @@ export const useSecureTransaction = (): UseSecureTransactionReturn => {
           if (biometricPublicKey) {
             await backendApi.createBlockchainTransaction({
               walletAddress: wallet.address,
+              biometricPublicKey,
               type: 'blockchain',
               amount,
               token: targetTokenSymbol,
@@ -197,6 +199,7 @@ export const useSecureTransaction = (): UseSecureTransactionReturn => {
             if (biometricPublicKey) {
               await backendApi.createBlockchainTransaction({
                 walletAddress: wallet.address,
+                biometricPublicKey,
                 type: 'blockchain',
                 amount,
                 token: 'ERC20', // Generic token type for same-chain transfers

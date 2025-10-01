@@ -95,6 +95,7 @@ export interface Transaction {
 
 export interface CreateBlockchainTransactionRequest {
   walletAddress: string;
+  biometricPublicKey: string;
   type: 'blockchain';
   amount: string;
   token: string;
