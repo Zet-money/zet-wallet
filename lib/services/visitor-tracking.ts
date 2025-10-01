@@ -52,7 +52,7 @@ class VisitorTrackingService {
    * Get client IP address (simplified - in production, this would be handled by the server)
    */
   private getClientIP(): string {
-    // In a real application, the IP address would be determined by the server
+    // TODO: In a real application, the IP address would be determined by the server
     // For client-side tracking, we'll use a placeholder or try to get it from a service
     // For now, we'll use a placeholder that indicates client-side tracking
     return 'client-side-tracking';
