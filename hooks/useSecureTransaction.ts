@@ -215,7 +215,11 @@ export const useSecureTransaction = (): UseSecureTransactionReturn => {
               console.log('Same-chain transaction created:', transaction);
               console.log('Transaction ID:', transaction._id);
               transactionId = transaction._id;
-              setState(prev => ({ ...prev, lastTransactionId: transaction._id }));
+              setState(prev => {
+                const newState = { ...prev, lastTransactionId: transaction._id };
+                console.log('Setting lastTransactionId in state:', newState.lastTransactionId);
+                return newState;
+              });
             }
           } catch (error) {
             console.warn('Failed to track transaction in backend:', error);
@@ -254,6 +258,7 @@ export const useSecureTransaction = (): UseSecureTransactionReturn => {
 
   const updateTransactionStatus = useCallback(async (status: 'pending' | 'completed' | 'failed', errorMessage?: string) => {
     console.log('updateTransactionStatus called with:', { status, errorMessage, lastTransactionId: state.lastTransactionId });
+    console.log('Current state in updateTransactionStatus:', state);
     if (!state.lastTransactionId) {
       console.warn('No transaction ID available for status update');
       return;
