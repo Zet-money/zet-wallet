@@ -7,6 +7,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { biometricMigration, type MigrationResult, type UnlockResult } from '@/lib/migration/biometric-migration';
+import { secureDB } from '@/lib/db/secure-db';
 
 export interface BiometricContextType {
   isAppUnlocked: boolean;
@@ -201,7 +202,7 @@ export function BiometricProvider({ children }: { children: React.ReactNode }) {
 
   const getBiometricPublicKey = async (): Promise<string | null> => {
     try {
-      const credentials = await biometricMigration.secureDB.getAllCredentials();
+      const credentials = await secureDB.getAllCredentials();
       if (credentials && credentials.length > 0) {
         return credentials[0].publicKey;
       }
