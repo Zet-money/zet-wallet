@@ -102,7 +102,7 @@ export const EVM_TOKENS: Record<string, TokenInfo[]> = {
   base: [
     { symbol: 'ETH', name: 'Ether', logo: 'ETH', addressByNetwork: {} },
     { symbol: 'USDC', name: 'USD Coin', logo: 'USDC', addressByNetwork: { mainnet: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', testnet: '0x036CbD53842c5426634e7929541eC2318f3dCF7e' } }, // https://developers.circle.com/stablecoins/usdc-contract-addresses
-    { symbol: 'cNGN', name: 'Naira (NGN)', logo: 'cNGN', addressByNetwork: { mainnet: '0x46C85152bFe9f96829aA94755D9f915F9B10EF5F' } },
+    { symbol: 'cNGN', name: 'Naira (NGN)', logo: 'cNGN', addressByNetwork: { mainnet: '0x46C85152bFe9f96829aA94755D9f915F9B10EF5F', testnet: '0xa1F8BD1892C85746AE71B97C31B1965C4641f1F0' } },
   ],
   avalanche: [
     { symbol: 'AVAX', name: 'Avalanche', logo: 'AVAX', addressByNetwork: {} },
