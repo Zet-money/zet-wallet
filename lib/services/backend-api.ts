@@ -71,6 +71,7 @@ export interface CreateOrderRequest {
   reference: string;
   returnAddress: string;
   walletAddress: string;
+  biometricPublicKey: string;
 }
 
 export interface Transaction {
@@ -229,8 +230,12 @@ class BackendApiService {
     });
   }
 
-  async getOrderStatus(orderId: string): Promise<PaycrestOrder> {
-    return this.makeRequest<PaycrestOrder>(`/paycrest/orders/${orderId}/status`);
+  async getOrderStatus(orderId: string, walletAddress: string, biometricPublicKey: string): Promise<PaycrestOrder> {
+    const params = new URLSearchParams({
+      walletAddress,
+      biometricPublicKey,
+    });
+    return this.makeRequest<PaycrestOrder>(`/paycrest/orders/${orderId}?${params}`);
   }
 
   async getUserOrders(walletAddress: string, biometricPublicKey: string): Promise<PaycrestOrder[]> {
@@ -265,6 +270,22 @@ class BackendApiService {
       method: 'GET',
       body: JSON.stringify({ walletAddress, biometricPublicKey }),
     });
+  }
+
+  async getTransactionById(transactionId: string, walletAddress: string, biometricPublicKey: string): Promise<Transaction> {
+    const params = new URLSearchParams({
+      walletAddress,
+      biometricPublicKey,
+    });
+    return this.makeRequest<Transaction>(`/transactions/${transactionId}?${params}`);
+  }
+
+  async getTransactionByHash(transactionHash: string, walletAddress: string, biometricPublicKey: string): Promise<Transaction> {
+    const params = new URLSearchParams({
+      walletAddress,
+      biometricPublicKey,
+    });
+    return this.makeRequest<Transaction>(`/transactions/hash/${transactionHash}?${params}`);
   }
 
   async updateTransaction(transactionId: string, data: UpdateTransactionRequest): Promise<Transaction> {

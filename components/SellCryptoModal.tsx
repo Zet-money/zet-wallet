@@ -137,7 +137,13 @@ export default function SellCryptoModal({ isOpen, onClose }: SellCryptoModalProp
     if (step === 'monitoring' && orderId && orderStatus === 'payment_order.pending') {
       const pollInterval = setInterval(async () => {
         try {
-          const order = await backendApi.getOrderStatus(orderId);
+          const biometricPublicKey = await getBiometricPublicKey();
+          if (!biometricPublicKey || !wallet?.address) {
+            console.error('Missing biometric public key or wallet address for order status check');
+            return;
+          }
+
+          const order = await backendApi.getOrderStatus(orderId, wallet.address, biometricPublicKey);
           setOrderStatus(order.status as OrderStatus);
           
           if (order.status !== 'payment_order.pending') {
@@ -176,6 +182,7 @@ export default function SellCryptoModal({ isOpen, onClose }: SellCryptoModalProp
       }
 
       // Create order through backend
+
       const order = await backendApi.createOrder({
         amount,
         token,
@@ -189,6 +196,7 @@ export default function SellCryptoModal({ isOpen, onClose }: SellCryptoModalProp
         reference: `sell_${crypto.randomUUID()}`,
         returnAddress: wallet.address,
         walletAddress: wallet.address,
+        biometricPublicKey,
       });
 
       setOrder(order);
@@ -228,7 +236,8 @@ export default function SellCryptoModal({ isOpen, onClose }: SellCryptoModalProp
         order.receiveAddress,
         tokenAddress,
         'base',
-        networkKey
+        networkKey,
+        token
       );
 
       if (result) {
