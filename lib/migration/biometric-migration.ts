@@ -11,6 +11,7 @@ export interface MigrationResult {
   success: boolean;
   error?: string;
   requiresBiometricSetup?: boolean;
+  biometricPublicKey?: string;
 }
 
 export interface UnlockResult {
@@ -193,7 +194,8 @@ export class BiometricMigration {
       }
 
       return {
-        success: true
+        success: true,
+        biometricPublicKey: credential.publicKey
       };
 
     } catch (error) {

@@ -10,6 +10,9 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { X, Clock, CheckCircle, XCircle, AlertCircle, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
+import { backendApi } from '@/lib/services/backend-api';
+import { useWallet } from '@/contexts/WalletContext';
+import { useBiometric } from '@/contexts/BiometricContext';
 
 interface Bank {
   name: string;
@@ -27,6 +30,8 @@ type OrderStatus = 'payment_order.pending' | 'payment_order.validated' | 'paymen
 type ModalStep = 'rate' | 'form' | 'monitoring';
 
 export default function SellCryptoModal({ isOpen, onClose }: SellCryptoModalProps) {
+  const { wallet } = useWallet();
+  const { getBiometricPublicKey } = useBiometric();
   const [step, setStep] = useState<ModalStep>('rate');
   const [rate, setRate] = useState<string>('0.00');
   const [rateLoading, setRateLoading] = useState(false);
@@ -122,20 +127,25 @@ export default function SellCryptoModal({ isOpen, onClose }: SellCryptoModalProp
     };
   }, [step, orderStartTime]);
 
-  // Simulate order status polling
+  // Poll order status from backend
   useEffect(() => {
-    if (step === 'monitoring' && orderStatus === 'payment_order.pending') {
-      const pollInterval = setInterval(() => {
-        // Simulate status change after 30 seconds
-        if (elapsedTime > 30) {
-          setOrderStatus('payment_order.validated');
-          clearInterval(pollInterval);
+    if (step === 'monitoring' && orderId && orderStatus === 'payment_order.pending') {
+      const pollInterval = setInterval(async () => {
+        try {
+          const order = await backendApi.getOrderStatus(orderId);
+          setOrderStatus(order.status as OrderStatus);
+          
+          if (order.status !== 'payment_order.pending') {
+            clearInterval(pollInterval);
+          }
+        } catch (error) {
+          console.error('Error polling order status:', error);
         }
       }, 5000);
       
       return () => clearInterval(pollInterval);
     }
-  }, [step, orderStatus, elapsedTime]);
+  }, [step, orderId, orderStatus, elapsedTime]);
 
   const handleProceed = () => {
     fetchBanks();
@@ -148,10 +158,35 @@ export default function SellCryptoModal({ isOpen, onClose }: SellCryptoModalProp
       return;
     }
 
+    if (!wallet?.address) {
+      toast.error('Wallet not connected');
+      return;
+    }
+
     try {
-      // Simulate API call to create sell order
-      const orderId = `order_${Date.now()}`;
-      setOrderId(orderId);
+      const biometricPublicKey = await getBiometricPublicKey();
+      if (!biometricPublicKey) {
+        toast.error('Biometric authentication required');
+        return;
+      }
+
+      // Create order through backend
+      const order = await backendApi.createOrder({
+        amount,
+        token,
+        network: 'base',
+        rate,
+        recipient: {
+          bank: selectedBank,
+          accountName,
+          accountNumber,
+        },
+        reference: `sell_${Date.now()}`,
+        returnAddress: wallet.address,
+        walletAddress: wallet.address,
+      });
+
+      setOrderId(order.orderId);
       setOrderStartTime(new Date());
       setElapsedTime(0);
       setStep('monitoring');

@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { HDNodeWallet } from 'ethers';
 // Solana wallet generation removed
 import { useBiometric } from '@/contexts/BiometricContext';
+import { backendApi } from '@/lib/services/backend-api';
 
 export interface Wallet {
   address: string;
@@ -145,6 +146,25 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
             mnemonic: '', // Never store mnemonic in memory
             isImported: wallet.isImported,
           };
+          
+          // Register user with backend
+          try {
+            const biometricPublicKey = result.biometricPublicKey;
+            if (biometricPublicKey) {
+              await backendApi.createUser({
+                walletAddress: wallet.address,
+                biometricPublicKey,
+                name: '',
+                email: '',
+                username: '',
+              });
+              console.log('User registered with backend successfully');
+            }
+          } catch (error) {
+            console.warn('Failed to register user with backend:', error);
+            // Don't block wallet creation if backend registration fails
+          }
+          
           // Save session after successful encryption
           saveSession(walletForSession);
           setWallet(walletForSession); // Update wallet state without mnemonic

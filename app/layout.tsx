@@ -9,6 +9,7 @@ import { useEffect } from "react";
 import { WalletProvider } from "@/contexts/WalletContext";
 import { BiometricProvider } from "@/contexts/BiometricContext";
 import { UserSettingsProvider } from "@/contexts/UserSettingsContext";
+import { visitorTracking } from "@/lib/services/visitor-tracking";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -29,6 +30,9 @@ export default function RootLayout({
   useEffect(() => {
     registerServiceWorker()
     setupInstallPrompt()
+    
+    // Initialize visitor tracking
+    visitorTracking.initialize()
   }, [])
   return (
     <html lang="en" suppressHydrationWarning>

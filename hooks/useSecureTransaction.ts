@@ -2,6 +2,8 @@ import { useState, useCallback } from 'react';
 import { ethers } from 'ethers';
 import { secureTransactionService } from '@/lib/services/secure-transaction';
 import { transferERC20Token } from '@/lib/erc20-transfer';
+import { backendApi } from '@/lib/services/backend-api';
+import { useWallet } from '@/contexts/WalletContext';
 import { useBiometric } from '@/contexts/BiometricContext';
 import { toast } from 'sonner';
 
@@ -30,7 +32,8 @@ interface UseSecureTransactionReturn {
  * Hook for secure cross-chain transactions with biometric authentication
  */
 export const useSecureTransaction = (): UseSecureTransactionReturn => {
-  const { unlockApp } = useBiometric();
+  const { unlockApp, getBiometricPublicKey } = useBiometric();
+  const { wallet } = useWallet();
   const [state, setState] = useState<TransactionState>({
     isExecuting: false,
     error: null,
@@ -81,10 +84,31 @@ export const useSecureTransaction = (): UseSecureTransactionReturn => {
       console.log('[useSecureTransaction] Transferring ETH:', { amount, receiver, targetChain, network, targetTokenSymbol });
       const tx = await secureTransactionService.transferETH(amount, receiver, rpcUrl, targetChain, network as any, targetTokenSymbol);
       
+      // Track transaction in backend
+      if (wallet?.address) {
+        try {
+          const biometricPublicKey = await getBiometricPublicKey();
+          if (biometricPublicKey) {
+            await backendApi.createBlockchainTransaction({
+              walletAddress: wallet.address,
+              type: 'blockchain',
+              amount,
+              token: targetTokenSymbol,
+              network,
+              transactionHash: tx.hash,
+              recipientAddress: receiver,
+              senderAddress: wallet.address,
+            });
+          }
+        } catch (error) {
+          console.warn('Failed to track transaction in backend:', error);
+        }
+      }
+      
       toast.success(`ETH transfer submitted: ${tx.hash}`);
       return tx;
     });
-  }, [executeWithErrorHandling]);
+  }, [executeWithErrorHandling, wallet, getBiometricPublicKey]);
 
   const transferERC20 = useCallback(async (
     amount: string,
@@ -99,10 +123,31 @@ export const useSecureTransaction = (): UseSecureTransactionReturn => {
       console.log('[useSecureTransaction] Transferring ERC20:', { amount, receiver, tokenAddress, targetChain, network, targetTokenSymbol });
       const tx = await secureTransactionService.transferERC20(amount, receiver, tokenAddress, rpcUrl, targetChain, network as any, targetTokenSymbol);
       
+      // Track transaction in backend
+      if (wallet?.address) {
+        try {
+          const biometricPublicKey = await getBiometricPublicKey();
+          if (biometricPublicKey) {
+            await backendApi.createBlockchainTransaction({
+              walletAddress: wallet.address,
+              type: 'blockchain',
+              amount,
+              token: targetTokenSymbol,
+              network,
+              transactionHash: tx.hash,
+              recipientAddress: receiver,
+              senderAddress: wallet.address,
+            });
+          }
+        } catch (error) {
+          console.warn('Failed to track transaction in backend:', error);
+        }
+      }
+      
       toast.success(`ERC20 transfer submitted: ${tx.hash}`);
       return tx;
     });
-  }, [executeWithErrorHandling]);
+  }, [executeWithErrorHandling, wallet, getBiometricPublicKey]);
 
   const transferSameChain = useCallback(async (
     amount: string,
@@ -119,7 +164,7 @@ export const useSecureTransaction = (): UseSecureTransactionReturn => {
       if (!unlockResult.success || !unlockResult.mnemonic) {
         throw new Error(unlockResult.error || 'Failed to unlock app for transaction');
       }
-
+  
       try {
         // Import HDNodeWallet dynamically to avoid server-side issues
         const { HDNodeWallet } = await import('ethers');
@@ -133,11 +178,32 @@ export const useSecureTransaction = (): UseSecureTransactionReturn => {
           chain: chain as 'base',
           network: network as 'mainnet' | 'testnet'
         });
-
+  
         if (!result.success) {
           throw new Error(result.error || 'Transfer failed');
         }
 
+        // Track transaction in backend
+        if (wallet?.address) {
+          try {
+            const biometricPublicKey = await getBiometricPublicKey();
+            if (biometricPublicKey) {
+              await backendApi.createBlockchainTransaction({
+                walletAddress: wallet.address,
+                type: 'blockchain',
+                amount,
+                token: 'ERC20', // Generic token type for same-chain transfers
+                network,
+                transactionHash: result.hash,
+                recipientAddress: receiver,
+                senderAddress: wallet.address,
+              });
+            }
+          } catch (error) {
+            console.warn('Failed to track transaction in backend:', error);
+          }
+        }
+  
         toast.success(`Transfer submitted: ${result.hash}`);
         return { hash: result.hash };
       } finally {
@@ -145,7 +211,7 @@ export const useSecureTransaction = (): UseSecureTransactionReturn => {
         // The biometric session will timeout after 5 minutes
       }
     });
-  }, [executeWithErrorHandling, unlockApp]);
+  }, [executeWithErrorHandling, unlockApp, wallet, getBiometricPublicKey]);
 
   const executeFunction = useCallback(async (
     amount: string,

@@ -25,6 +25,7 @@ export interface BiometricContextType {
   encryptNewMnemonic: (mnemonic: string) => Promise<MigrationResult>;
   clearBiometricCredentials: () => Promise<void>;
   checkMigrationStatus: () => Promise<void>;
+  getBiometricPublicKey: () => Promise<string | null>;
 }
 
 const BiometricContext = createContext<BiometricContextType | undefined>(undefined);
@@ -198,6 +199,19 @@ export function BiometricProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const getBiometricPublicKey = async (): Promise<string | null> => {
+    try {
+      const credentials = await biometricMigration.getStoredCredentials();
+      if (credentials && credentials.length > 0) {
+        return credentials[0].publicKey;
+      }
+      return null;
+    } catch (error) {
+      console.error('[BiometricContext] Error getting biometric public key:', error);
+      return null;
+    }
+  };
+
   return (
     <BiometricContext.Provider
       value={{
@@ -213,6 +227,7 @@ export function BiometricProvider({ children }: { children: React.ReactNode }) {
         encryptNewMnemonic,
         clearBiometricCredentials,
         checkMigrationStatus,
+        getBiometricPublicKey,
       }}
     >
       {children}
