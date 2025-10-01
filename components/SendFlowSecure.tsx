@@ -379,7 +379,8 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
             recipientAddress,
             tokenAddress,
             'base',
-            network
+            network,
+            asset.symbol
           );
           
           if (!result) {

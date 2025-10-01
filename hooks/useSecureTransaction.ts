@@ -25,7 +25,7 @@ interface UseSecureTransactionReturn {
   // Actions
   transferETH: (amount: string, receiver: string, rpcUrl: string, targetChain?: string, network?: string, targetTokenSymbol?: string) => Promise<ethers.TransactionResponse | null>;
   transferERC20: (amount: string, receiver: string, tokenAddress: string, rpcUrl: string, targetChain?: string, network?: string, targetTokenSymbol?: string) => Promise<ethers.TransactionResponse | null>;
-  transferSameChain: (amount: string, receiver: string, tokenAddress: string, chain: string, network: string) => Promise<{ hash: string; transactionId?: string } | null>;
+  transferSameChain: (amount: string, receiver: string, tokenAddress: string, chain: string, network: string, tokenSymbol: string) => Promise<{ hash: string; transactionId?: string } | null>;
   executeFunction: (amount: string, receiver: string, types: string[], values: any[], rpcUrl: string, tokenAddress?: string) => Promise<ethers.TransactionResponse | null>;
   updateTransactionStatus: (status: 'pending' | 'completed' | 'failed', errorMessage?: string) => Promise<void>;
   setLastTransactionId: (id: string) => void;
@@ -164,8 +164,9 @@ export const useSecureTransaction = (): UseSecureTransactionReturn => {
     receiver: string,
     tokenAddress: string,
     chain: string,
-    network: string
-  ): Promise<{ hash: string } | null> => {
+    network: string,
+    tokenSymbol: string
+  ): Promise<{ hash: string; transactionId?: string } | null> => {
     return executeWithErrorHandling(async () => {
       console.log('[useSecureTransaction] Same-chain transfer:', { amount, receiver, tokenAddress, chain, network });
       
@@ -204,7 +205,7 @@ export const useSecureTransaction = (): UseSecureTransactionReturn => {
                 walletAddress: wallet.address,
                 biometricPublicKey,
                 amount,
-                tokenSymbol: 'ERC20', // Generic token type for same-chain transfers
+                tokenSymbol, // Use actual token symbol
                 receiver,
                 rpcUrl: IN_APP_RPC_MAP['base']?.[network as 'mainnet' | 'testnet'] || '',
                 network: network as 'mainnet' | 'testnet',
