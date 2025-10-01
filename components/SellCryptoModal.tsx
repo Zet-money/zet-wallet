@@ -181,7 +181,7 @@ export default function SellCryptoModal({ isOpen, onClose }: SellCryptoModalProp
           accountName,
           accountNumber,
         },
-        reference: `sell_${Date.now()}`,
+        reference: `sell_${crypto.randomUUID()}`,
         returnAddress: wallet.address,
         walletAddress: wallet.address,
       });
