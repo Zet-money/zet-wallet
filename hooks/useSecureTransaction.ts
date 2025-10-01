@@ -97,13 +97,13 @@ export const useSecureTransaction = (): UseSecureTransactionReturn => {
             const transaction = await backendApi.createBlockchainTransaction({
               walletAddress: wallet.address,
               biometricPublicKey,
-              type: 'blockchain',
               amount,
-              token: targetTokenSymbol,
-              network,
+              tokenSymbol: targetTokenSymbol,
+              receiver,
+              rpcUrl,
+              targetChain,
+              network: network as 'mainnet' | 'testnet',
               transactionHash: tx.hash,
-              recipientAddress: receiver,
-              senderAddress: wallet.address,
             });
             setState(prev => ({ ...prev, lastTransactionId: transaction.id }));
           }
@@ -138,13 +138,13 @@ export const useSecureTransaction = (): UseSecureTransactionReturn => {
             await backendApi.createBlockchainTransaction({
               walletAddress: wallet.address,
               biometricPublicKey,
-              type: 'blockchain',
               amount,
-              token: targetTokenSymbol,
-              network,
+              tokenSymbol: targetTokenSymbol,
+              receiver,
+              rpcUrl,
+              targetChain,
+              network: network as 'mainnet' | 'testnet',
               transactionHash: tx.hash,
-              recipientAddress: receiver,
-              senderAddress: wallet.address,
             });
           }
         } catch (error) {
@@ -200,13 +200,13 @@ export const useSecureTransaction = (): UseSecureTransactionReturn => {
               await backendApi.createBlockchainTransaction({
                 walletAddress: wallet.address,
                 biometricPublicKey,
-                type: 'blockchain',
                 amount,
-                token: 'ERC20', // Generic token type for same-chain transfers
-                network,
+                tokenSymbol: 'ERC20', // Generic token type for same-chain transfers
+                receiver,
+                rpcUrl: IN_APP_RPC_MAP['base']?.[network as 'mainnet' | 'testnet'] || '',
+                network: network as 'mainnet' | 'testnet',
+                isSameChain: true,
                 transactionHash: result.hash,
-                recipientAddress: receiver,
-                senderAddress: wallet.address,
               });
             }
           } catch (error) {

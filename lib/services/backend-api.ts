@@ -96,17 +96,16 @@ export interface Transaction {
 export interface CreateBlockchainTransactionRequest {
   walletAddress: string;
   biometricPublicKey: string;
-  type: 'blockchain';
   amount: string;
-  token: string;
-  network: string;
-  transactionHash: string;
-  recipientAddress: string;
-  senderAddress: string;
-  gasUsed?: string;
-  gasPrice?: string;
-  blockNumber?: number;
-  confirmations?: number;
+  tokenSymbol: string;
+  receiver: string;
+  rpcUrl: string;
+  targetChain?: string;
+  network: 'mainnet' | 'testnet';
+  targetTokenAddress?: string;
+  targetTokenSymbol?: string;
+  isSameChain?: boolean;
+  transactionHash?: string;
 }
 
 export interface Visitor {
