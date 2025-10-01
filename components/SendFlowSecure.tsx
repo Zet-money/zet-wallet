@@ -350,11 +350,11 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
           console.log('[UI][SEND] Executing same-chain native ETH transfer');
           // For same-chain ETH transfers, we'll use the existing transferETH function
           // but we need to modify it to handle same-chain transfers
-          tx = await transferETH(amount, recipientAddress, rpcUrl, destinationChain, network);
+          tx = await transferETH(amount, recipientAddress, rpcUrl, destinationChain, network, destinationToken);
         } else {
           // Native ETH transfer to ZetaChain
           console.log('[UI][SEND] Executing native ETH transfer');
-          tx = await transferETH(amount, recipientAddress, rpcUrl, destinationChain, network);
+          tx = await transferETH(amount, recipientAddress, rpcUrl, destinationChain, network, destinationToken);
         }
       } else {
         // ERC20 token transfer

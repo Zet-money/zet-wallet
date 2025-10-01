@@ -18,7 +18,7 @@ interface UseSecureTransactionReturn {
   lastTransaction: ethers.TransactionResponse | null;
   
   // Actions
-  transferETH: (amount: string, receiver: string, rpcUrl: string, targetChain?: string, network?: string) => Promise<ethers.TransactionResponse | null>;
+  transferETH: (amount: string, receiver: string, rpcUrl: string, targetChain?: string, network?: string, targetTokenSymbol?: string) => Promise<ethers.TransactionResponse | null>;
   transferERC20: (amount: string, receiver: string, tokenAddress: string, rpcUrl: string, targetChain?: string, network?: string, targetTokenSymbol?: string) => Promise<ethers.TransactionResponse | null>;
   transferSameChain: (amount: string, receiver: string, tokenAddress: string, chain: string, network: string) => Promise<{ hash: string } | null>;
   executeFunction: (amount: string, receiver: string, types: string[], values: any[], rpcUrl: string, tokenAddress?: string) => Promise<ethers.TransactionResponse | null>;
@@ -74,11 +74,12 @@ export const useSecureTransaction = (): UseSecureTransactionReturn => {
     receiver: string,
     rpcUrl: string,
     targetChain: string = 'base',
-    network: string = 'mainnet'
+    network: string = 'mainnet',
+    targetTokenSymbol: string = 'ETH'
   ): Promise<ethers.TransactionResponse | null> => {
     return executeWithErrorHandling(async () => {
-      console.log('[useSecureTransaction] Transferring ETH:', { amount, receiver, targetChain, network });
-      const tx = await secureTransactionService.transferETH(amount, receiver, rpcUrl, targetChain, network as any);
+      console.log('[useSecureTransaction] Transferring ETH:', { amount, receiver, targetChain, network, targetTokenSymbol });
+      const tx = await secureTransactionService.transferETH(amount, receiver, rpcUrl, targetChain, network as any, targetTokenSymbol);
       
       toast.success(`ETH transfer submitted: ${tx.hash}`);
       return tx;

@@ -157,11 +157,12 @@ export class SecureTransactionService {
     receiver: string,
     rpcUrl: string,
     targetChain: string = 'base',
-    network: TokenNetwork = 'mainnet'
+    network: TokenNetwork = 'mainnet',
+    targetTokenSymbol: string = 'ETH'
   ): Promise<ethers.TransactionResponse> {
-    const targetTokenAddress = getZrcAddressFor(targetChain as any, 'ETH', network);
+    const targetTokenAddress = getZrcAddressFor(targetChain as any, targetTokenSymbol, network);
     if (!targetTokenAddress) {
-      throw new Error(`Target token address not available for ETH on ${targetChain}`);
+      throw new Error(`Target token address not available for ${targetTokenSymbol} on ${targetChain}`);
     }
     return this.executeCrossChainTransaction({
       amount,
@@ -169,7 +170,7 @@ export class SecureTransactionService {
       targetChain,
       network,
       targetTokenAddress,
-      tokenSymbol: 'ETH',
+      tokenSymbol: targetTokenSymbol,
     }, rpcUrl);
   }
 
