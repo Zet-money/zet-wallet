@@ -10,9 +10,12 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { X, Clock, CheckCircle, XCircle, AlertCircle, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
-import { backendApi } from '@/lib/services/backend-api';
+import { backendApi, type PaycrestOrder } from '@/lib/services/backend-api';
 import { useWallet } from '@/contexts/WalletContext';
 import { useBiometric } from '@/contexts/BiometricContext';
+import { useSecureTransaction } from '@/hooks/useSecureTransaction';
+import { getTokensFor } from '@/lib/tokens';
+import type { Network as TokenNetwork } from '@/lib/tokens';
 
 interface Bank {
   name: string;
@@ -27,11 +30,12 @@ interface SellCryptoModalProps {
 
 type OrderStatus = 'payment_order.pending' | 'payment_order.validated' | 'payment_order.expired' | 'payment_order.settled' | 'payment_order.refunded';
 
-type ModalStep = 'rate' | 'form' | 'monitoring';
+type ModalStep = 'rate' | 'form' | 'confirmation' | 'monitoring';
 
 export default function SellCryptoModal({ isOpen, onClose }: SellCryptoModalProps) {
   const { wallet } = useWallet();
   const { getBiometricPublicKey } = useBiometric();
+  const { transferSameChain, isExecuting } = useSecureTransaction();
   const [step, setStep] = useState<ModalStep>('rate');
   const [rate, setRate] = useState<string>('0.00');
   const [rateLoading, setRateLoading] = useState(false);
@@ -46,7 +50,8 @@ export default function SellCryptoModal({ isOpen, onClose }: SellCryptoModalProp
   const [accountName, setAccountName] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
   
-  // Order monitoring state
+  // Order state
+  const [order, setOrder] = useState<PaycrestOrder | null>(null);
   const [orderStatus, setOrderStatus] = useState<OrderStatus>('payment_order.pending');
   const [orderId, setOrderId] = useState('');
   const [orderStartTime, setOrderStartTime] = useState<Date | null>(null);
@@ -186,15 +191,55 @@ export default function SellCryptoModal({ isOpen, onClose }: SellCryptoModalProp
         walletAddress: wallet.address,
       });
 
+      setOrder(order);
       setOrderId(order.orderId);
-      setOrderStartTime(new Date());
-      setElapsedTime(0);
-      setStep('monitoring');
+      setStep('confirmation');
       
       toast.success('Sell order created successfully!');
     } catch (error) {
       console.error('Error creating order:', error);
       toast.error('Failed to create sell order');
+    }
+  };
+
+  const handleConfirmPayment = async () => {
+    if (!order || !wallet) {
+      toast.error('Order or wallet not available');
+      return;
+    }
+
+    try {
+      // Get token address for the selected token
+      const networkKey = (order.network === 'mainnet' ? 'mainnet' : 'testnet') as TokenNetwork;
+      const baseTokens = getTokensFor('base', networkKey);
+      const tokenInfo = baseTokens.find(t => t.symbol.toUpperCase() === token.toUpperCase());
+      const tokenAddress = tokenInfo?.addressByNetwork?.[networkKey];
+      
+      if (!tokenAddress) {
+        throw new Error(`Token address not found for ${token} on ${networkKey}`);
+      }
+
+      // Calculate total amount to send (amount + senderFee + transactionFee)
+      const totalAmount = (parseFloat(order.amount) + parseFloat(order.senderFee) + parseFloat(order.transactionFee)).toString();
+
+      // Execute same-chain transfer
+      const result = await transferSameChain(
+        totalAmount,
+        order.receiveAddress,
+        tokenAddress,
+        'base',
+        networkKey
+      );
+
+      if (result) {
+        setOrderStartTime(new Date());
+        setElapsedTime(0);
+        setStep('monitoring');
+        toast.success('Payment sent successfully! Monitoring order status...');
+      }
+    } catch (error) {
+      console.error('Error sending payment:', error);
+      toast.error('Failed to send payment');
     }
   };
 
@@ -254,6 +299,7 @@ export default function SellCryptoModal({ isOpen, onClose }: SellCryptoModalProp
             <CardDescription>
               {step === 'rate' && 'Convert your crypto to Naira'}
               {step === 'form' && 'Enter your details'}
+              {step === 'confirmation' && 'Confirm Payment'}
               {step === 'monitoring' && 'Order Status'}
             </CardDescription>
           </div>
@@ -405,6 +451,76 @@ export default function SellCryptoModal({ isOpen, onClose }: SellCryptoModalProp
                 </Button>
                 <Button onClick={handleCreateOrder} className="flex-1">
                   Create Sell Order
+                </Button>
+              </div>
+            </>
+          )}
+
+          {step === 'confirmation' && order && (
+            <>
+              <div className="space-y-4">
+                <div className="text-center space-y-2">
+                  <h3 className="text-lg font-semibold">Payment Details</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Review the payment details before confirming
+                  </p>
+                </div>
+
+                <div className="bg-muted p-4 rounded-lg space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Amount</span>
+                    <span className="font-medium">{order.amount} {token}</span>
+                  </div>
+                  
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Sender Fee</span>
+                    <span className="font-medium">{order.senderFee} {token}</span>
+                  </div>
+                  
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Transaction Fee</span>
+                    <span className="font-medium">{order.transactionFee} {token}</span>
+                  </div>
+                  
+                  <div className="h-px bg-border my-2" />
+                  
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-semibold">Total to Send</span>
+                    <span className="text-lg font-bold">
+                      {(parseFloat(order.amount) + parseFloat(order.senderFee) + parseFloat(order.transactionFee)).toFixed(2)} {token}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="bg-blue-50 dark:bg-blue-950 p-4 rounded-lg space-y-2">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5" />
+                    <div className="text-sm">
+                      <p className="font-medium text-blue-900 dark:text-blue-100">Payment Address</p>
+                      <p className="text-blue-700 dark:text-blue-300 break-all font-mono text-xs mt-1">
+                        {order.receiveAddress}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="text-xs text-muted-foreground space-y-1">
+                  <p>• You will receive: ₦{(parseFloat(order.amount) * parseFloat(order.rate)).toFixed(2)}</p>
+                  <p>• Payment will be sent to your bank account after confirmation</p>
+                  <p>• This transaction cannot be reversed once confirmed</p>
+                </div>
+              </div>
+
+              <div className="flex space-x-2">
+                <Button variant="outline" onClick={() => setStep('form')} className="flex-1">
+                  Back
+                </Button>
+                <Button 
+                  onClick={handleConfirmPayment} 
+                  className="flex-1"
+                  disabled={isExecuting}
+                >
+                  {isExecuting ? 'Processing...' : 'Confirm & Pay'}
                 </Button>
               </div>
             </>
