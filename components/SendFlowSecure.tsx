@@ -181,7 +181,15 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
       }
     }
     
-    return tokens.map((token) => ({
+    // Filter out cNGN when sending ETH on Base
+    const filteredTokens = tokens.filter(token => {
+      if (asset.symbol === 'ETH' && destinationChain === 'base-same') {
+        return token.symbol !== 'cNGN';
+      }
+      return true;
+    });
+
+    return filteredTokens.map((token) => ({
       value: token.symbol,
       label: token.symbol,
       name: token.name,
