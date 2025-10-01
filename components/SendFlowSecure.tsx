@@ -92,10 +92,19 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
 
   // Destination chains
   const destinationChains = useMemo(() => {
-    const excluded = new Set(['optimism', 'bsc', 'zetachain']);
+    // If cNGN is selected, only show Base as destination
+    if (asset?.symbol === 'cNGN') {
+      return [{
+        value: 'base-same',
+        label: 'Base (Same Chain)',
+        icon: 'base-logo'
+      }];
+    }
+    
+    const excluded = new Set(['optimism', 'bsc', 'zetachain', 'base']); // Exclude 'base' to avoid duplicate
     const chains = Object.keys(EVM_TOKENS).filter((key) => !excluded.has(key)).map((key) => {
       const symbol = logoSymbolForChain(key);
-      const icon = key === 'base' ? 'base-logo' : `https://assets.parqet.com/logos/crypto/${symbol}?format=png`;
+      const icon = `https://assets.parqet.com/logos/crypto/${symbol}?format=png`;
       return { value: key, label: toLabel(key), icon };
     });
     
@@ -107,7 +116,7 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
     });
     
     return chains;
-  }, []);
+  }, [asset?.symbol]);
 
   // Get available tokens for the selected destination chain
   const destinationTokens = useMemo(() => {
