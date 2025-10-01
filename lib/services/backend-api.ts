@@ -135,6 +135,8 @@ export interface UpdateTransactionRequest {
   status?: 'pending' | 'completed' | 'failed';
   transactionHash?: string;
   errorMessage?: string;
+  walletAddress: string;
+  biometricPublicKey: string;
 }
 
 class BackendApiService {

@@ -273,15 +273,23 @@ export const useSecureTransaction = (): UseSecureTransactionReturn => {
     }
 
     try {
+      const biometricPublicKey = await getBiometricPublicKey();
+      if (!biometricPublicKey || !wallet?.address) {
+        console.warn('Missing biometric public key or wallet address for transaction update');
+        return;
+      }
+
       await backendApi.updateTransaction(transactionId, {
         status,
         errorMessage,
+        walletAddress: wallet.address,
+        biometricPublicKey,
       });
       console.log(`Transaction ${transactionId} status updated to ${status}`);
     } catch (error) {
       console.error('Failed to update transaction status:', error);
     }
-  }, []);
+  }, [getBiometricPublicKey, wallet?.address]);
 
   const setLastTransactionId = useCallback((id: string) => {
     setState(prev => ({ ...prev, lastTransactionId: id }));
