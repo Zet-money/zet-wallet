@@ -201,7 +201,7 @@ export function BiometricProvider({ children }: { children: React.ReactNode }) {
 
   const getBiometricPublicKey = async (): Promise<string | null> => {
     try {
-      const credentials = await biometricMigration.getStoredCredentials();
+      const credentials = await biometricMigration.secureDB.getAllCredentials();
       if (credentials && credentials.length > 0) {
         return credentials[0].publicKey;
       }
