@@ -1,5 +1,6 @@
-import { messaging } from './firebase';
-import { backendApi } from './services/backend-api';
+import { getToken, onMessage } from 'firebase/messaging';
+import { messaging } from '../firebase';
+import { backendApi } from './backend-api';
 
 export interface NotificationPermission {
   granted: boolean;
@@ -136,16 +137,6 @@ export class NotificationService {
           badge: '/icon-192x192.png',
           data,
           requireInteraction: true,
-          actions: [
-            {
-              action: 'view',
-              title: 'View',
-            },
-            {
-              action: 'dismiss',
-              title: 'Dismiss',
-            },
-          ],
         });
       });
     }

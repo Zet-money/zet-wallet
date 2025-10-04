@@ -1,12 +1,11 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { X, Bell, BellOff } from 'lucide-react';
+import { X, BellRing } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { notificationService } from '@/lib/services/notification-service';
-import { useWallet } from '@/contexts/wallet-context';
 import { toast } from 'sonner';
+import { useWallet } from '@/contexts/WalletContext';
 
 export function NotificationPermissionBanner() {
   const [isVisible, setIsVisible] = useState(false);
@@ -15,9 +14,16 @@ export function NotificationPermissionBanner() {
 
   useEffect(() => {
     // Check if user has already dismissed the banner
-    const dismissed = localStorage.getItem('notification-banner-dismissed');
-    if (dismissed) {
-      return;
+    const dismissedData = localStorage.getItem('notification-banner-dismissed');
+    if (dismissedData) {
+      const dismissedTime = JSON.parse(dismissedData).timestamp;
+      const now = Date.now();
+      const twentyFourHours = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+      
+      // If dismissed less than 24 hours ago, don't show
+      if (now - dismissedTime < twentyFourHours) {
+        return;
+      }
     }
 
     // Check if notifications are supported and permission is not granted
@@ -55,7 +61,10 @@ export function NotificationPermissionBanner() {
 
   const handleDismiss = () => {
     setIsVisible(false);
-    localStorage.setItem('notification-banner-dismissed', 'true');
+    // Store timestamp for 24-hour reminder
+    localStorage.setItem('notification-banner-dismissed', JSON.stringify({
+      timestamp: Date.now()
+    }));
   };
 
   if (!isVisible) {
@@ -63,45 +72,40 @@ export function NotificationPermissionBanner() {
   }
 
   return (
-    <Card className="mb-4 border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950">
-      <CardContent className="p-4">
+    <div className="fixed bottom-4 right-4 top-4 left-4 sm:top-auto sm:left-auto z-50">
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-4 max-w-sm mx-auto sm:mx-0">
         <div className="flex items-start justify-between">
           <div className="flex items-start space-x-3">
-            <Bell className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
-            <div className="flex-1">
-              <h3 className="text-sm font-medium text-blue-900 dark:text-blue-100">
+            <BellRing className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">
                 Enable Notifications
               </h3>
-              <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-                Get real-time updates on your transactions. We'll notify you when:
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                Get real-time updates on your transactions
               </p>
-              <ul className="text-xs text-blue-600 dark:text-blue-400 mt-2 space-y-1">
-                <li>• Your transactions are confirmed</li>
-                <li>• Transactions fail and need attention</li>
-                <li>• Cross-chain transfers complete</li>
-              </ul>
             </div>
           </div>
-          <div className="flex items-center space-x-2 ml-4">
-            <Button
-              size="sm"
-              onClick={handleEnableNotifications}
-              disabled={isLoading}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              {isLoading ? 'Enabling...' : 'Enable'}
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={handleDismiss}
-              className="text-blue-600 hover:text-blue-700 hover:bg-blue-100 dark:text-blue-400 dark:hover:text-blue-300 dark:hover:bg-blue-900"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleDismiss}
+            className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 p-1 h-auto"
+          >
+            <X className="h-4 w-4" />
+          </Button>
         </div>
-      </CardContent>
-    </Card>
+        <div className="mt-3 flex justify-end">
+          <Button
+            size="sm"
+            onClick={handleEnableNotifications}
+            disabled={isLoading}
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            {isLoading ? 'Enabling...' : 'Enable'}
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 }
