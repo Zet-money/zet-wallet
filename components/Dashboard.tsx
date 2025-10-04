@@ -59,6 +59,7 @@ export default function Dashboard() {
 
   // Setup notification message listener
   useEffect(() => {
+    console.log('Dashboard useEffect running, wallet:', wallet?.address, 'addNotification:', typeof addNotification);
     if (typeof window !== 'undefined' && wallet?.address) {
       console.log('Setting up notification message listener...');
       notificationService.setupMessageListener((payload) => {
@@ -79,6 +80,8 @@ export default function Dashboard() {
           console.log('Notification added to context');
         }
       });
+    } else {
+      console.log('Dashboard useEffect: Conditions not met - window:', typeof window !== 'undefined', 'wallet:', wallet?.address);
     }
   }, [wallet?.address, addNotification]);
 
