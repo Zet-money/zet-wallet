@@ -295,6 +295,21 @@ class BackendApiService {
     });
   }
 
+  // Notification endpoints
+  async subscribeToNotifications(walletAddress: string, fcmToken: string): Promise<{ message: string }> {
+    return this.makeRequest<{ message: string }>('/notifications/subscribe', {
+      method: 'POST',
+      body: JSON.stringify({ fcmToken }),
+    });
+  }
+
+  async unsubscribeFromNotifications(walletAddress: string, fcmToken?: string): Promise<{ message: string }> {
+    return this.makeRequest<{ message: string }>('/notifications/unsubscribe', {
+      method: 'POST',
+      body: JSON.stringify({ fcmToken }),
+    });
+  }
+
   // Visitor endpoints
   async createVisitor(data: CreateVisitorRequest): Promise<Visitor> {
     return this.makeRequest<Visitor>('/visitors', {

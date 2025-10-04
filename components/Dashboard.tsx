@@ -23,6 +23,7 @@ import { getTokenPriceUSD, getTokenChangeUSD24h } from '@/lib/prices';
 import ReceiveFlow from './ReceiveFlow';
 import SellCryptoModal from './SellCryptoModal';
 import { useSecureTransaction } from '@/hooks/useSecureTransaction';
+import { NotificationPermissionBanner } from './NotificationPermissionBanner';
 // Solana imports removed - only Base chain supported
 
 // Only Base chain is supported for sending
@@ -233,6 +234,11 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Notification Permission Banner */}
+      <div className="container mx-auto px-4 max-w-4xl">
+        <NotificationPermissionBanner />
       </div>
 
       {/* Main Content */}
