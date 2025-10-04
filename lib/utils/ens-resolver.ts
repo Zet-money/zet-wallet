@@ -1,9 +1,9 @@
 import { ethers } from 'ethers';
 
 /**
- * Detect if input is ENS/Base name or regular address
+ * Detect if input is ENS/Base name, Ethereum address, or Solana address
  */
-export function detectAddressType(input: string): 'address' | 'ens' | 'basename' | 'invalid' {
+export function detectAddressType(input: string): 'address' | 'ens' | 'basename' | 'solana' | 'invalid' {
   // Check if it's a valid Ethereum address first
   if (ethers.isAddress(input)) {
     return 'address';
@@ -22,7 +22,33 @@ export function detectAddressType(input: string): 'address' | 'ens' | 'basename'
     return 'basename';
   }
   
+  // Check if it's a Solana address (base58, 32-44 characters, starts with letters/numbers)
+  if (isSolanaAddress(inputStr)) {
+    return 'solana';
+  }
+  
   return 'invalid';
+}
+
+/**
+ * Check if input looks like a Solana address
+ */
+function isSolanaAddress(input: string): boolean {
+  // Solana addresses are base58 encoded, typically 32-44 characters
+  // They contain only base58 characters: 1-9, A-H, J-N, P-Z, a-k, m-z
+  const base58Regex = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+  
+  // Additional checks for Solana address characteristics
+  if (!base58Regex.test(input)) {
+    return false;
+  }
+  
+  // Solana addresses are typically 32-44 characters
+  if (input.length < 32 || input.length > 44) {
+    return false;
+  }
+  
+  return true;
 }
 
 /**
@@ -52,6 +78,10 @@ export async function resolveRecipient(
   
   if (type === 'address') {
     return { address: input, originalInput: input, type: 'address' };
+  }
+  
+  if (type === 'solana') {
+    return { address: input, originalInput: input, type: 'solana' };
   }
   
   if (type === 'ens' || type === 'basename') {

@@ -613,6 +613,9 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
       if (errorMessage.includes('ENS') || errorMessage.includes('name not found')) {
         setEnsError(errorMessage);
         toast.error(`ENS Resolution Failed: ${errorMessage}`);
+      } else if (errorMessage.includes('Invalid address')) {
+        setEnsError('Invalid address format. Please enter a valid Ethereum address, ENS name, or Solana address.');
+        toast.error('Invalid Address Format');
       } else {
         toast.error(`Transfer failed: ${errorMessage}`);
       }
@@ -828,11 +831,11 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
 
           {/* Recipient Address */}
           <div className="space-y-2">
-            <Label htmlFor="recipient">Recipient Address or ENS Name</Label>
+            <Label htmlFor="recipient">Recipient Address, ENS Name, or Solana Address</Label>
             <div className="relative">
               <Input
                 id="recipient"
-                placeholder="0x... or tomiwa.eth or tomiwa.base.eth"
+                placeholder="0x..., tomiwa.eth, tomiwa.base.eth, or Solana address"
                 value={recipientAddress}
                 onChange={(e) => {
                   setRecipientAddress(e.target.value);
@@ -851,6 +854,11 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
               <div className="text-sm text-destructive flex items-center gap-1">
                 <AlertCircle className="h-4 w-4" />
                 {ensError}
+              </div>
+            )}
+            {recipientAddress && !ensError && (
+              <div className="text-xs text-muted-foreground">
+                Supported formats: Ethereum addresses (0x...), ENS names (.eth), Base names (.base.eth), Solana addresses
               </div>
             )}
           </div>
