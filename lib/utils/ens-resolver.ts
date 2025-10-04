@@ -4,18 +4,21 @@ import { ethers } from 'ethers';
  * Detect if input is ENS/Base name or regular address
  */
 export function detectAddressType(input: string): 'address' | 'ens' | 'basename' | 'invalid' {
-  // Check if it's a valid Ethereum address
+  // Check if it's a valid Ethereum address first
   if (ethers.isAddress(input)) {
     return 'address';
   }
   
+  // Ensure input is a string for string operations
+  const inputStr = String(input);
+  
   // Check if it's ENS (.eth)
-  if (input.endsWith('.eth') && input.length > 4) {
+  if (inputStr.endsWith('.eth') && inputStr.length > 4) {
     return 'ens';
   }
   
   // Check if it's Base name (.base.eth)
-  if (input.endsWith('.base.eth') && input.length > 9) {
+  if (inputStr.endsWith('.base.eth') && inputStr.length > 9) {
     return 'basename';
   }
   
