@@ -66,11 +66,17 @@ export default function Dashboard() {
         
         // Show notification banner instead of toast
         if (payload.notification) {
+          console.log('Adding notification to context:', {
+            title: payload.notification.title,
+            body: payload.notification.body,
+            data: payload.data,
+          });
           addNotification({
             title: payload.notification.title || 'New Notification',
             body: payload.notification.body || 'You have a new notification',
             data: payload.data,
           });
+          console.log('Notification added to context');
         }
       });
     }

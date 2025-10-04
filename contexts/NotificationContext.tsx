@@ -29,10 +29,16 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       timestamp: new Date(),
     };
     
-    setNotifications(prev => [...prev, newNotification]);
+    console.log('NotificationContext: Adding notification', newNotification);
+    setNotifications(prev => {
+      const updated = [...prev, newNotification];
+      console.log('NotificationContext: Updated notifications array', updated);
+      return updated;
+    });
     
     // Auto-remove after 10 seconds
     setTimeout(() => {
+      console.log('NotificationContext: Auto-removing notification', newNotification.id);
       removeNotification(newNotification.id);
     }, 10000);
   };
