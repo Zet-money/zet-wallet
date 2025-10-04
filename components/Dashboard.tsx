@@ -24,6 +24,7 @@ import ReceiveFlow from './ReceiveFlow';
 import SellCryptoModal from './SellCryptoModal';
 import { useSecureTransaction } from '@/hooks/useSecureTransaction';
 import { NotificationPermissionBanner } from './NotificationPermissionBanner';
+import { notificationService } from '@/lib/services/notification-service';
 // Solana imports removed - only Base chain supported
 
 // Only Base chain is supported for sending
@@ -52,6 +53,24 @@ export default function Dashboard() {
       if (typeof window !== 'undefined') window.localStorage.setItem('zet.chain', selectedChain)
     } catch {}
   }, [selectedChain])
+
+  // Setup notification message listener
+  useEffect(() => {
+    if (typeof window !== 'undefined' && wallet?.address) {
+      console.log('Setting up notification message listener...');
+      notificationService.setupMessageListener((payload) => {
+        console.log('Received notification payload:', payload);
+        
+        // Show toast notification for better UX
+        if (payload.notification) {
+          toast.success(payload.notification.title || 'New Notification', {
+            description: payload.notification.body,
+            duration: 5000,
+          });
+        }
+      });
+    }
+  }, [wallet?.address]);
 
   const chainKey = 'base' // Only Base chain supported
   const baseTokens = getTokensFor(chainKey, network)
