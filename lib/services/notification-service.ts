@@ -52,6 +52,12 @@ export class NotificationService {
     }
 
     try {
+      // Register service worker first
+      if ('serviceWorker' in navigator) {
+        await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+        console.log('Service worker registered');
+      }
+
       const token = await getToken(messaging, {
         vapidKey: this.vapidKey,
       });
@@ -69,7 +75,7 @@ export class NotificationService {
     }
   }
 
-  async subscribeToNotifications(walletAddress: string): Promise<boolean> {
+  async subscribeToNotifications(walletAddress: string, biometricPublicKey: string): Promise<boolean> {
     try {
       const permission = await this.requestPermission();
       
@@ -84,7 +90,7 @@ export class NotificationService {
         return false;
       }
 
-      await backendApi.subscribeToNotifications(walletAddress, token);
+      await backendApi.subscribeToNotifications(walletAddress, biometricPublicKey, token);
       console.log('Successfully subscribed to notifications');
       return true;
     } catch (error) {
@@ -93,9 +99,9 @@ export class NotificationService {
     }
   }
 
-  async unsubscribeFromNotifications(walletAddress: string, token?: string): Promise<boolean> {
+  async unsubscribeFromNotifications(walletAddress: string, biometricPublicKey: string, token?: string): Promise<boolean> {
     try {
-      await backendApi.unsubscribeFromNotifications(walletAddress, token);
+      await backendApi.unsubscribeFromNotifications(walletAddress, biometricPublicKey, token);
       console.log('Successfully unsubscribed from notifications');
       return true;
     } catch (error) {

@@ -296,17 +296,25 @@ class BackendApiService {
   }
 
   // Notification endpoints
-  async subscribeToNotifications(walletAddress: string, fcmToken: string): Promise<{ message: string }> {
+  async subscribeToNotifications(walletAddress: string, biometricPublicKey: string, fcmToken: string): Promise<{ message: string }> {
     return this.makeRequest<{ message: string }>('/notifications/subscribe', {
       method: 'POST',
-      body: JSON.stringify({ fcmToken }),
+      body: JSON.stringify({ 
+        fcmToken,
+        walletAddress,
+        biometricPublicKey
+      }),
     });
   }
 
-  async unsubscribeFromNotifications(walletAddress: string, fcmToken?: string): Promise<{ message: string }> {
+  async unsubscribeFromNotifications(walletAddress: string, biometricPublicKey: string, fcmToken?: string): Promise<{ message: string }> {
     return this.makeRequest<{ message: string }>('/notifications/unsubscribe', {
       method: 'POST',
-      body: JSON.stringify({ fcmToken }),
+      body: JSON.stringify({ 
+        fcmToken,
+        walletAddress,
+        biometricPublicKey
+      }),
     });
   }
 

@@ -6,32 +6,81 @@ import { Button } from '@/components/ui/button';
 import { notificationService } from '@/lib/services/notification-service';
 import { toast } from 'sonner';
 import { useWallet } from '@/contexts/WalletContext';
+import { useBiometric } from '@/contexts/BiometricContext';
 
 export function NotificationPermissionBanner() {
   const [isVisible, setIsVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { wallet } = useWallet();
+  const { getBiometricPublicKey } = useBiometric();
 
   useEffect(() => {
+    console.log('NotificationPermissionBanner: Checking conditions...');
+    
     // Check if user has already dismissed the banner
     const dismissedData = localStorage.getItem('notification-banner-dismissed');
+    console.log('Dismissed data:', dismissedData);
+    
     if (dismissedData) {
-      const dismissedTime = JSON.parse(dismissedData).timestamp;
-      const now = Date.now();
-      const twentyFourHours = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
-      
-      // If dismissed less than 24 hours ago, don't show
-      if (now - dismissedTime < twentyFourHours) {
-        return;
+      try {
+        const dismissedTime = JSON.parse(dismissedData).timestamp;
+        const now = Date.now();
+        const twentyFourHours = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+        
+        console.log('Time since dismissed:', (now - dismissedTime) / (1000 * 60 * 60), 'hours');
+        
+        // If dismissed less than 24 hours ago, don't show
+        if (now - dismissedTime < twentyFourHours) {
+          console.log('Banner dismissed less than 24 hours ago, not showing');
+          return;
+        }
+      } catch (error) {
+        console.log('Error parsing dismissed data, treating as not dismissed');
+        localStorage.removeItem('notification-banner-dismissed');
       }
     }
 
     // Check if notifications are supported and permission is not granted
-    if (notificationService.isSupported()) {
+    const isSupported = notificationService.isSupported();
+    console.log('Notifications supported:', isSupported);
+    
+    if (isSupported) {
       const permission = notificationService.getPermissionStatus();
+      console.log('Permission status:', permission);
+      
+      // Show banner if permission is default (not asked yet) OR if granted but no FCM token saved
       if (!permission.granted && !permission.denied) {
+        console.log('Permission not asked yet, setting banner visible');
         setIsVisible(true);
+      } else if (permission.granted) {
+        // Permission is granted, but we need to ensure the token is registered with backend
+        console.log('Permission granted, ensuring token is registered with backend...');
+        if (wallet?.address) {
+          // Try to register the token with backend
+          getBiometricPublicKey().then(biometricPublicKey => {
+            if (biometricPublicKey) {
+              notificationService.subscribeToNotifications(wallet.address, biometricPublicKey).then(success => {
+                if (!success) {
+                  console.log('Failed to register token with backend, showing banner');
+                  setIsVisible(true);
+                } else {
+                  console.log('Token successfully registered with backend');
+                }
+              });
+            } else {
+              console.log('No biometric public key, showing banner');
+              setIsVisible(true);
+            }
+          });
+        } else {
+          console.log('No wallet address, showing banner');
+          setIsVisible(true);
+        }
+      } else {
+        console.log('Permission denied, not showing banner');
       }
+    } else {
+      console.log('Notifications not supported, not showing banner');
     }
   }, []);
 
@@ -43,11 +92,18 @@ export function NotificationPermissionBanner() {
 
     setIsLoading(true);
     try {
-      const success = await notificationService.subscribeToNotifications(wallet.address);
+      const biometricPublicKey = await getBiometricPublicKey();
+      if (!biometricPublicKey) {
+        toast.error('Biometric public key not available');
+        return;
+      }
+      
+      const success = await notificationService.subscribeToNotifications(wallet.address, biometricPublicKey);
       if (success) {
         toast.success('Notifications enabled! You\'ll receive real-time updates on your transactions.');
         setIsVisible(false);
-        localStorage.setItem('notification-banner-dismissed', 'true');
+        // Clear the dismissed flag since notifications are now enabled
+        localStorage.removeItem('notification-banner-dismissed');
       } else {
         toast.error('Failed to enable notifications. Please try again.');
       }
@@ -100,7 +156,7 @@ export function NotificationPermissionBanner() {
             size="sm"
             onClick={handleEnableNotifications}
             disabled={isLoading}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground"
           >
             {isLoading ? 'Enabling...' : 'Enable'}
           </Button>
