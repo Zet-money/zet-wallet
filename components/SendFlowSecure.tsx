@@ -19,6 +19,8 @@ import { CctxProgress, trackCrossChainConfirmations as trackCrossChainTransactio
 import CctxProgressComponent from '@/components/CctxProgress';
 import { waitForTxConfirmation, getTxStatus } from '@/lib/zetachain';
 import { explorerFor } from '@/lib/explorer';
+import { resolveRecipient } from '@/lib/utils/ens-resolver';
+import { ethers } from 'ethers';
 
 interface SendFlowProps {
   asset: {
@@ -71,6 +73,8 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
   const { wallet } = useWallet();
   const { transferETH, transferERC20, transferSameChain, isExecuting, error: transactionError, updateTransactionStatus, setLastTransactionId } = useSecureTransaction();
   const [recipientAddress, setRecipientAddress] = useState('');
+  const [isResolvingENS, setIsResolvingENS] = useState(false);
+  const [ensError, setEnsError] = useState<string | null>(null);
   const [amount, setAmount] = useState('');
   const [destinationChain, setDestinationChain] = useState('');
   const [destinationToken, setDestinationToken] = useState('');
@@ -324,11 +328,28 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
     console.log('[UI][SEND] All validations passed, starting secure transfer process');
     
     try {
+      setIsResolvingENS(true);
+      setEnsError(null);
+
+      // Resolve ENS/Base name if needed
+      const baseRpcUrl = IN_APP_RPC_MAP['base']?.[network];
+      if (!baseRpcUrl) {
+        throw new Error(`No RPC URL found for base on ${network}`);
+      }
+
+      const provider = new ethers.JsonRpcProvider(baseRpcUrl);
+      const resolved = await resolveRecipient(recipientAddress, provider);
+      
+      console.log('[UI][SEND] Resolved recipient:', resolved);
+
+      // Use resolved address for transaction
+      const finalRecipientAddress = resolved.address;
+
       // Store transaction details for tracking
       setTransactionAmount(amount);
       setTransactionToken(asset.symbol);
       setTransactionTargetChain(destinationChain);
-      setTransactionReceiver(recipientAddress);
+      setTransactionReceiver(finalRecipientAddress);
       
       // Start transaction timer
       startTimer();
@@ -350,11 +371,11 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
           console.log('[UI][SEND] Executing same-chain native ETH transfer');
           // For same-chain ETH transfers, we'll use the existing transferETH function
           // but we need to modify it to handle same-chain transfers
-          tx = await transferETH(amount, recipientAddress, rpcUrl, destinationChain, network, destinationToken);
+          tx = await transferETH(amount, finalRecipientAddress, rpcUrl, destinationChain, network, destinationToken);
         } else {
           // Native ETH transfer to ZetaChain
           console.log('[UI][SEND] Executing native ETH transfer');
-          tx = await transferETH(amount, recipientAddress, rpcUrl, destinationChain, network, destinationToken);
+          tx = await transferETH(amount, finalRecipientAddress, rpcUrl, destinationChain, network, destinationToken);
         }
       } else {
         // ERC20 token transfer
@@ -376,7 +397,7 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
           
           const result = await transferSameChain(
             amount,
-            recipientAddress,
+            finalRecipientAddress,
             tokenAddress,
             'base',
             network,
@@ -394,7 +415,7 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
           }
         } else {
           // Cross-chain ERC20 transfer to ZetaChain
-          tx = await transferERC20(amount, recipientAddress, tokenAddress, rpcUrl, destinationChain, network, destinationToken);
+          tx = await transferERC20(amount, finalRecipientAddress, tokenAddress, rpcUrl, destinationChain, network, destinationToken);
         }
       }
 
@@ -430,7 +451,7 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
               stopTimer();
               setTxPhase('completed');
               toast.success('Transfer completed!', { 
-                description: `Successfully transferred ${amount} ${asset.symbol} to ${recipientAddress}`, 
+                description: `Successfully transferred ${amount} ${asset.symbol} to ${resolved.originalInput}`, 
                 duration: 10000 
               });
             } else {
@@ -587,9 +608,19 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
     } catch (error) {
       console.error('[UI][SEND] Transfer error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      toast.error(`Transfer failed: ${errorMessage}`);
+      
+      // Check if it's an ENS resolution error
+      if (errorMessage.includes('ENS') || errorMessage.includes('name not found')) {
+        setEnsError(errorMessage);
+        toast.error(`ENS Resolution Failed: ${errorMessage}`);
+      } else {
+        toast.error(`Transfer failed: ${errorMessage}`);
+      }
+      
       setTxPhase('failed');
       stopTimer(); // Stop timer on error
+    } finally {
+      setIsResolvingENS(false);
     }
   };
 
@@ -797,13 +828,31 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
 
           {/* Recipient Address */}
           <div className="space-y-2">
-            <Label htmlFor="recipient">Recipient Address</Label>
-            <Input
-              id="recipient"
-              placeholder="0x... or zeta1..."
-              value={recipientAddress}
-              onChange={(e) => setRecipientAddress(e.target.value)}
-            />
+            <Label htmlFor="recipient">Recipient Address or ENS Name</Label>
+            <div className="relative">
+              <Input
+                id="recipient"
+                placeholder="0x... or tomiwa.eth or tomiwa.base.eth"
+                value={recipientAddress}
+                onChange={(e) => {
+                  setRecipientAddress(e.target.value);
+                  setEnsError(null);
+                }}
+                className={isResolvingENS ? 'pr-10' : ''}
+                disabled={isResolvingENS}
+              />
+              {isResolvingENS && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                </div>
+              )}
+            </div>
+            {ensError && (
+              <div className="text-sm text-destructive flex items-center gap-1">
+                <AlertCircle className="h-4 w-4" />
+                {ensError}
+              </div>
+            )}
           </div>
 
           {/* Destination Chain and Token */}
@@ -911,13 +960,18 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
             </Button>
             <Button
               onClick={handleSend}
-              disabled={isExecuting || !recipientAddress || !amount || !destinationChain || !destinationToken}
+              disabled={isExecuting || isResolvingENS || !recipientAddress || !amount || !destinationChain || !destinationToken}
               className="flex-1"
             >
               {isExecuting ? (
                 <>
                   <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
                   Sending...
+                </>
+              ) : isResolvingENS ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
+                  Resolving ENS...
                 </>
               ) : (
                 <>

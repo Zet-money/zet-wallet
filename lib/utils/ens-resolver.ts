@@ -1,0 +1,64 @@
+import { ethers } from 'ethers';
+
+/**
+ * Detect if input is ENS/Base name or regular address
+ */
+export function detectAddressType(input: string): 'address' | 'ens' | 'basename' | 'invalid' {
+  // Check if it's a valid Ethereum address
+  if (ethers.isAddress(input)) {
+    return 'address';
+  }
+  
+  // Check if it's ENS (.eth)
+  if (input.endsWith('.eth') && input.length > 4) {
+    return 'ens';
+  }
+  
+  // Check if it's Base name (.base.eth)
+  if (input.endsWith('.base.eth') && input.length > 9) {
+    return 'basename';
+  }
+  
+  return 'invalid';
+}
+
+/**
+ * Resolve ENS/Base name to address
+ */
+export async function resolveToAddress(
+  name: string, 
+  provider: ethers.Provider
+): Promise<string | null> {
+  try {
+    const address = await provider.resolveName(name);
+    return address;
+  } catch (error) {
+    console.error(`Failed to resolve ${name}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Main resolver function - detects type and resolves if needed
+ */
+export async function resolveRecipient(
+  input: string,
+  provider: ethers.Provider
+): Promise<{ address: string; originalInput: string; type: string }> {
+  const type = detectAddressType(input);
+  
+  if (type === 'address') {
+    return { address: input, originalInput: input, type: 'address' };
+  }
+  
+  if (type === 'ens' || type === 'basename') {
+    const resolvedAddress = await resolveToAddress(input, provider);
+    if (resolvedAddress) {
+      return { address: resolvedAddress, originalInput: input, type };
+    } else {
+      throw new Error(`${type.toUpperCase()} name not found: ${input}`);
+    }
+  }
+  
+  throw new Error('Invalid address or name format');
+}
