@@ -24,16 +24,12 @@ import ReceiveFlow from './ReceiveFlow';
 import SellCryptoModal from './SellCryptoModal';
 import { useSecureTransaction } from '@/hooks/useSecureTransaction';
 import { NotificationPermissionBanner } from './NotificationPermissionBanner';
-import { NotificationContainer } from './NotificationContainer';
-import { notificationService } from '@/lib/services/notification-service';
-import { useNotifications } from '@/contexts/NotificationContext';
 // Solana imports removed - only Base chain supported
 
 // Only Base chain is supported for sending
 
 export default function Dashboard() {
   const { wallet } = useWallet();
-  const { addNotification } = useNotifications();
   const { lockApp, isEncrypted } = useBiometric();
   const { profile } = useUserSettings();
   const { network, setNetwork } = useNetwork();
@@ -56,34 +52,6 @@ export default function Dashboard() {
       if (typeof window !== 'undefined') window.localStorage.setItem('zet.chain', selectedChain)
     } catch {}
   }, [selectedChain])
-
-  // Setup notification message listener
-  useEffect(() => {
-    console.log('Dashboard useEffect running, wallet:', wallet?.address, 'addNotification:', typeof addNotification);
-    if (typeof window !== 'undefined' && wallet?.address) {
-      console.log('Setting up notification message listener...');
-      notificationService.setupMessageListener((payload) => {
-        console.log('Received notification payload:', payload);
-        
-        // Show notification banner instead of toast
-        if (payload.notification) {
-          console.log('Adding notification to context:', {
-            title: payload.notification.title,
-            body: payload.notification.body,
-            data: payload.data,
-          });
-          addNotification({
-            title: payload.notification.title || 'New Notification',
-            body: payload.notification.body || 'You have a new notification',
-            data: payload.data,
-          });
-          console.log('Notification added to context');
-        }
-      });
-    } else {
-      console.log('Dashboard useEffect: Conditions not met - window:', typeof window !== 'undefined', 'wallet:', wallet?.address);
-    }
-  }, [wallet?.address, addNotification]);
 
   const chainKey = 'base' // Only Base chain supported
   const baseTokens = getTokensFor(chainKey, network)
@@ -272,9 +240,6 @@ export default function Dashboard() {
       <div className="container mx-auto px-4 max-w-4xl">
         <NotificationPermissionBanner />
       </div>
-
-      {/* Notification Container */}
-      <NotificationContainer />
 
       {/* Main Content */}
       <div className="container mx-auto px-4 py-6 max-w-4xl">

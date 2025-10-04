@@ -10,6 +10,7 @@ import { WalletProvider } from "@/contexts/WalletContext";
 import { BiometricProvider } from "@/contexts/BiometricContext";
 import { UserSettingsProvider } from "@/contexts/UserSettingsContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
+import { GlobalNotificationHandler } from "@/components/GlobalNotificationHandler";
 import { visitorTracking } from "@/lib/services/visitor-tracking";
 import "./globals.css";
 
@@ -57,6 +58,7 @@ export default function RootLayout({
               <WalletProvider>
                 <UserSettingsProvider>
                   <NotificationProvider>
+                    <GlobalNotificationHandler />
                     {children}
                   </NotificationProvider>
                 </UserSettingsProvider>
