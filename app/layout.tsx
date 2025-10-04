@@ -9,6 +9,7 @@ import { useEffect } from "react";
 import { WalletProvider } from "@/contexts/WalletContext";
 import { BiometricProvider } from "@/contexts/BiometricContext";
 import { UserSettingsProvider } from "@/contexts/UserSettingsContext";
+import { NotificationProvider } from "@/contexts/NotificationContext";
 import { visitorTracking } from "@/lib/services/visitor-tracking";
 import "./globals.css";
 
@@ -55,7 +56,9 @@ export default function RootLayout({
             <NetworkProvider>
               <WalletProvider>
                 <UserSettingsProvider>
-                  {children}
+                  <NotificationProvider>
+                    {children}
+                  </NotificationProvider>
                 </UserSettingsProvider>
               </WalletProvider>
             </NetworkProvider>
