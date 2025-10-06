@@ -152,12 +152,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
           try {
             const biometricPublicKey = result.biometricPublicKey;
             if (biometricPublicKey) {
-              console.log('Creating user with backend:', {
-                walletAddress: wallet.address,
-                biometricPublicKey: biometricPublicKey.substring(0, 20) + '...'
-              });
-              
-              const createdUser = await backendApi.createUser({
+              await backendApi.createUser({
                 walletAddress: wallet.address,
                 biometricPublicKey,
                 name: '',
@@ -165,21 +160,12 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
                 username: '',
                 sessionTimeout: 30, // Default 30 minutes
               });
-              
-              console.log('✅ User registered with backend successfully:', {
-                walletAddress: createdUser.walletAddress,
-                createdAt: createdUser.createdAt
-              });
               toast.success('Wallet created and registered successfully!');
             } else {
-              console.error('❌ No biometric public key available for user registration');
               toast.warning('Wallet created but registration failed - no biometric key');
             }
           } catch (error) {
-            console.error('❌ Failed to register user with backend:', error);
-            // Show user-friendly error message
             if (error instanceof Error) {
-              console.error('Error details:', error.message);
               toast.error(`Registration failed: ${error.message}`);
             } else {
               toast.error('Registration failed: Unable to connect to server');

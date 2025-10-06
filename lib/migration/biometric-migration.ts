@@ -356,12 +356,16 @@ export class BiometricMigration {
       // Store the updated encrypted wallet
       await secureDB.storeWallet(updatedWallet);
 
+      // Get the biometric public key from the credential
+      const credential = await secureDB.getCredential(securedWallet.credentialId);
+      const biometricPublicKey = credential ? credential.publicKey : undefined;
+
       return {
-        success: true
+        success: true,
+        biometricPublicKey
       };
 
     } catch (error) {
-      console.error('[BiometricMigration] Error encrypting new mnemonic:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error during encryption'

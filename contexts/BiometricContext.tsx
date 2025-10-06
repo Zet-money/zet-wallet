@@ -193,7 +193,6 @@ export function BiometricProvider({ children }: { children: React.ReactNode }) {
       }
       return result;
     } catch (error) {
-      console.error('Error encrypting new mnemonic:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error during encryption'
