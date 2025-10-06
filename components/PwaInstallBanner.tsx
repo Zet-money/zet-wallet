@@ -8,10 +8,10 @@ export default function PwaInstallBanner() {
 
   useEffect(() => {
     if (isStandalonePWA()) return
-    
+
     const checkAndShowBanner = () => {
       const dismissed = typeof window !== 'undefined' ? window.localStorage.getItem('zet.pwa.dismissed') : '1'
-      
+
       // Handle old format (just '1') and new format (JSON with timestamp)
       let isDismissed = false
       if (dismissed) {
@@ -34,7 +34,7 @@ export default function PwaInstallBanner() {
           }
         }
       }
-      
+
       if (!isDismissed && canInstallPWA()) {
         setVisible(true)
       }
@@ -85,7 +85,7 @@ export default function PwaInstallBanner() {
             setInstalling(true)
             const ok = await promptInstallPWA()
             if (!ok) {
-              try { window.localStorage.setItem('zet.pwa.dismissed', '1') } catch {}
+              try { window.localStorage.setItem('zet.pwa.dismissed', '1') } catch { }
               setVisible(false)
             }
             setInstalling(false)
@@ -94,14 +94,14 @@ export default function PwaInstallBanner() {
         <button
           className="px-2 py-1 rounded-md border text-sm"
           onClick={() => {
-            try { 
+            try {
+              setVisible(false)
               // Store timestamp for reminder (show again after 24 hours)
               window.localStorage.setItem('zet.pwa.dismissed', JSON.stringify({
                 timestamp: Date.now(),
                 reminder: true
               }))
-            } catch {}
-            setVisible(false)
+            } catch { }
           }}
         >Later</button>
       </div>
