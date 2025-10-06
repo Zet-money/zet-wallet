@@ -58,7 +58,7 @@ export default function PwaInstallBanner() {
   // iOS Safari: show "Add to Home Screen" instructions instead of prompt
   if (isIOS() && isSafari()) {
     return (
-      <div className="fixed bottom-4 inset-x-0 flex justify-center z-50">
+      <div className="fixed bottom-4 inset-x-0 flex justify-center z-[60]">
         <div className="bg-card border shadow-lg rounded-xl px-4 py-3 text-sm max-w-sm">
           <div className="font-medium mb-1">Add Zet Wallet to Home Screen</div>
           <div className="text-muted-foreground">Open the Share menu
@@ -71,9 +71,11 @@ export default function PwaInstallBanner() {
 
   if (!visible && !canInstallPWA()) return null
 
+  console.log('PWA Banner rendering:', { visible, canInstall: canInstallPWA() })
+
   return (
-    <div className="fixed bottom-4 inset-x-0 flex justify-center z-50">
-      <div className="bg-card border shadow-lg rounded-xl px-4 py-3 flex items-center space-x-3">
+    <div className="fixed bottom-4 inset-x-0 flex justify-center z-[60]">
+      <div className="bg-card border shadow-lg rounded-xl px-4 py-3 flex items-center space-x-3 relative">
         <div className="text-sm">
           <div className="font-medium">Install Zet Wallet</div>
           <div className="text-muted-foreground">Get the best experience as a PWA. {(!visible && !canInstallPWA()) ? 'Reload once to enable the install prompt.' : ''}</div>
@@ -92,8 +94,11 @@ export default function PwaInstallBanner() {
           }}
         >{installing ? 'Installing…' : 'Install'}</button>
         <button
-          className="px-2 py-1 rounded-md border text-sm"
-          onClick={() => {
+          className="px-2 py-1 rounded-md border text-sm hover:bg-muted transition-colors"
+          onClick={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            console.log('Later button clicked!')
             try {
               setVisible(false)
               // Store timestamp for reminder (show again after 24 hours)
@@ -101,7 +106,10 @@ export default function PwaInstallBanner() {
                 timestamp: Date.now(),
                 reminder: true
               }))
-            } catch { }
+              console.log('Later button: Banner dismissed and reminder set')
+            } catch (error) {
+              console.error('Later button: Error setting localStorage:', error)
+            }
           }}
         >Later</button>
       </div>
