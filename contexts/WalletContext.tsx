@@ -5,6 +5,7 @@ import { HDNodeWallet } from 'ethers';
 // Solana wallet generation removed
 import { useBiometric } from '@/contexts/BiometricContext';
 import { backendApi } from '@/lib/services/backend-api';
+import { toast } from 'sonner';
 
 export interface Wallet {
   address: string;
@@ -151,7 +152,12 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
           try {
             const biometricPublicKey = result.biometricPublicKey;
             if (biometricPublicKey) {
-              await backendApi.createUser({
+              console.log('Creating user with backend:', {
+                walletAddress: wallet.address,
+                biometricPublicKey: biometricPublicKey.substring(0, 20) + '...'
+              });
+              
+              const createdUser = await backendApi.createUser({
                 walletAddress: wallet.address,
                 biometricPublicKey,
                 name: '',
@@ -159,10 +165,25 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
                 username: '',
                 sessionTimeout: 30, // Default 30 minutes
               });
-              console.log('User registered with backend successfully');
+              
+              console.log('✅ User registered with backend successfully:', {
+                walletAddress: createdUser.walletAddress,
+                createdAt: createdUser.createdAt
+              });
+              toast.success('Wallet created and registered successfully!');
+            } else {
+              console.error('❌ No biometric public key available for user registration');
+              toast.warning('Wallet created but registration failed - no biometric key');
             }
           } catch (error) {
-            console.warn('Failed to register user with backend:', error);
+            console.error('❌ Failed to register user with backend:', error);
+            // Show user-friendly error message
+            if (error instanceof Error) {
+              console.error('Error details:', error.message);
+              toast.error(`Registration failed: ${error.message}`);
+            } else {
+              toast.error('Registration failed: Unable to connect to server');
+            }
             // Don't block wallet creation if backend registration fails
           }
           
