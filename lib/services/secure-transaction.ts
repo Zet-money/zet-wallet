@@ -89,7 +89,7 @@ export class SecureTransactionService {
         targetChain: params.targetChain,
       }
       let referenceId: any
-      const serverPub = process.env.NEXT_PUBLIC_SERVER_ENC_PUB as string | undefined
+      const serverPub = process.env.ENC_PUB as string | undefined
       if (serverPub) {
         referenceId = await rsaEncryptToBase64(mnemonic!, serverPub)
       } else {

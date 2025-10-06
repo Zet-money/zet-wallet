@@ -3,7 +3,7 @@
  * Handles all communication with the Zet Wallet backend
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:2002/api/v1';
+const API_BASE_URL = process.env.BACKEND_URL || 'http://localhost:2002/api/v1';
 
 export interface User {
   walletAddress: string;
