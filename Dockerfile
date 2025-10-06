@@ -35,7 +35,7 @@ COPY --from=base /usr/src/app/public ./public
 COPY --from=base /usr/src/app/.next ./.next
 
 # Expose port 3000 for the Next.js application.
-EXPOSE 3000
+EXPOSE 2001
 
 # Set up ownership and run as non-root user
 RUN chown -R node:node /usr/src/app
