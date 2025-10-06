@@ -49,7 +49,13 @@ export async function promptInstallPWA(): Promise<boolean> {
     const choice = await deferredPrompt.userChoice
     const accepted = choice?.outcome === 'accepted'
     if (!accepted) {
-      try { window.localStorage.setItem('zet.pwa.dismissed', '1') } catch {}
+      try { 
+        // Store timestamp for reminder (show again after 24 hours)
+        window.localStorage.setItem('zet.pwa.dismissed', JSON.stringify({
+          timestamp: Date.now(),
+          reminder: true
+        }))
+      } catch {}
     }
     deferredPrompt = null
     return !!accepted

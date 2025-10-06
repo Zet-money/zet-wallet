@@ -8,13 +8,43 @@ export default function PwaInstallBanner() {
 
   useEffect(() => {
     if (isStandalonePWA()) return
-    const dismissed = typeof window !== 'undefined' ? window.localStorage.getItem('zet.pwa.dismissed') : '1'
-    if (!dismissed && canInstallPWA()) setVisible(true)
+    
+    const checkAndShowBanner = () => {
+      const dismissed = typeof window !== 'undefined' ? window.localStorage.getItem('zet.pwa.dismissed') : '1'
+      
+      // Handle old format (just '1') and new format (JSON with timestamp)
+      let isDismissed = false
+      if (dismissed) {
+        if (dismissed === '1') {
+          isDismissed = true
+        } else {
+          try {
+            const dismissedData = JSON.parse(dismissed)
+            if (dismissedData.reminder) {
+              // Check if 24 hours have passed
+              const now = Date.now()
+              const twentyFourHours = 24 * 60 * 60 * 1000
+              isDismissed = (now - dismissedData.timestamp) < twentyFourHours
+            } else {
+              isDismissed = true
+            }
+          } catch {
+            // If JSON parsing fails, treat as dismissed
+            isDismissed = true
+          }
+        }
+      }
+      
+      if (!isDismissed && canInstallPWA()) {
+        setVisible(true)
+      }
+    }
+
+    checkAndShowBanner()
 
     onInstallAvailabilityChange((available) => {
       if (available) {
-        const dismissed2 = typeof window !== 'undefined' ? window.localStorage.getItem('zet.pwa.dismissed') : '1'
-        if (!dismissed2) setVisible(true)
+        checkAndShowBanner()
       }
     })
 
@@ -64,7 +94,13 @@ export default function PwaInstallBanner() {
         <button
           className="px-2 py-1 rounded-md border text-sm"
           onClick={() => {
-            try { window.localStorage.setItem('zet.pwa.dismissed', '1') } catch {}
+            try { 
+              // Store timestamp for reminder (show again after 24 hours)
+              window.localStorage.setItem('zet.pwa.dismissed', JSON.stringify({
+                timestamp: Date.now(),
+                reminder: true
+              }))
+            } catch {}
             setVisible(false)
           }}
         >Later</button>
