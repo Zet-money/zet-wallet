@@ -5,52 +5,82 @@ import { canInstallPWA, isIOS, isSafari, isStandalonePWA, onInstallAvailabilityC
 export default function PwaInstallBanner() {
   const [visible, setVisible] = useState(false)
   const [installing, setInstalling] = useState(false)
+  const [canInstall, setCanInstall] = useState(false)
+  const [isDismissed, setIsDismissed] = useState(true)
+
+  const checkDismissedStatus = () => {
+    if (typeof window === 'undefined') return true
+    
+    const dismissed = window.localStorage.getItem('zet.pwa.dismissed')
+    
+    // Handle old format (just '1') and new format (JSON with timestamp)
+    if (!dismissed) return false
+    
+    if (dismissed === '1') {
+      return true
+    }
+    
+    try {
+      const dismissedData = JSON.parse(dismissed)
+      if (dismissedData.reminder) {
+        // Check if 24 hours have passed
+        const now = Date.now()
+        const twentyFourHours = 24 * 60 * 60 * 1000
+        return (now - dismissedData.timestamp) < twentyFourHours
+      }
+      return true
+    } catch {
+      // If JSON parsing fails, treat as dismissed
+      return true
+    }
+  }
+
+  const updateVisibility = () => {
+    const dismissed = checkDismissedStatus()
+    const installable = canInstallPWA()
+    
+    setIsDismissed(dismissed)
+    setCanInstall(installable)
+    setVisible(!dismissed && installable)
+  }
 
   useEffect(() => {
     if (isStandalonePWA()) return
 
-    const checkAndShowBanner = () => {
-      const dismissed = typeof window !== 'undefined' ? window.localStorage.getItem('zet.pwa.dismissed') : '1'
+    // Initial check
+    updateVisibility()
 
-      // Handle old format (just '1') and new format (JSON with timestamp)
-      let isDismissed = false
-      if (dismissed) {
-        if (dismissed === '1') {
-          isDismissed = true
-        } else {
-          try {
-            const dismissedData = JSON.parse(dismissed)
-            if (dismissedData.reminder) {
-              // Check if 24 hours have passed
-              const now = Date.now()
-              const twentyFourHours = 24 * 60 * 60 * 1000
-              isDismissed = (now - dismissedData.timestamp) < twentyFourHours
-            } else {
-              isDismissed = true
-            }
-          } catch {
-            // If JSON parsing fails, treat as dismissed
-            isDismissed = true
-          }
-        }
-      }
-
-      if (!isDismissed && canInstallPWA()) {
-        setVisible(true)
+    // Listen for install availability changes
+    const handleAvailabilityChange = (available: boolean) => {
+      setCanInstall(available)
+      if (available) {
+        updateVisibility()
       }
     }
 
-    checkAndShowBanner()
-
-    onInstallAvailabilityChange((available) => {
-      if (available) {
-        checkAndShowBanner()
+    // Listen for install status changes
+    const handleInstallStatusChange = (installed: boolean) => {
+      if (installed) {
+        setVisible(false)
       }
-    })
+    }
 
-    onInstallStatusChange((installed) => {
-      if (installed) setVisible(false)
-    })
+    // Listen for storage changes (when user dismisses from another tab)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'zet.pwa.dismissed') {
+        updateVisibility()
+      }
+    }
+
+    // Set up listeners
+    onInstallAvailabilityChange(handleAvailabilityChange)
+    onInstallStatusChange(handleInstallStatusChange)
+    window.addEventListener('storage', handleStorageChange)
+
+    // Cleanup
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+    }
   }, [])
 
   if (isStandalonePWA()) return null
@@ -69,16 +99,17 @@ export default function PwaInstallBanner() {
     )
   }
 
-  if (!visible && !canInstallPWA()) return null
+  // Don't render if not visible or can't install
+  if (!visible || !canInstall) return null
 
-  console.log('PWA Banner rendering:', { visible, canInstall: canInstallPWA() })
+  console.log('PWA Banner rendering:', { visible, canInstall, isDismissed })
 
   return (
     <div className="fixed bottom-4 inset-x-0 flex justify-center z-[60]">
       <div className="bg-card border shadow-lg rounded-xl px-4 py-3 flex items-center space-x-3 relative">
         <div className="text-sm">
           <div className="font-medium">Install Zet Wallet</div>
-          <div className="text-muted-foreground">Get the best experience as a PWA. {(!visible && !canInstallPWA()) ? 'Reload once to enable the install prompt.' : ''}</div>
+          <div className="text-muted-foreground">Get the best experience as a PWA.</div>
         </div>
         <button
           className="px-3 py-1.5 rounded-md bg-primary text-primary-foreground text-sm disabled:opacity-60"
@@ -87,8 +118,10 @@ export default function PwaInstallBanner() {
             setInstalling(true)
             const ok = await promptInstallPWA()
             if (!ok) {
-              try { window.localStorage.setItem('zet.pwa.dismissed', '1') } catch { }
-              setVisible(false)
+              try { 
+                window.localStorage.setItem('zet.pwa.dismissed', '1') 
+                updateVisibility() // Update state immediately
+              } catch { }
             }
             setInstalling(false)
           }}
@@ -98,17 +131,16 @@ export default function PwaInstallBanner() {
           onClick={(e) => {
             e.preventDefault()
             e.stopPropagation()
-            console.log('Later button clicked!')
             try {
-              setVisible(false)
               // Store timestamp for reminder (show again after 24 hours)
               window.localStorage.setItem('zet.pwa.dismissed', JSON.stringify({
                 timestamp: Date.now(),
                 reminder: true
               }))
-              console.log('Later button: Banner dismissed and reminder set')
+              // Update state immediately
+              updateVisibility()
             } catch (error) {
-              console.error('Later button: Error setting localStorage:', error)
+              console.error('Error setting localStorage:', error)
             }
           }}
         >Later</button>
