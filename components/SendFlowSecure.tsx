@@ -342,6 +342,9 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
       
       console.log('[UI][SEND] Resolved recipient:', resolved);
 
+      // ENS resolution complete, now we can show "Sending..." state
+      setIsResolvingENS(false);
+
       // Use resolved address for transaction
       const finalRecipientAddress = resolved.address;
 
@@ -957,38 +960,40 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
             </div>
           )}
 
-          {/* Action Buttons */}
-          <div className="flex space-x-2 pt-4">
-            <Button
-              variant="outline"
-              onClick={onClose}
-              className="flex-1"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSend}
-              disabled={isExecuting || isResolvingENS || !recipientAddress || !amount || !destinationChain || !destinationToken}
-              className="flex-1"
-            >
-              {isExecuting ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
-                  Sending...
-                </>
-              ) : isResolvingENS ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
-                  Resolving ENS...
-                </>
-              ) : (
-                <>
-                  Send
-                  <ArrowRight className="w-4 h-4 ml-2" />
-                </>
-              )}
-            </Button>
-          </div>
+          {/* Action Buttons - Only show when transaction is not completed */}
+          {txPhase !== 'completed' && txPhase !== 'failed' && txPhase !== 'timeout' && (
+            <div className="flex space-x-2 pt-4">
+              <Button
+                variant="outline"
+                onClick={onClose}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSend}
+                disabled={isExecuting || isResolvingENS || !recipientAddress || !amount || !destinationChain || !destinationToken}
+                className="flex-1"
+              >
+                {isExecuting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
+                    Sending...
+                  </>
+                ) : isResolvingENS ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
+                    Resolving ENS...
+                  </>
+                ) : (
+                  <>
+                    Send
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
