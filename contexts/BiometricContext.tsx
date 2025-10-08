@@ -17,6 +17,7 @@ export interface BiometricContextType {
   isEncrypted: boolean;
   isLoading: boolean;
   needsBiometricSetup: boolean;
+  needsWalletCreation: boolean;
   migrationStatus: {
     hasUnencrypted: boolean;
     hasEncrypted: boolean;
@@ -45,6 +46,7 @@ export function BiometricProvider({ children }: { children: React.ReactNode }) {
   } | null>(null);
   const [sessionTimeout, setSessionTimeout] = useState<NodeJS.Timeout | null>(null);
   const [needsBiometricSetup, setNeedsBiometricSetup] = useState(false);
+  const [needsWalletCreation, setNeedsWalletCreation] = useState(false);
 
   // Helper function to update lastActive timestamp
   const updateLastActive = async () => {
@@ -58,6 +60,20 @@ export function BiometricProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (error) {
       console.warn('Failed to update lastActive timestamp:', error);
+    }
+  };
+
+  // Helper function to check if encrypted wallet has actual mnemonic data
+  const checkWalletHasMnemonic = async (): Promise<boolean> => {
+    try {
+      const securedWallet = await secureDB.getWallet();
+      if (!securedWallet) return false;
+      
+      // Check if the wallet has actual encrypted mnemonic data (not empty)
+      return securedWallet.encryptedMnemonic.byteLength > 0;
+    } catch (error) {
+      console.error('Error checking wallet mnemonic:', error);
+      return false;
     }
   };
 
@@ -80,13 +96,21 @@ export function BiometricProvider({ children }: { children: React.ReactNode }) {
             setNeedsBiometricSetup(true);
           }
         } else if (status.hasEncrypted && status.biometricSupported) {
-          // If we have encrypted data, try to unlock automatically
-          const unlockResult = await biometricMigration.unlockWalletWithBiometrics();
-          if (unlockResult.success) {
-            setIsAppUnlocked(true);
-            startSessionTimeout();
-            // Update lastActive timestamp
-            await updateLastActive();
+          // Check if the encrypted wallet has actual mnemonic data
+          const hasMnemonic = await checkWalletHasMnemonic();
+          if (hasMnemonic) {
+            // If we have encrypted data with mnemonic, try to unlock automatically
+            const unlockResult = await biometricMigration.unlockWalletWithBiometrics();
+            if (unlockResult.success) {
+              setIsAppUnlocked(true);
+              startSessionTimeout();
+              // Update lastActive timestamp
+              await updateLastActive();
+            }
+          } else {
+            // If we have encrypted data but no mnemonic, user needs to create wallet
+            setNeedsWalletCreation(true);
+            setIsAppUnlocked(true); // Allow access to wallet creation
           }
         } else if (status.hasUnencrypted && !status.hasEncrypted) {
           // If we have unencrypted data but no encrypted data, unlock the app
@@ -171,6 +195,13 @@ export function BiometricProvider({ children }: { children: React.ReactNode }) {
         setIsEncrypted(true);
         setIsAppUnlocked(true);
         setNeedsBiometricSetup(false);
+        
+        // Check if we need wallet creation after biometric setup
+        const hasMnemonic = await checkWalletHasMnemonic();
+        if (!hasMnemonic) {
+          setNeedsWalletCreation(true);
+        }
+        
         startSessionTimeout(); // Start session timeout after setup
         await checkMigrationStatus();
       }
@@ -189,6 +220,7 @@ export function BiometricProvider({ children }: { children: React.ReactNode }) {
       const result = await biometricMigration.encryptNewMnemonic(mnemonic);
       if (result.success) {
         setIsEncrypted(true);
+        setNeedsWalletCreation(false); // Wallet creation is now complete
         await checkMigrationStatus();
       }
       return result;
@@ -241,6 +273,7 @@ export function BiometricProvider({ children }: { children: React.ReactNode }) {
         isEncrypted,
         isLoading,
         needsBiometricSetup,
+        needsWalletCreation,
         migrationStatus,
         unlockApp,
         lockApp,

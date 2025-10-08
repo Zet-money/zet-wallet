@@ -13,7 +13,7 @@ import PwaInstallBanner from '@/components/PwaInstallBanner';
 
 function AppContent() {
   const { isWalletInitialized, isLoading } = useWallet();
-  const { isAppUnlocked, isBiometricSupported, isEncrypted, isLoading: isBiometricLoading, needsBiometricSetup } = useBiometric();
+  const { isAppUnlocked, isBiometricSupported, isEncrypted, isLoading: isBiometricLoading, needsBiometricSetup, needsWalletCreation } = useBiometric();
   const searchParams = useSearchParams();
   const initParam = searchParams.get('init');
   const [showSplash, setShowSplash] = useState(() => initParam === 'false' ? false : true);
@@ -74,8 +74,8 @@ function AppContent() {
     );
   }
 
-  // Show wallet setup if no session found
-  if (!isWalletInitialized) {
+  // Show wallet setup if no session found OR if biometric is set up but wallet creation is needed
+  if (!isWalletInitialized || needsWalletCreation) {
     return (
       <>
         <WalletSetup />
