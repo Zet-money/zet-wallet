@@ -122,7 +122,7 @@ export default function WalletSetup() {
               </div>
             </div>
             
-            <Button onClick={confirmMnemonicSaved} className="w-full">
+            <Button onClick={confirmMnemonicSaved} className="w-full gradient-primary text-white">
               I've saved my recovery phrase
             </Button>
           </CardContent>
@@ -138,7 +138,7 @@ export default function WalletSetup() {
           <div className="w-16 h-16 mx-auto bg-primary/10 rounded-2xl flex items-center justify-center mb-4">
             <span className="text-2xl font-bold text-primary">Z</span>
           </div>
-          <CardTitle className="text-2xl">Welcome to Zet.money</CardTitle>
+          <CardTitle className="text-2xl gradient-text">Welcome to Zet.money</CardTitle>
           <CardDescription>
             Create a new wallet or import an existing one to get started
           </CardDescription>
@@ -157,7 +157,7 @@ export default function WalletSetup() {
                   Generate a new 12-word recovery phrase for your wallet
                 </p>
               </div>
-              <Button onClick={handleCreateWallet} className="w-full">
+              <Button onClick={handleCreateWallet} className="w-full gradient-primary text-white">
                 Create New Wallet
               </Button>
             </TabsContent>
@@ -176,7 +176,7 @@ export default function WalletSetup() {
                   Enter the 12 words separated by spaces
                 </p>
               </div>
-              <Button onClick={handleImportWallet} className="w-full">
+              <Button onClick={handleImportWallet} className="w-full gradient-primary text-white">
                 Import Wallet
               </Button>
             </TabsContent>

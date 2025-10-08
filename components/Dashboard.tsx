@@ -185,7 +185,7 @@ export default function Dashboard() {
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <h1 className="font-semibold text-sm sm:text-base">Zet.money</h1>
+                  <h1 className="font-semibold text-sm sm:text-base gradient-text">Zet.money</h1>
                   {profile?.name && (
                     <span className="text-sm text-muted-foreground hidden sm:inline">
                       Hi, {profile.name}
@@ -272,7 +272,7 @@ export default function Dashboard() {
         <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-6">
           <Button 
             onClick={() => setShowSendModal(true)}
-            className="h-12 sm:h-10 flex items-center justify-center space-x-2"
+            className="h-12 sm:h-10 flex items-center justify-center space-x-2 gradient-primary text-white"
           >
             <Send className="w-4 h-4" />
             <span>Send</span>
@@ -340,7 +340,7 @@ export default function Dashboard() {
                           e.currentTarget.nextElementSibling?.classList.remove('hidden');
                         }}
                       />
-                      <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center text-xs font-semibold hidden">
+                      <div className="w-8 h-8 bg-muted rounded-full items-center justify-center text-xs font-semibold hidden">
                         {asset.symbol}
                       </div>
                     </div>
@@ -436,7 +436,7 @@ export default function Dashboard() {
                               e.currentTarget.nextElementSibling?.classList.remove('hidden');
                             }}
                           />
-                          <div className="w-6 h-6 bg-muted rounded-full flex items-center justify-center text-xs font-semibold hidden">
+                          <div className="w-6 h-6 bg-muted rounded-full items-center justify-center text-xs font-semibold hidden">
                             {asset.symbol}
                           </div>
                         </div>
