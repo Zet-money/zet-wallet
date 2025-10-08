@@ -1,17 +1,14 @@
-"use client";
-
 import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/sonner";
 import { NetworkProvider } from "@/contexts/NetworkContext";
-import { registerServiceWorker, setupInstallPrompt } from "@/lib/pwa";
-import { useEffect } from "react";
 import { WalletProvider } from "@/contexts/WalletContext";
 import { BiometricProvider } from "@/contexts/BiometricContext";
 import { UserSettingsProvider } from "@/contexts/UserSettingsContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
 import { GlobalNotificationHandler } from "@/components/GlobalNotificationHandler";
-import { visitorTracking } from "@/lib/services/visitor-tracking";
+import AppInitializer from "@/components/AppInitializer";
+import { metadata } from "./metadata";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -24,26 +21,15 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+export { metadata };
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  useEffect(() => {
-    registerServiceWorker()
-    setupInstallPrompt()
-    
-    // Initialize visitor tracking
-    visitorTracking.initialize()
-  }, [])
   return (
     <html lang="en" suppressHydrationWarning>
-      <head>
-        <link rel="apple-touch-icon" href="/favicon.ico" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="Zet Wallet" />
-      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
@@ -53,18 +39,20 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <BiometricProvider>
-            <NetworkProvider>
-              <WalletProvider>
-                <UserSettingsProvider>
-                  <NotificationProvider>
-                    <GlobalNotificationHandler />
-                    {children}
-                  </NotificationProvider>
-                </UserSettingsProvider>
-              </WalletProvider>
-            </NetworkProvider>
-          </BiometricProvider>
+          <AppInitializer>
+            <BiometricProvider>
+              <NetworkProvider>
+                <WalletProvider>
+                  <UserSettingsProvider>
+                    <NotificationProvider>
+                      <GlobalNotificationHandler />
+                      {children}
+                    </NotificationProvider>
+                  </UserSettingsProvider>
+                </WalletProvider>
+              </NetworkProvider>
+            </BiometricProvider>
+          </AppInitializer>
           <Toaster position="top-center" />
         </ThemeProvider>
       </body>
