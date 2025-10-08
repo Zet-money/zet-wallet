@@ -22,6 +22,7 @@ import { IN_APP_RPC_MAP } from '@/lib/rpc';
 import { getTokenPriceUSD, getTokenChangeUSD24h } from '@/lib/prices';
 import ReceiveFlow from './ReceiveFlow';
 import SellCryptoModal from './SellCryptoModal';
+import SendFlowSecure from './SendFlowSecure';
 import { useSecureTransaction } from '@/hooks/useSecureTransaction';
 import { NotificationPermissionBanner } from './NotificationPermissionBanner';
 // Solana imports removed - only Base chain supported
@@ -44,6 +45,8 @@ export default function Dashboard() {
   const [showSellModal, setShowSellModal] = useState(false);
   const [showBuyModal, setShowBuyModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showSendFlow, setShowSendFlow] = useState(false);
+  const [selectedAsset, setSelectedAsset] = useState<any>(null);
   // Chain selection is disabled - only Base is supported
 
   // Persist selected chain on change
@@ -53,22 +56,28 @@ export default function Dashboard() {
     } catch {}
   }, [selectedChain])
 
-  const chainKey = 'base' // Only Base chain supported
-  const baseTokens = getTokensFor(chainKey, network)
-  const networkTokens = baseTokens.map((t, idx) => ({
-    id: `${chainKey}-${t.symbol}-${idx}`,
-    symbol: t.symbol,
-    name: t.name,
-    balance: '—',
-    usdValue: '0.00',
-    chain: 'Base',
-    logo: `${t.symbol === 'cNGN' ? '/cngn.svg' : `https://assets.parqet.com/logos/crypto/${t.logo || t.symbol}?format=png`}`,
-  }))
-
   const [balances, setBalances] = useState<Record<string, string>>({})
   const [loadingBalances, setLoadingBalances] = useState(false)
   const [prices, setPrices] = useState<Record<string, number>>({})
   const [changes, setChanges] = useState<Record<string, number>>({})
+
+  const chainKey = 'base' // Only Base chain supported
+  const baseTokens = getTokensFor(chainKey, network)
+  const networkTokens = baseTokens.map((t, idx) => {
+    const balance = balances[t.symbol] || '0';
+    const price = prices[t.symbol] || 0;
+    const usdValue = balance !== '0' && price > 0 ? (parseFloat(balance) * price).toFixed(2) : '0.00';
+    
+    return {
+      id: `${chainKey}-${t.symbol}-${idx}`,
+      symbol: t.symbol,
+      name: t.name,
+      balance: balance,
+      usdValue: usdValue,
+      chain: 'Base',
+      logo: `${t.symbol === 'cNGN' ? '/cngn.svg' : `https://assets.parqet.com/logos/crypto/${t.logo || t.symbol}?format=png`}`,
+    };
+  })
 
   useEffect(() => {
     const load = async () => {
@@ -411,7 +420,8 @@ export default function Dashboard() {
                     className="cursor-pointer hover:bg-muted/50"
                     onClick={() => {
                       setShowSendModal(false);
-                      router.push(`/asset/${asset.id}`);
+                      setSelectedAsset(asset);
+                      setShowSendFlow(true);
                     }}
                   >
                     <CardContent className="p-3">
@@ -435,7 +445,12 @@ export default function Dashboard() {
                             <span className="font-semibold">{asset.symbol}</span>
                             <Badge variant="secondary" className="text-xs">{asset.chain}</Badge>
                           </div>
-                          <p className="text-sm text-muted-foreground">{asset.balance} {asset.symbol}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {parseFloat(asset.balance).toFixed(6)} {asset.symbol}
+                          </p>
+                          {asset.usdValue !== '0.00' && (
+                            <p className="text-xs text-muted-foreground">${asset.usdValue}</p>
+                          )}
                         </div>
                       </div>
                     </CardContent>
@@ -502,6 +517,17 @@ export default function Dashboard() {
         isOpen={showSettingsModal} 
         onClose={() => setShowSettingsModal(false)} 
       />
+
+      {/* Send Flow Modal */}
+      {showSendFlow && selectedAsset && (
+        <SendFlowSecure 
+          asset={selectedAsset}
+          onClose={() => {
+            setShowSendFlow(false);
+            setSelectedAsset(null);
+          }}
+        />
+      )}
     </div>
   );
 }
