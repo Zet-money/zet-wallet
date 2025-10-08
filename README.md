@@ -1,4 +1,4 @@
-# Zet Wallet
+# Zet.money
 
 A modern, responsive cross-chain wallet UI built with Next.js, TypeScript, and Shadcn UI. This wallet interface supports multiple blockchain networks including Ethereum, Solana, Sui, and TON.
 
@@ -179,4 +179,4 @@ This project is licensed under the MIT License.
 
 ---
 
-Built with ❤️ for the Zet Wallet project
+Built with ❤️ for the Zet.money project

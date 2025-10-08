@@ -2,7 +2,7 @@ import type { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Zet Wallet',
+    name: 'Zet.money',
     short_name: 'Zet',
     description: 'Cross-chain wallet powered by ZetaChain',
     start_url: '/',

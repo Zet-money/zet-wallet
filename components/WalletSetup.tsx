@@ -138,7 +138,7 @@ export default function WalletSetup() {
           <div className="w-16 h-16 mx-auto bg-primary/10 rounded-2xl flex items-center justify-center mb-4">
             <span className="text-2xl font-bold text-primary">Z</span>
           </div>
-          <CardTitle className="text-2xl">Welcome to Zet Wallet</CardTitle>
+          <CardTitle className="text-2xl">Welcome to Zet.money</CardTitle>
           <CardDescription>
             Create a new wallet or import an existing one to get started
           </CardDescription>

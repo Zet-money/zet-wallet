@@ -1,7 +1,7 @@
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Zet Wallet",
+  title: "Zet.money",
   description: "Your Crypto Super App",
   icons: {
     icon: "/favicon.ico",
@@ -10,6 +10,6 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Zet Wallet",
+    title: "Zet.money",
   },
 };

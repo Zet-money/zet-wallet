@@ -26,8 +26,8 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
           <div className="w-24 h-24 mx-auto bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
             <span className="text-4xl font-bold text-white">Z</span>
           </div>
-          <h1 className="text-4xl font-bold text-white">Zet Wallet</h1>
-          <p className="text-white/80 text-lg">Cross-chain DeFi made simple</p>
+          <h1 className="text-4xl font-bold text-white">Zet.money</h1>
+          <p className="text-white/80 text-lg">Your Crypto Super App</p>
         </div>
         
         {isLoading && (

@@ -185,7 +185,7 @@ export default function Dashboard() {
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <h1 className="font-semibold text-sm sm:text-base">Zet Wallet</h1>
+                  <h1 className="font-semibold text-sm sm:text-base">Zet.money</h1>
                   {profile?.name && (
                     <span className="text-sm text-muted-foreground hidden sm:inline">
                       Hi, {profile.name}

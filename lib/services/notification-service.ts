@@ -126,7 +126,7 @@ export class NotificationService {
       // Show notification if app is in foreground
       if (payload.notification) {
         this.showNotification(
-          payload.notification.title || 'ZetWallet',
+          payload.notification.title || 'Zet.money',
           payload.notification.body || 'You have a new notification',
           payload.data
         );

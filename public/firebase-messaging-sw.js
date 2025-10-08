@@ -19,7 +19,7 @@ const messaging = firebase.messaging();
 messaging.onBackgroundMessage((payload) => {
   console.log('Received background message:', payload);
 
-  const notificationTitle = payload.notification?.title || 'ZetWallet';
+  const notificationTitle = payload.notification?.title || 'Zet.money';
   const notificationOptions = {
     body: payload.notification?.body || 'You have a new notification',
     icon: '/icon-192x192.png',

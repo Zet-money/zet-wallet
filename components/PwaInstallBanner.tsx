@@ -90,7 +90,7 @@ export default function PwaInstallBanner() {
     return (
       <div className="fixed bottom-4 inset-x-0 flex justify-center z-[60]">
         <div className="bg-card border shadow-lg rounded-xl px-4 py-3 text-sm max-w-sm">
-          <div className="font-medium mb-1">Add Zet Wallet to Home Screen</div>
+          <div className="font-medium mb-1">Add Zet.money to Home Screen</div>
           <div className="text-muted-foreground">Open the Share menu
             <span className="inline-block mx-1">⬆️</span> and choose “Add to Home Screen”.
           </div>
@@ -108,7 +108,7 @@ export default function PwaInstallBanner() {
     <div className="fixed bottom-4 inset-x-0 flex justify-center z-[60]">
       <div className="bg-card border shadow-lg rounded-xl px-4 py-3 flex items-center space-x-3 relative">
         <div className="text-sm">
-          <div className="font-medium">Install Zet Wallet</div>
+          <div className="font-medium">Install Zet.money</div>
           <div className="text-muted-foreground">Get the best experience as a PWA.</div>
         </div>
         <button
