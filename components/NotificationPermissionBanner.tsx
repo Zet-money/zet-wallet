@@ -17,6 +17,20 @@ export function NotificationPermissionBanner() {
   useEffect(() => {
     console.log('NotificationPermissionBanner: Checking conditions...');
     
+    // Don't show banner if wallet is not available yet
+    if (!wallet?.address) {
+      console.log('No wallet address available yet, not showing banner');
+      return;
+    }
+    
+    // Check if notifications are already properly enabled
+    const notificationsEnabled = localStorage.getItem('notifications_enabled');
+    if (notificationsEnabled === 'true') {
+      console.log('Notifications already enabled, not showing banner');
+      setIsVisible(false);
+      return;
+    }
+
     // Check if user has already dismissed the banner
     const dismissedData = localStorage.getItem('notification-banner-dismissed');
     console.log('Dismissed data:', dismissedData);
@@ -48,41 +62,29 @@ export function NotificationPermissionBanner() {
       const permission = notificationService.getPermissionStatus();
       console.log('Permission status:', permission);
       
-      // Show banner if permission is default (not asked yet) OR if granted but no FCM token saved
+      // Show banner if permission is default (not asked yet)
       if (!permission.granted && !permission.denied) {
         console.log('Permission not asked yet, setting banner visible');
         setIsVisible(true);
       } else if (permission.granted) {
-        // Permission is granted, but we need to ensure the token is registered with backend
-        console.log('Permission granted, ensuring token is registered with backend...');
-        if (wallet?.address) {
-          // Try to register the token with backend
-          getBiometricPublicKey().then(biometricPublicKey => {
-            if (biometricPublicKey) {
-              notificationService.subscribeToNotifications(wallet.address, biometricPublicKey).then(success => {
-                if (!success) {
-                  console.log('Failed to register token with backend, showing banner');
-                  setIsVisible(true);
-                } else {
-                  console.log('Token successfully registered with backend');
-                }
-              });
-            } else {
-              console.log('No biometric public key, showing banner');
-              setIsVisible(true);
-            }
-          });
-        } else {
-          console.log('No wallet address, showing banner');
+        // Permission is granted - check if we have a stored FCM token
+        const storedToken = localStorage.getItem('fcm_token');
+        if (!storedToken) {
+          console.log('Permission granted but no FCM token stored, showing banner');
           setIsVisible(true);
+        } else {
+          console.log('Permission granted and FCM token exists, not showing banner');
+          setIsVisible(false);
         }
       } else {
         console.log('Permission denied, not showing banner');
+        setIsVisible(false);
       }
     } else {
       console.log('Notifications not supported, not showing banner');
+      setIsVisible(false);
     }
-  }, []);
+  }, [wallet?.address]); // Add wallet.address as dependency
 
   const handleEnableNotifications = async () => {
     if (!wallet?.address) {
@@ -104,6 +106,8 @@ export function NotificationPermissionBanner() {
         setIsVisible(false);
         // Clear the dismissed flag since notifications are now enabled
         localStorage.removeItem('notification-banner-dismissed');
+        // Store a flag to indicate notifications are properly set up
+        localStorage.setItem('notifications_enabled', 'true');
       } else {
         toast.error('Failed to enable notifications. Please try again.');
       }
