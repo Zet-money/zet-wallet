@@ -28,6 +28,16 @@ export function getZrcSymbolFor(targetChain: SupportedEvm, tokenSymbol: string, 
   if (targetChain === 'zetachain') return tokenSymbol.toUpperCase()
   const suffix = network === 'mainnet' ? MAINNET_SUFFIX[targetChain as Exclude<SupportedEvm, 'zetachain'>] : TESTNET_SUFFIX[targetChain as Exclude<SupportedEvm, 'zetachain'>]
   if (!suffix) return undefined
+  console.log('suffix', suffix)
+  console.log('tokenSymbol', tokenSymbol)
+  console.log('targetChain', targetChain)
+  console.log('network', network)
+  
+  // Special case: MATIC on Polygon maps to POL.POL (mainnet) or POL.AMOY (testnet)
+  if (targetChain === 'polygon' && tokenSymbol.toUpperCase() === 'MATIC') {
+    return network === 'mainnet' ? 'POL.POL' : 'POL.AMOY'
+  }
+  
   return `${tokenSymbol.toUpperCase()}.${suffix}`
 }
 
