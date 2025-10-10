@@ -137,10 +137,15 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
     const networkKey = (network === 'mainnet' ? 'mainnet' : 'testnet') as TokenNetwork;
     const tokens = getTokensFor(chainForTokens, networkKey);
     
-    // Filter out cNGN when sending ETH on Base (same-chain restriction)
+    // Filter tokens based on source token restrictions
     const filteredTokens = tokens.filter(token => {
+      // When sending ETH on Base, exclude cNGN
       if (asset.symbol === 'ETH' && destinationChain === 'base-same') {
         return token.symbol !== 'cNGN';
+      }
+      // When sending cNGN, only allow cNGN as destination
+      if (asset.symbol === 'cNGN' && destinationChain === 'base-same') {
+        return token.symbol === 'cNGN';
       }
       return true;
     });
@@ -864,7 +869,12 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
 
               {(asset.symbol === 'cNGN' && destinationChain !== 'base-same') && (
                 <p className="text-sm text-muted-foreground">
-                  cNGN can only be transferred on the same chain (Base)
+                  cNGN cross-chain transfers will be supported soon
+                </p>
+              )}
+              {(asset.symbol === 'cNGN' && destinationChain === 'base-same') && (
+                <p className="text-sm text-muted-foreground">
+                  ETH and USDC destination tokens for cNGN transfers will be available soon
                 </p>
               )}
             </>
