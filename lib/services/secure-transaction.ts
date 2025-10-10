@@ -8,6 +8,7 @@ import { type Network as ZetNetwork } from "@/lib/providers";
 import { BiometricMigration } from "@/lib/migration/biometric-migration";
 import { getZrcAddressFor } from "@/lib/zrc";
 import { type Network as TokenNetwork } from "@/lib/tokens";
+import { IN_APP_RPC_MAP } from "@/lib/rpc";
 
 
 
@@ -107,6 +108,7 @@ export class SecureTransactionService {
         targetChain: (params.targetChain as any) || undefined,
         tokenSymbol: params.tokenSymbol,
         originChain: 'base',
+        rpc: IN_APP_RPC_MAP,
       });
       
       console.log('[SecureTransaction] Transaction submitted:', tx.hash);

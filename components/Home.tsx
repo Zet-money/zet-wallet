@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
 import { WalletProvider, useWallet } from '@/contexts/WalletContext';
 import { useBiometric } from '@/contexts/BiometricContext';
+import { useSplash } from '@/contexts/SplashContext';
 import SplashScreen from '@/components/SplashScreen';
 import WalletSetup from '@/components/WalletSetup';
 import Dashboard from '@/components/Dashboard';
@@ -14,26 +14,29 @@ import PwaInstallBanner from '@/components/PwaInstallBanner';
 function AppContent() {
   const { isWalletInitialized, isLoading } = useWallet();
   const { isAppUnlocked, isBiometricSupported, isEncrypted, isLoading: isBiometricLoading, needsBiometricSetup, needsWalletCreation } = useBiometric();
-  const searchParams = useSearchParams();
-  const initParam = searchParams.get('init');
-  const [showSplash, setShowSplash] = useState(() => initParam === 'false' ? false : true);
+  const { shouldShowSplash, setHasShownSplash } = useSplash();
+  const [showSplash, setShowSplash] = useState(shouldShowSplash);
 
   useEffect(() => {
-    if (initParam === 'false') {
+    if (!shouldShowSplash) {
       setShowSplash(false);
       return;
     }
     const timer = setTimeout(() => {
       setShowSplash(false);
+      setHasShownSplash(true);
     }, 2000);
     return () => clearTimeout(timer);
-  }, [initParam]);
+  }, [shouldShowSplash, setHasShownSplash]);
 
   // Show splash screen first
   if (showSplash) {
     return (
       <>
-        <SplashScreen onComplete={() => setShowSplash(false)} />
+        <SplashScreen onComplete={() => {
+          setShowSplash(false);
+          setHasShownSplash(true);
+        }} />
         <PwaInstallBanner />
       </>
     );

@@ -63,7 +63,7 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => router.push('/?init=false')}
+              onClick={() => router.push('/')}
               className="p-2"
             >
               <ArrowLeft className="w-4 h-4" />

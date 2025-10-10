@@ -6,6 +6,7 @@ import { WalletProvider } from "@/contexts/WalletContext";
 import { BiometricProvider } from "@/contexts/BiometricContext";
 import { UserSettingsProvider } from "@/contexts/UserSettingsContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
+import { SplashProvider } from "@/contexts/SplashContext";
 import { GlobalNotificationHandler } from "@/components/GlobalNotificationHandler";
 import AppInitializer from "@/components/AppInitializer";
 import { metadata } from "./metadata";
@@ -40,18 +41,20 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <AppInitializer>
-            <BiometricProvider>
-              <NetworkProvider>
-                <WalletProvider>
-                  <UserSettingsProvider>
-                    <NotificationProvider>
-                      <GlobalNotificationHandler />
-                      {children}
-                    </NotificationProvider>
-                  </UserSettingsProvider>
-                </WalletProvider>
-              </NetworkProvider>
-            </BiometricProvider>
+            <SplashProvider>
+              <BiometricProvider>
+                <NetworkProvider>
+                  <WalletProvider>
+                    <UserSettingsProvider>
+                      <NotificationProvider>
+                        <GlobalNotificationHandler />
+                        {children}
+                      </NotificationProvider>
+                    </UserSettingsProvider>
+                  </WalletProvider>
+                </NetworkProvider>
+              </BiometricProvider>
+            </SplashProvider>
           </AppInitializer>
           <Toaster position="top-center" />
         </ThemeProvider>

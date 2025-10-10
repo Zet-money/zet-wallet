@@ -126,66 +126,18 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
   const destinationTokens = useMemo(() => {
     if (!destinationChain) return [];
     
+    // Block cNGN from cross-chain transfers
+    if (asset.symbol === 'cNGN' && destinationChain !== 'base-same') {
+      console.log('[Token Filter] cNGN cross-chain transfers are disabled');
+      return [];
+    }
+    
     // For same-chain transfers, use the source chain
     const chainForTokens = destinationChain === 'base-same' ? 'base' : destinationChain;
     const networkKey = (network === 'mainnet' ? 'mainnet' : 'testnet') as TokenNetwork;
     const tokens = getTokensFor(chainForTokens, networkKey);
     
-    // If source token is USDC or cNGN, only show matching token as destination token
-    if (asset.symbol === 'USDC' || asset.symbol === 'cNGN') {
-      console.log('[Token Filter] Debug:', {
-        destinationChain,
-        assetSymbol: asset.symbol,
-        assetChain: asset.chain,
-        networkKey,
-        availableTokens: tokens.map(t => t.symbol),
-        matchingTokens: tokens.filter(t => t.symbol.includes(asset.symbol))
-      });
-      
-      // Find matching token with appropriate symbol for the destination chain
-      let matchingToken = tokens.find(token => token.symbol === asset.symbol);
-      
-      // For ZetaChain, look for token with the source chain suffix
-      if (!matchingToken && destinationChain === 'zetachain') {
-        // Map source chains to their token symbols on ZetaChain
-        const tokenSymbolMap: { [key: string]: { [key: string]: string } } = {
-          'USDC': {
-            'base': 'USDC.BASE',
-            'bsc': 'USDC.BSC',
-            'ethereum': 'USDC.ETH',
-            'polygon': 'USDC.POL',
-            'arbitrum': 'USDC.ARB',
-            'optimism': 'USDC.OP',
-            'avalanche': 'USDC.AVAX'
-          },
-          'cNGN': {
-            'base': 'cNGN.BASE' // Add cNGN mapping if it exists on ZetaChain
-          }
-        };
-        
-        const symbolMap = tokenSymbolMap[asset.symbol];
-        if (symbolMap) {
-          const tokenSymbol = symbolMap[asset.chain] || `${asset.symbol}.BASE`; // Default to BASE if not found
-          console.log('[Token Filter] Looking for token symbol:', tokenSymbol);
-          matchingToken = tokens.find(token => token.symbol === tokenSymbol);
-          console.log('[Token Filter] Found token:', matchingToken);
-        }
-      }
-      
-      if (matchingToken) {
-        console.log('[Token Filter] Returning token:', matchingToken.symbol);
-        return [{
-          value: matchingToken.symbol,
-          label: matchingToken.symbol,
-          name: matchingToken.name,
-          logo: asset.symbol === 'cNGN' ? '/cngn.svg' : (matchingToken.symbol === 'ETH' ? 'base-logo' : `https://assets.parqet.com/logos/crypto/${matchingToken.logo || matchingToken.symbol}?format=png`)
-        }];
-      } else {
-        console.log('[Token Filter] No matching token found, returning all tokens');
-      }
-    }
-    
-    // Filter out cNGN when sending ETH on Base
+    // Filter out cNGN when sending ETH on Base (same-chain restriction)
     const filteredTokens = tokens.filter(token => {
       if (asset.symbol === 'ETH' && destinationChain === 'base-same') {
         return token.symbol !== 'cNGN';
@@ -201,45 +153,13 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
     }));
   }, [destinationChain, network, asset.symbol]);
 
-  // Auto-select matching token as destination token when source is USDC or cNGN
+  // Auto-select first available token when destination chain changes (if no token selected)
   useEffect(() => {
-    console.log('[Token Auto-select] Debug:', {
-      assetSymbol: asset.symbol,
-      destinationChain,
-      assetChain: asset.chain,
-      currentDestinationToken: destinationToken
-    });
-    
-    if ((asset.symbol === 'USDC' || asset.symbol === 'cNGN') && destinationChain) {
-      // For ZetaChain, use the appropriate token symbol based on source chain
-      if (destinationChain === 'zetachain') {
-        const tokenSymbolMap: { [key: string]: { [key: string]: string } } = {
-          'USDC': {
-            'base': 'USDC.BASE',
-            'bsc': 'USDC.BSC',
-            'ethereum': 'USDC.ETH',
-            'polygon': 'USDC.POL',
-            'arbitrum': 'USDC.ARB',
-            'optimism': 'USDC.OP',
-            'avalanche': 'USDC.AVAX'
-          },
-          'cNGN': {
-            'base': 'cNGN.BASE'
-          }
-        };
-        
-        const symbolMap = tokenSymbolMap[asset.symbol];
-        if (symbolMap) {
-          const tokenSymbol = symbolMap[asset.chain] || `${asset.symbol}.BASE`;
-          console.log('[Token Auto-select] Setting ZetaChain token symbol:', tokenSymbol);
-          setDestinationToken(tokenSymbol);
-        }
-      } else {
-        console.log('[Token Auto-select] Setting standard token for chain:', destinationChain);
-        setDestinationToken(asset.symbol);
-      }
+    if (destinationChain && !destinationToken && destinationTokens.length > 0) {
+      console.log('[Token Auto-select] Setting first available token:', destinationTokens[0].value);
+      setDestinationToken(destinationTokens[0].value);
     }
-  }, [asset.symbol, destinationChain, asset.chain]);
+  }, [destinationChain, destinationTokens, destinationToken]);
 
   // Timer effect for tracking transaction duration
   useEffect(() => {
@@ -905,14 +825,14 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
                 <Select 
                   value={destinationToken} 
                   onValueChange={setDestinationToken}
-                  disabled={asset.symbol === 'USDC' || asset.symbol === 'cNGN'}
+                  disabled={asset.symbol === 'cNGN' && destinationChain !== 'base-same'}
                 >
-                  <SelectTrigger className={(asset.symbol === 'USDC' || asset.symbol === 'cNGN') ? 'opacity-50 cursor-not-allowed' : ''}>
+                  <SelectTrigger className={(asset.symbol === 'cNGN' && destinationChain !== 'base-same') ? 'opacity-50 cursor-not-allowed' : ''}>
                     <SelectValue placeholder="Select destination token" />
                   </SelectTrigger>
-                  {(asset.symbol === 'USDC' || asset.symbol === 'cNGN') && (
+                  {(asset.symbol === 'cNGN' && destinationChain !== 'base-same') && (
                     <p className="text-xs text-muted-foreground mt-1">
-                      You will be able to select destination tokens soon
+                      cNGN cross-chain transfers will be supported soon
                     </p>
                   )}
                   <SelectContent>
@@ -942,9 +862,9 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
             )}
           </div>
 
-              {(asset.symbol === 'USDC' || asset.symbol === 'cNGN') && destinationChain && (
+              {(asset.symbol === 'cNGN' && destinationChain !== 'base-same') && (
                 <p className="text-sm text-muted-foreground">
-                  Destination token is automatically set to {asset.symbol}
+                  cNGN can only be transferred on the same chain (Base)
                 </p>
               )}
             </>
