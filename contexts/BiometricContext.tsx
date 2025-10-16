@@ -47,6 +47,7 @@ export function BiometricProvider({ children }: { children: React.ReactNode }) {
   const [sessionTimeout, setSessionTimeout] = useState<NodeJS.Timeout | null>(null);
   const [needsBiometricSetup, setNeedsBiometricSetup] = useState(false);
   const [needsWalletCreation, setNeedsWalletCreation] = useState(false);
+  const [lastActivityTime, setLastActivityTime] = useState<number>(Date.now());
 
   // Helper function to update lastActive timestamp
   const updateLastActive = async () => {
@@ -103,6 +104,7 @@ export function BiometricProvider({ children }: { children: React.ReactNode }) {
             const unlockResult = await biometricMigration.unlockWalletWithBiometrics();
             if (unlockResult.success) {
               setIsAppUnlocked(true);
+              setLastActivityTime(Date.now()); // Reset activity time on auto-unlock
               startSessionTimeout();
               // Update lastActive timestamp
               await updateLastActive();
@@ -111,11 +113,13 @@ export function BiometricProvider({ children }: { children: React.ReactNode }) {
             // If we have encrypted data but no mnemonic, user needs to create wallet
             setNeedsWalletCreation(true);
             setIsAppUnlocked(true); // Allow access to wallet creation
+            setLastActivityTime(Date.now()); // Reset activity time
           }
         } else if (status.hasUnencrypted && !status.hasEncrypted) {
           // If we have unencrypted data but no encrypted data, unlock the app
           // This allows users to migrate to biometric encryption
           setIsAppUnlocked(true);
+          setLastActivityTime(Date.now()); // Reset activity time
         }
       } catch (error) {
         console.error('Error initializing biometric system:', error);
@@ -127,28 +131,58 @@ export function BiometricProvider({ children }: { children: React.ReactNode }) {
     initializeBiometric();
   }, []);
 
-  // Session timeout management
+  // Session timeout management - only locks on inactivity
   const startSessionTimeout = (timeoutMinutes: number = 5) => {
     // Clear existing timeout
     if (sessionTimeout) {
       clearTimeout(sessionTimeout);
     }
 
-    // Set timeout based on provided minutes
-    const timeout = setTimeout(() => {
-      setIsAppUnlocked(false);
-      setSessionTimeout(null);
-    }, timeoutMinutes * 60 * 1000);
+    // Set timeout to check inactivity periodically
+    const timeout = setInterval(() => {
+      const now = Date.now();
+      const inactiveTime = now - lastActivityTime;
+      const timeoutMs = timeoutMinutes * 60 * 1000;
+      
+      // Only lock if user has been inactive for the timeout period
+      if (inactiveTime >= timeoutMs) {
+        setIsAppUnlocked(false);
+        clearInterval(timeout);
+        setSessionTimeout(null);
+      }
+    }, 1000); // Check every second
 
     setSessionTimeout(timeout);
   };
 
   const clearSessionTimeout = () => {
     if (sessionTimeout) {
-      clearTimeout(sessionTimeout);
+      clearInterval(sessionTimeout);
       setSessionTimeout(null);
     }
   };
+
+  // Track user activity
+  const updateActivity = () => {
+    setLastActivityTime(Date.now());
+  };
+
+  // Set up activity listeners when app is unlocked
+  useEffect(() => {
+    if (!isAppUnlocked) return;
+
+    // Add event listeners for user activity
+    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
+    events.forEach(event => {
+      document.addEventListener(event, updateActivity, true);
+    });
+
+    return () => {
+      events.forEach(event => {
+        document.removeEventListener(event, updateActivity, true);
+      });
+    };
+  }, [isAppUnlocked]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -169,6 +203,7 @@ export function BiometricProvider({ children }: { children: React.ReactNode }) {
       const result = await biometricMigration.unlockWalletWithBiometrics();
       if (result.success) {
         setIsAppUnlocked(true);
+        setLastActivityTime(Date.now()); // Reset activity time on unlock
         startSessionTimeout(timeoutMinutes); // Restart session timeout
         // Update lastActive timestamp
         await updateLastActive();
@@ -195,6 +230,7 @@ export function BiometricProvider({ children }: { children: React.ReactNode }) {
         setIsEncrypted(true);
         setIsAppUnlocked(true);
         setNeedsBiometricSetup(false);
+        setLastActivityTime(Date.now()); // Reset activity time after setup
         
         // Check if we need wallet creation after biometric setup
         const hasMnemonic = await checkWalletHasMnemonic();
