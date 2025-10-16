@@ -12,6 +12,7 @@ export const tokenToCoingeckoId: { [symbol: string]: string } = {
   ARB: 'arbitrum',
   OP: 'optimism',
   BASE: 'base-protocol',
+  CNGN: 'celo-nigerian-naira',
 }
 
 const priceCache: Record<string, CachedPrice> = {}
