@@ -268,6 +268,35 @@ export default function Dashboard() {
           </div>
         </div>
 
+        {/* Total Portfolio Value */}
+        <Card className="mb-6 bg-gradient-to-r from-purple-500/10 to-blue-500/10 border-purple-500/20 p-0">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Total Portfolio Value</p>
+                <p className="text-2xl sm:text-3xl font-bold gradient-text">
+                  {loadingBalances ? (
+                    <span className="inline-block h-8 w-24 bg-muted animate-pulse rounded" />
+                  ) : (
+                    (() => {
+                      const total = displayedAssets.reduce((sum, asset) => {
+                        const bal = balances[asset.symbol]
+                        const price = prices[asset.symbol]
+                        if (bal === undefined || price === undefined) return sum
+                        return sum + (Number(bal) * price)
+                      }, 0)
+                      return `$${total.toFixed(2)}`
+                    })()
+                  )}
+                </p>
+              </div>
+              <div className="w-12 h-12 bg-gradient-to-r from-purple-600 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                <TrendingUp className="w-6 h-6 text-white" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Action Buttons */}
         <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-6">
           <Button 
