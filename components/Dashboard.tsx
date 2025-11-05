@@ -421,6 +421,34 @@ export default function Dashboard() {
           ))}
         </div>
 
+        {/* Testnet Faucet Link */}
+        {!isMainnet && (
+          <Card className="mt-6 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border-blue-500/20">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
+                    <Download className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-sm">Need Testnet Tokens?</h3>
+                    <p className="text-xs text-muted-foreground">Get free testnet tokens for testingt</p>
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.open('https://faucet.zet.money', '_blank')}
+                  className="flex items-center space-x-2"
+                >
+                  <span>Get Tokens</span>
+                  <Download className="w-4 h-4" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {filteredAssets.length === 0 && (
           <div className="text-center py-12">
             <p className="text-muted-foreground">No assets found</p>
