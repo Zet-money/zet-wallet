@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Search, Send, Download, Settings, Copy, Check, X, Lock, TrendingUp, TrendingDown } from 'lucide-react';
+import { Search, Send, Download, Settings, Copy, Check, X, Lock, TrendingUp, TrendingDown, ArrowRightLeft } from 'lucide-react';
 import { useWallet } from '@/contexts/WalletContext';
 import { useBiometric } from '@/contexts/BiometricContext';
 import { useUserSettings } from '@/contexts/UserSettingsContext';
@@ -316,26 +316,40 @@ export default function Dashboard() {
           </Button>
         </div>
 
-        {isMainnet && (
-          <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-6">
-            <Button 
-              onClick={() => setShowSellModal(true)}
-              variant="outline" 
-              className="h-12 sm:h-10 flex items-center justify-center space-x-2"
-            >
-              <TrendingDown className="w-4 h-4" />
-              <span>Sell Crypto</span>
-            </Button>
-            <Button 
-              onClick={() => setShowBuyModal(true)}
-              variant="outline" 
-              className="h-12 sm:h-10 flex items-center justify-center space-x-2"
-            >
-              <TrendingUp className="w-4 h-4" />
-              <span>Buy Crypto</span>
-            </Button>
-          </div>
-        )}
+        {/* Mainnet/Testnet Action Buttons */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-6">
+          <Button 
+            onClick={() => setShowSellModal(true)}
+            variant="outline" 
+            className="h-12 sm:h-10 flex items-center justify-center space-x-2"
+            disabled={!isMainnet}
+          >
+            <TrendingDown className="w-4 h-4" />
+            <span>Sell Crypto</span>
+            {!isMainnet && <Badge variant="secondary" className="ml-2 text-xs">Mainnet</Badge>}
+          </Button>
+          <Button 
+            onClick={() => setShowBuyModal(true)}
+            variant="outline" 
+            className="h-12 sm:h-10 flex items-center justify-center space-x-2"
+            disabled={!isMainnet}
+          >
+            <TrendingUp className="w-4 h-4" />
+            <span>Buy Crypto</span>
+            {!isMainnet && <Badge variant="secondary" className="ml-2 text-xs">Mainnet</Badge>}
+          </Button>
+          <Button 
+            variant="outline" 
+            className="h-12 sm:h-10 flex items-center justify-center space-x-2 relative bg-gradient-to-r from-purple-500/10 to-blue-500/10 border-purple-500/30 hover:from-purple-500/20 hover:to-blue-500/20 transition-all duration-200"
+            disabled
+          >
+            <ArrowRightLeft className="w-4 h-4 text-purple-600" />
+            <span className="text-purple-700 dark:text-purple-300">Swap Crypto</span>
+            <Badge variant="secondary" className="absolute -top-2 -right-2 text-xs px-1 py-0 bg-gradient-to-r from-orange-500 to-pink-500 text-white border-0">
+              Soon
+            </Badge>
+          </Button>
+        </div>
 
         {/* Search */}
         <div className="relative mb-6">
