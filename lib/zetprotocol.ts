@@ -72,7 +72,56 @@ export async function createZetProtocolMessage(params: {
 /**
  * Performs a cross-chain transfer using ZetProtocol
  */
-export async function performCrossChainTransfer({
+export async function performCrossChainTransfer(
+  params: ZetProtocolDepositParams
+): Promise<{ hash: string }> {
+  return performCrossChainTransferWithRetry(params);
+}
+
+/**
+ * Internal implementation with automatic retry logic for allowance and nonce errors
+ */
+async function performCrossChainTransferWithRetry(
+  params: ZetProtocolDepositParams,
+  attemptNumber: number = 1,
+  maxAttempts: number = 3
+): Promise<{ hash: string }> {
+  try {
+    return await performCrossChainTransferInternal(params);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+    const isRetryableError = 
+      errorMessage.includes('nonce') || 
+      errorMessage.includes('allowance') || 
+      errorMessage.includes('approval') ||
+      errorMessage.includes('transfer amount exceeds');
+    
+    if (isRetryableError && attemptNumber < maxAttempts) {
+      console.log(`[performCrossChainTransfer] Retryable error on attempt ${attemptNumber}/${maxAttempts}: ${errorMessage}`);
+      console.log(`[performCrossChainTransfer] Waiting ${attemptNumber * 2} seconds before retry...`);
+      
+      // Wait progressively longer between retries
+      await new Promise(resolve => setTimeout(resolve, attemptNumber * 2000));
+      
+      console.log(`[performCrossChainTransfer] Retrying (attempt ${attemptNumber + 1}/${maxAttempts})...`);
+      return performCrossChainTransferWithRetry(params, attemptNumber + 1, maxAttempts);
+    }
+    
+    // If not retryable or max attempts reached, throw user-friendly error
+    if (attemptNumber >= maxAttempts && isRetryableError) {
+      throw new Error(
+        `Transaction failed after ${maxAttempts} attempts. This usually happens due to network congestion or approval delays. Please wait a moment and try again. If the issue persists, contact support.`
+      );
+    }
+    
+    throw error;
+  }
+}
+
+/**
+ * Internal implementation of cross-chain transfer
+ */
+async function performCrossChainTransferInternal({
   originChain,
   amount,
   targetChain,
