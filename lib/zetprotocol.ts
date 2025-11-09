@@ -84,7 +84,7 @@ export async function performCrossChainTransfer(
 async function performCrossChainTransferWithRetry(
   params: ZetProtocolDepositParams,
   attemptNumber: number = 1,
-  maxAttempts: number = 3
+  maxAttempts: number = 5
 ): Promise<{ hash: string }> {
   try {
     return await performCrossChainTransferInternal(params);
@@ -94,7 +94,8 @@ async function performCrossChainTransferWithRetry(
       errorMessage.includes('nonce') || 
       errorMessage.includes('allowance') || 
       errorMessage.includes('approval') ||
-      errorMessage.includes('transfer amount exceeds');
+      errorMessage.includes('transfer amount exceeds') ||
+      errorMessage.includes('replacement fee too low');
     
     if (isRetryableError && attemptNumber < maxAttempts) {
       console.log(`[performCrossChainTransfer] Retryable error on attempt ${attemptNumber}/${maxAttempts}: ${errorMessage}`);

@@ -10,7 +10,7 @@ import { useBiometric } from '@/contexts/BiometricContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Shield, Fingerprint, AlertCircle, CheckCircle, XCircle, Lock } from 'lucide-react';
+import { Lock, Fingerprint, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function BiometricSetup() {
@@ -93,7 +93,7 @@ export default function BiometricSetup() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="mx-auto w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-            <Shield className="h-8 w-8 text-blue-600" />
+            <Lock className="h-8 w-8 text-blue-600" />
           </div>
           <CardTitle className="text-blue-900">Secure Your Wallet</CardTitle>
           <CardDescription className="text-blue-700">
@@ -161,7 +161,7 @@ export default function BiometricSetup() {
           {/* Security Notice */}
           <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
             <div className="flex items-start gap-2">
-              <Shield className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+              <Lock className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
               <div className="text-sm text-blue-800">
                 <p className="font-semibold">Security Notice:</p>
                 <p>Biometric authentication is mandatory for this app. Your wallet data will be encrypted and protected by your device's biometric security features.</p>

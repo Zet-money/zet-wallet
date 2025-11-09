@@ -11,7 +11,7 @@ import { useUserSettings } from '@/contexts/UserSettingsContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { AlertCircle, Shield, Fingerprint, Lock, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
+import { AlertCircle, Fingerprint, Lock, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
 
 export default function BiometricLockScreen() {
   const { unlockApp, isBiometricSupported, isEncrypted, migrationStatus, clearBiometricCredentials } = useBiometric();
@@ -140,7 +140,7 @@ export default function BiometricLockScreen() {
             <div className="flex items-center justify-between">
               <span className="text-sm font-semibold text-gray-400">Encryption Status:</span>
               <Badge variant="default" className="flex items-center gap-1">
-                <Shield className="h-3 w-3" />
+                <Lock className="h-3 w-3" />
                 Encrypted
               </Badge>
             </div>
