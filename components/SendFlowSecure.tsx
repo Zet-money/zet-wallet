@@ -71,7 +71,7 @@ function logoSymbolForChain(key: string) {
 export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
   const { network } = useNetwork();
   const { wallet } = useWallet();
-  const { transferETH, transferERC20, transferSameChain, isExecuting, error: transactionError, updateTransactionStatus, setLastTransactionId } = useSecureTransaction();
+  const { transferETH, transferERC20, transferSameChain, transferSameChainETH, isExecuting, error: transactionError, updateTransactionStatus, setLastTransactionId } = useSecureTransaction();
   const [recipientAddress, setRecipientAddress] = useState('');
   const [isResolvingENS, setIsResolvingENS] = useState(false);
   const [ensError, setEnsError] = useState<string | null>(null);
@@ -297,9 +297,17 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
         if (isSameChainTransfer) {
           // Native ETH transfer on same chain (Base to Base)
           console.log('[UI][SEND] Executing same-chain native ETH transfer');
-          // For same-chain ETH transfers, we'll use the existing transferETH function
-          // but we need to modify it to handle same-chain transfers
-          tx = await transferETH(amount, finalRecipientAddress, rpcUrl, destinationChain, network, destinationToken);
+          const result = await transferSameChainETH(amount, finalRecipientAddress, 'base', network);
+          
+          if (!result) {
+            throw new Error('Transfer failed');
+          }
+          
+          tx = { hash: result.hash };
+          // Store transaction ID for status updates
+          if (result.transactionId) {
+            setLastTransactionId(result.transactionId);
+          }
         } else {
           // Native ETH transfer to ZetaChain
           console.log('[UI][SEND] Executing native ETH transfer');

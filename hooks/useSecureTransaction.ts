@@ -26,6 +26,7 @@ interface UseSecureTransactionReturn {
   transferETH: (amount: string, receiver: string, rpcUrl: string, targetChain?: string, network?: string, targetTokenSymbol?: string) => Promise<ethers.TransactionResponse | null>;
   transferERC20: (amount: string, receiver: string, tokenAddress: string, rpcUrl: string, targetChain?: string, network?: string, targetTokenSymbol?: string) => Promise<ethers.TransactionResponse | null>;
   transferSameChain: (amount: string, receiver: string, tokenAddress: string, chain: string, network: string, tokenSymbol: string) => Promise<{ hash: string; transactionId?: string } | null>;
+  transferSameChainETH: (amount: string, receiver: string, chain: string, network: string) => Promise<{ hash: string; transactionId?: string } | null>;
   executeFunction: (amount: string, receiver: string, types: string[], values: any[], rpcUrl: string, tokenAddress?: string) => Promise<ethers.TransactionResponse | null>;
   updateTransactionStatus: (status: 'pending' | 'completed' | 'failed', errorMessage?: string) => Promise<void>;
   setLastTransactionId: (id: string) => void;
@@ -240,7 +241,98 @@ export const useSecureTransaction = (): UseSecureTransactionReturn => {
         // The biometric session will timeout after 5 minutes
       }
     });
-  }, [executeWithErrorHandling, unlockApp, wallet, getBiometricPublicKey]);
+  }, [executeWithErrorHandling, wallet, getBiometricPublicKey]);
+
+  const transferSameChainETH = useCallback(async (
+    amount: string,
+    receiver: string,
+    chain: string,
+    network: string
+  ): Promise<{ hash: string; transactionId?: string } | null> => {
+    return executeWithErrorHandling(async () => {
+      console.log('[useSecureTransaction] Same-chain ETH transfer:', { amount, receiver, chain, network });
+      
+      // Unlock app to get mnemonic temporarily
+      const unlockResult = await unlockApp(5); // 5 minute timeout
+      if (!unlockResult.success || !unlockResult.mnemonic) {
+        throw new Error(unlockResult.error || 'Failed to unlock app for transaction');
+      }
+  
+      try {
+        // Import HDNodeWallet and JsonRpcProvider dynamically
+        const { HDNodeWallet, JsonRpcProvider, parseEther } = await import('ethers');
+        const hdWallet = HDNodeWallet.fromPhrase(unlockResult.mnemonic);
+        
+        // Get RPC URL for the chain
+        const rpcUrl = IN_APP_RPC_MAP[chain as 'base']?.[network as 'mainnet' | 'testnet'];
+        if (!rpcUrl) {
+          throw new Error(`RPC URL not found for ${chain} ${network}`);
+        }
+
+        // Create provider and wallet
+        const provider = new JsonRpcProvider(rpcUrl);
+        const walletWithProvider = hdWallet.connect(provider);
+
+        // Parse amount to wei
+        const amountWei = parseEther(amount);
+
+        // Check balance
+        const balance = await provider.getBalance(walletWithProvider.address);
+        if (balance < amountWei) {
+          throw new Error(`Insufficient balance. Available: ${balance.toString()}`);
+        }
+
+        // Send transaction
+        const tx = await walletWithProvider.sendTransaction({
+          to: receiver,
+          value: amountWei,
+        });
+
+        // Wait for confirmation
+        await tx.wait();
+
+        // Track transaction in backend
+        let transactionId: string | undefined;
+        if (wallet?.address) {
+          try {
+            const biometricPublicKey = await getBiometricPublicKey();
+            if (biometricPublicKey) {
+              const transaction = await backendApi.createBlockchainTransaction({
+                walletAddress: wallet.address,
+                biometricPublicKey,
+                amount,
+                tokenSymbol: 'ETH',
+                receiver,
+                rpcUrl,
+                network: network as 'mainnet' | 'testnet',
+                isSameChain: true,
+                transactionHash: tx.hash,
+              });
+              console.log('Same-chain ETH transaction created:', transaction);
+              console.log('Transaction ID:', transaction._id);
+              transactionId = transaction._id;
+              setState(prev => {
+                const newState = { ...prev, lastTransactionId: transaction._id };
+                console.log('Setting lastTransactionId in state:', newState.lastTransactionId);
+                return newState;
+              });
+              lastTransactionIdRef.current = transaction._id;
+            }
+          } catch (error) {
+            console.error('Failed to create transaction record:', error);
+          }
+        }
+
+        return {
+          hash: tx.hash,
+          transactionId,
+        };
+      } catch (error) {
+        console.error('Same-chain ETH transfer error:', error);
+        throw error;
+      }
+    });
+  }, [executeWithErrorHandling, wallet, getBiometricPublicKey, unlockApp]);
 
   const executeFunction = useCallback(async (
     amount: string,
@@ -312,6 +404,7 @@ export const useSecureTransaction = (): UseSecureTransactionReturn => {
     transferETH,
     transferERC20,
     transferSameChain,
+    transferSameChainETH,
     executeFunction,
     updateTransactionStatus,
     setLastTransactionId,
