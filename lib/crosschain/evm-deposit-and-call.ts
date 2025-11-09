@@ -283,6 +283,7 @@ const broadcastGatewayTx = async (params: {
     gasPrice?: string;
     maxFeePerGas?: string;
     maxPriorityFeePerGas?: string;
+    nonce?: number;
   };
 }) => {
   console.log('[broadcastGatewayTx] ===== BROADCASTING TRANSACTION =====');
@@ -308,9 +309,9 @@ const broadcastGatewayTx = async (params: {
     typeof value === 'bigint' ? value.toString() : value, 2));
   
   try {
-    // Get the current nonce to avoid nonce conflicts
-    const nonce = await params.signer.getNonce();
-    console.log('[broadcastGatewayTx] Current nonce:', nonce);
+    // Use explicit nonce if provided, otherwise get current nonce
+    const nonce = params.txOptions?.nonce ?? await params.signer.getNonce();
+    console.log('[broadcastGatewayTx] Using nonce:', nonce, params.txOptions?.nonce ? '(explicit)' : '(fetched)');
     
     const tx = await params.signer.sendTransaction({
       ...txRequest,
@@ -363,6 +364,56 @@ export const evmDepositAndCall = async (
   params: EvmDepositAndCallParams,
   options: EvmOptions
 ) => {
+  return evmDepositAndCallWithRetry(params, options);
+};
+
+/**
+ * Internal implementation of evmDepositAndCall with automatic retry logic.
+ * This function automatically retries the entire operation if approval or nonce errors occur.
+ */
+const evmDepositAndCallWithRetry = async (
+  params: EvmDepositAndCallParams,
+  options: EvmOptions,
+  attemptNumber: number = 1,
+  maxAttempts: number = 3
+): Promise<ethers.TransactionResponse> => {
+  try {
+    return await evmDepositAndCallInternal(params, options);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+    const isRetryableError = 
+      errorMessage.includes('nonce') || 
+      errorMessage.includes('allowance') || 
+      errorMessage.includes('approval') ||
+      errorMessage.includes('transfer amount exceeds');
+    
+    if (isRetryableError && attemptNumber < maxAttempts) {
+      console.log(`[evmDepositAndCall] Retryable error detected on attempt ${attemptNumber}/${maxAttempts}`);
+      console.log(`[evmDepositAndCall] Error: ${errorMessage}`);
+      console.log(`[evmDepositAndCall] Waiting ${attemptNumber * 2} seconds before retrying...`);
+      
+      // Wait progressively longer between retries
+      await new Promise(resolve => setTimeout(resolve, attemptNumber * 2000));
+      
+      console.log(`[evmDepositAndCall] Retrying entire operation (attempt ${attemptNumber + 1}/${maxAttempts})...`);
+      return evmDepositAndCallWithRetry(params, options, attemptNumber + 1, maxAttempts);
+    }
+    
+    // If not retryable or max attempts reached, throw the error
+    if (attemptNumber >= maxAttempts) {
+      console.error(`[evmDepositAndCall] Max retry attempts (${maxAttempts}) reached. Operation failed.`);
+    }
+    throw error;
+  }
+};
+
+/**
+ * Internal implementation of the deposit and call logic.
+ */
+const evmDepositAndCallInternal = async (
+  params: EvmDepositAndCallParams,
+  options: EvmOptions
+): Promise<ethers.TransactionResponse> => {
   console.log('[evmDepositAndCall] ===== STARTING TRANSACTION =====');
   console.log('[evmDepositAndCall] Input params:', JSON.stringify(params, (key, value) => 
     typeof value === 'bigint' ? value.toString() : value, 2));
@@ -411,17 +462,73 @@ export const evmDepositAndCall = async (
 
     const decimals = await erc20Contract.decimals();
     const value = ethers.parseUnits(validatedParams.amount, decimals);
+    const signerAddress = await validatedOptions.signer.getAddress();
     
     console.log('[evmDepositAndCall] Token decimals:', decimals);
     console.log('[evmDepositAndCall] Parsed amount:', value.toString());
     console.log('[evmDepositAndCall] Gateway address for approval:', gatewayAddress);
+    console.log('[evmDepositAndCall] Signer address:', signerAddress);
 
-    // Approve the gateway to spend the tokens
-    console.log('[evmDepositAndCall] Approving gateway to spend tokens...');
-    const approval = await erc20Contract.approve(gatewayAddress, value);
-    console.log('[evmDepositAndCall] Approval transaction hash:', approval.hash);
-    await approval.wait();
-    console.log('[evmDepositAndCall] Approval confirmed');
+    // Step 1: Check if approval already exists
+    console.log('[evmDepositAndCall] Checking existing allowance...');
+    let currentAllowance = await erc20Contract.allowance(signerAddress, gatewayAddress);
+    console.log('[evmDepositAndCall] Current allowance:', currentAllowance.toString());
+    
+    if (currentAllowance < value) {
+      console.log('[evmDepositAndCall] Insufficient allowance, need to approve');
+      
+      // Step 2: Make approval and verify with retries
+      let approvalVerified = false;
+      let approvalAttempts = 0;
+      const maxApprovalAttempts = 2;
+      
+      while (!approvalVerified && approvalAttempts < maxApprovalAttempts) {
+        approvalAttempts++;
+        console.log(`[evmDepositAndCall] Approval attempt ${approvalAttempts}/${maxApprovalAttempts}`);
+        
+        // Get fresh nonce for each approval attempt to avoid "nonce already used" errors
+        const approvalNonce = await validatedOptions.signer.getNonce();
+        console.log('[evmDepositAndCall] Using nonce for approval:', approvalNonce);
+        
+        // Create a new contract instance with explicit nonce in the signer
+        // This ensures each retry uses a fresh nonce
+        const wallet = validatedOptions.signer as ethers.Wallet;
+        const provider = wallet.provider;
+        
+        // Send approval transaction - ethers will automatically use the current nonce
+        const approval = await erc20Contract.approve(gatewayAddress, value);
+        console.log('[evmDepositAndCall] Approval transaction hash:', approval.hash);
+        
+        // Wait for approval to be mined
+        await approval.wait();
+        console.log('[evmDepositAndCall] Approval transaction confirmed');
+        
+        // Timeout for 2 seconds for blockchain state to propagate
+        console.log('[evmDepositAndCall] Waiting 2 seconds for approval to propagate...');
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Check if approval exists
+        currentAllowance = await erc20Contract.allowance(signerAddress, gatewayAddress);
+        console.log('[evmDepositAndCall] Allowance after approval:', currentAllowance.toString(), 'Required:', value.toString());
+        
+        if (currentAllowance >= value) {
+          approvalVerified = true;
+          console.log('[evmDepositAndCall] ✓ Approval verified successfully');
+        } else {
+          console.log('[evmDepositAndCall] ✗ Approval not yet reflected, will retry with fresh nonce...');
+        }
+      }
+      
+      if (!approvalVerified) {
+        throw new Error(`Failed to verify token approval after ${maxApprovalAttempts} attempts. Last allowance: ${currentAllowance.toString()}, Required: ${value.toString()}`);
+      }
+      
+      // Additional wait after verification to ensure approval is fully propagated
+      console.log('[evmDepositAndCall] Approval verified, waiting additional 1 second for safety...');
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    } else {
+      console.log('[evmDepositAndCall] Sufficient allowance already exists, skipping approval');
+    }
 
     // Generate calldata for deposit and call
     console.log('[evmDepositAndCall] Generating calldata for ERC20 deposit...');
@@ -441,9 +548,23 @@ export const evmDepositAndCall = async (
       dataLength: callData.data.length
     });
 
+    // Step 3: FINAL verification before making the deposit transaction
+    console.log('[evmDepositAndCall] Final allowance check before deposit...');
+    const finalAllowance = await erc20Contract.allowance(signerAddress, gatewayAddress);
+    console.log('[evmDepositAndCall] Final allowance:', finalAllowance.toString(), 'Required:', value.toString());
+    
+    if (finalAllowance < value) {
+      throw new Error(`Insufficient allowance confirmed. Have: ${finalAllowance.toString()}, Need: ${value.toString()}. Cannot proceed with deposit.`);
+    }
+    
+    console.log('[evmDepositAndCall] ✓ Allowance confirmed, proceeding with deposit transaction...');
     console.log('[evmDepositAndCall] Broadcasting ERC20 gateway transaction...');
     
-    // Retry mechanism for nonce errors
+    // Fetch fresh nonce to ensure no conflicts with approval transaction
+    const currentNonce = await validatedOptions.signer.getNonce();
+    console.log('[evmDepositAndCall] Fresh nonce for deposit transaction:', currentNonce);
+    
+    // Retry mechanism for nonce errors (should be rare now)
     let tx;
     let retryCount = 0;
     const maxRetries = 3;

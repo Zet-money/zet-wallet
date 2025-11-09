@@ -17,8 +17,6 @@ interface NotificationBannerProps {
 export function NotificationBanner({ notification, onClose }: NotificationBannerProps) {
   const [isVisible, setIsVisible] = useState(true);
 
-  console.log('NotificationBanner: Rendering notification', notification);
-
   const handleClose = () => {
     setIsVisible(false);
     onClose();

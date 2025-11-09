@@ -64,13 +64,6 @@ export default function CctxProgressComponent({
   receiver,
   onViewExplorer 
 }: CctxProgressProps) {
-  console.log('[UI][CCTX][PROGRESS] CctxProgressComponent rendered', {
-    progress,
-    originChain,
-    targetChain,
-    hasOnViewExplorer: !!onViewExplorer
-  })
-  
   const getProgressPercentage = () => {
     const percentage = (() => {
       switch (progress.status) {
@@ -83,11 +76,6 @@ export default function CctxProgressComponent({
         default: return 0
       }
     })()
-    
-    console.log('[UI][CCTX][PROGRESS] Progress percentage calculated', {
-      status: progress.status,
-      percentage
-    })
     
     return percentage
   }
@@ -123,24 +111,16 @@ export default function CctxProgressComponent({
       }
     }
     
-    console.log('[UI][CCTX][PROGRESS] Target chain name resolved', {
-      targetChainId: progress.targetChainId,
-      targetChain,
-      chainName,
-      availableChains: Object.keys(chainNames)
-    })
     return chainName
   }
 
   const formatAmount = (amount: string | undefined, asset?: string) => {
     if (!amount) {
-      console.log('[UI][CCTX][PROGRESS] Amount is undefined, returning 0')
       return '0'
     }
     
     // Check if amount is already in human-readable format (has decimal point)
     if (amount.includes('.')) {
-      console.log('[UI][CCTX][PROGRESS] Amount already formatted, returning as-is', { amount })
       return amount
     }
     
@@ -164,24 +144,14 @@ export default function CctxProgressComponent({
       maximumFractionDigits: 6 
     })
     
-    console.log('[UI][CCTX][PROGRESS] Amount formatted', { 
-      amount, 
-      decimals, 
-      num, 
-      formatted,
-      asset,
-      hasDecimalPoint: amount.includes('.')
-    })
     return formatted
   }
 
   const formatGas = (gas: string | undefined) => {
     if (!gas || gas === '0') {
-      console.log('[UI][CCTX][PROGRESS] Gas is undefined or 0, returning N/A', { gas })
       return 'N/A'
     }
     const formatted = Number(gas).toLocaleString()
-    console.log('[UI][CCTX][PROGRESS] Gas formatted', { gas, formatted })
     return formatted
   }
 

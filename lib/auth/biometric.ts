@@ -144,8 +144,6 @@ export class BiometricAuth {
         throw new Error('WebAuthn is not supported in this browser');
       }
 
-      console.log('[BiometricAuth] Attempting authentication with credential ID:', credentialId);
-
       // The credential ID is already base64 encoded, so we can use it directly
       // Prepare authentication options
       const authenticationOptions: PublicKeyCredentialRequestOptionsJSON = {
@@ -161,8 +159,6 @@ export class BiometricAuth {
         timeout: 60000, // 60 seconds
         rpId: BiometricAuth.getRpId(),
       };
-
-      console.log('[BiometricAuth] Authentication options:', authenticationOptions);
 
       // Start the authentication process
       const authenticationResponse: AuthenticationResponseJSON = await startAuthentication({

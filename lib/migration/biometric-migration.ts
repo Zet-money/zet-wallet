@@ -240,9 +240,6 @@ export class BiometricMigration {
         };
       }
 
-      console.log('[BiometricMigration] Retrieved secured wallet:', securedWallet);
-      console.log('[BiometricMigration] Credential ID:', securedWallet.credentialId);
-
       // Authenticate with biometrics
       await this.biometricAuth.authenticate(securedWallet.credentialId);
 
@@ -289,7 +286,6 @@ export class BiometricMigration {
     try {
       this.ensureInitialized();
       await secureDB.clearAllData();
-      console.log('[BiometricMigration] Cleared all encrypted data');
     } catch (error) {
       console.error('[BiometricMigration] Error resetting encrypted data:', error);
       throw new Error('Failed to reset encrypted data');
@@ -303,7 +299,6 @@ export class BiometricMigration {
     try {
       this.ensureInitialized();
       await secureDB.clearCredentials();
-      console.log('[BiometricMigration] Cleared biometric credentials');
     } catch (error) {
       console.error('[BiometricMigration] Error clearing biometric credentials:', error);
       throw new Error('Failed to clear biometric credentials');

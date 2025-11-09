@@ -128,7 +128,6 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
     
     // Block cNGN from cross-chain transfers
     if (asset.symbol === 'cNGN' && destinationChain !== 'base-same') {
-      console.log('[Token Filter] cNGN cross-chain transfers are disabled');
       return [];
     }
     
@@ -161,7 +160,6 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
   // Auto-select first available token when destination chain changes (if no token selected)
   useEffect(() => {
     if (destinationChain && !destinationToken && destinationTokens.length > 0) {
-      console.log('[Token Auto-select] Setting first available token:', destinationTokens[0].value);
       setDestinationToken(destinationTokens[0].value);
     }
   }, [destinationChain, destinationTokens, destinationToken]);
@@ -172,7 +170,6 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
       timerRef.current = setInterval(() => {
         const elapsed = Math.floor((Date.now() - startTimeRef.current!) / 1000);
         setTransactionDuration(elapsed);
-        console.log('[UI][TIMER] Transaction duration updated', { elapsed, txPhase })
       }, 1000);
     } else {
       if (timerRef.current) {
@@ -190,17 +187,12 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
   }, [isTimerRunning, txPhase]);
 
   const startTimer = () => {
-    console.log('[UI][TIMER] Starting transaction timer')
     startTimeRef.current = Date.now();
     setTransactionDuration(0);
     setIsTimerRunning(true);
   };
 
   const stopTimer = () => {
-    console.log('[UI][TIMER] Stopping transaction timer', { 
-      finalDuration: transactionDuration,
-      txPhase 
-    })
     setIsTimerRunning(false);
     if (timerRef.current) {
       clearInterval(timerRef.current);
@@ -215,15 +207,6 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
   };
 
   const handleSend = async () => {
-    console.log('[UI][SEND] handleSend called', {
-      recipientAddress,
-      amount,
-      destinationChain,
-      destinationToken,
-      assetBalance: asset.balance,
-      asset
-    });
-    
     // Validation
     if (!recipientAddress.trim()) {
       toast.error('Please enter a recipient address');
@@ -249,8 +232,6 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
       toast.error('Please select a destination token');
       return;
     }
-
-    console.log('[UI][SEND] All validations passed, starting secure transfer process');
     
     try {
       setIsResolvingENS(true);
@@ -264,8 +245,6 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
 
       const provider = new ethers.JsonRpcProvider(baseRpcUrl);
       const resolved = await resolveRecipient(recipientAddress, provider);
-      
-      console.log('[UI][SEND] Resolved recipient:', resolved);
 
       // ENS resolution complete, now we can show "Sending..." state
       setIsResolvingENS(false);
@@ -296,7 +275,6 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
       if (isNativeToken) {
         if (isSameChainTransfer) {
           // Native ETH transfer on same chain (Base to Base)
-          console.log('[UI][SEND] Executing same-chain native ETH transfer');
           const result = await transferSameChainETH(amount, finalRecipientAddress, 'base', network);
           
           if (!result) {
@@ -310,12 +288,10 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
           }
         } else {
           // Native ETH transfer to ZetaChain
-          console.log('[UI][SEND] Executing native ETH transfer');
           tx = await transferETH(amount, finalRecipientAddress, rpcUrl, destinationChain, network, destinationToken);
         }
       } else {
         // ERC20 token transfer
-        console.log('[UI][SEND] Executing ERC20 token transfer');
         
         // Get token address for the asset
         const networkKey = (network === 'mainnet' ? 'mainnet' : 'testnet') as TokenNetwork;
@@ -329,7 +305,6 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
         
         if (isSameChainTransfer) {
           // Same-chain ERC20 transfer (Base to Base)
-          console.log('[UI][SEND] Executing same-chain ERC20 transfer');
           
           const result = await transferSameChain(
             amount,
@@ -366,8 +341,6 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
 
         // Track transaction status
         try {
-          console.log('[UI][TRACKING] Starting transaction tracking', { hash: tx.hash });
-          
           // Wait for transaction confirmation on origin chain
           const originConfirmed = await waitForTxConfirmation({
             originChain: 'base',
@@ -383,7 +356,6 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
             // Check if this is a same-chain transfer
             if (isSameChainTransfer) {
               // Same-chain transfer completed
-              console.log('[UI][SEND] Same-chain transfer completed');
               stopTimer();
               setTxPhase('completed');
               toast.success('Transfer completed!', { 
@@ -398,12 +370,6 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
               });
 
               // Immediately show CCTX tracker UI with pending state
-              console.log('[UI][CCTX] Setting up pending CCTX progress state', {
-                transactionAmount,
-                transactionToken,
-                transactionTargetChain,
-                transactionReceiver
-              })
               setCctxProgress({
                 status: 'pending',
                 confirmations: 0,
@@ -418,33 +384,12 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
 
               // Track cross-chain transaction
               try {
-                console.log('[UI][CCTX] Starting trackCrossChainTransaction', { 
-                  hash: tx.hash, 
-                  network, 
-                  destinationChain,
-                  originChain: (asset.chain || 'base').toLowerCase()
-                })
-                
                 const cctxResult = await trackCrossChainTransaction({
                   hash: tx.hash,
                   network,
                   timeoutSeconds: 300,
                   onProgress: ({ confirmations, status, progress }) => {
-                    console.log('[UI][CCTX] onProgress callback triggered', {
-                      hasProgress: !!progress,
-                      confirmations,
-                      status,
-                      progressStatus: progress?.status,
-                      progressConfirmations: progress?.confirmations
-                    })
-                    
                     if (progress) {
-                      console.log('[UI][CCTX] Setting progress state', {
-                        status: progress.status,
-                        confirmations: progress.confirmations,
-                        statusText: progress.statusText,
-                        outboundHash: progress.outboundHash
-                      })
                       // Always use stored transaction details instead of CCTX data
                       const updatedProgress = {
                         ...progress,
@@ -457,23 +402,11 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
                       setTxPhase(progress.status === 'completed' ? 'completed' : progress.status === 'failed' ? 'failed' : 'pending')
                       setConfirmations(progress.confirmations)
                     }
-                    if (status) {
-                      console.log('[UI][CCTX] Status update received:', status)
-                    }
                   }
-                })
-                
-                console.log('[UI][CCTX] trackCrossChainTransaction completed', {
-                  status: cctxResult.status,
-                  hasProgress: !!cctxResult.progress,
-                  hasCctx: !!cctxResult.cctx,
-                  progressStatus: cctxResult.progress?.status,
-                  progressConfirmations: cctxResult.progress?.confirmations
                 })
                 
                 setTxPhase(cctxResult.status as any);
                 if (cctxResult.progress) {
-                  console.log('[UI][CCTX] Setting final progress state', cctxResult.progress)
                   // Always use stored transaction details instead of CCTX data
                   const finalProgress = {
                     ...cctxResult.progress,
@@ -485,21 +418,17 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
                   setCctxProgress(finalProgress)
                 }
                 if (cctxResult.cctx) {
-                  console.log('[UI][CCTX] Setting final CCTX state', { cctx: cctxResult.cctx })
                   setCctxs([cctxResult.cctx]);
                 }
                 
                 if (cctxResult.status === 'completed') {
-                  console.log('[UI][CCTX] Showing success toast')
                   stopTimer(); // Stop timer on completion
                   toast.success('Cross-chain transfer completed!', { description: `Successfully transferred to ${destinationChain}`, duration: 10000 });
                 } else if (cctxResult.status === 'failed') {
-                  console.log('[UI][CCTX] Showing failure toast')
                   stopTimer(); // Stop timer on failure
                   await updateTransactionStatus('failed', 'Cross-chain transfer failed');
                   toast.error('Cross-chain transfer failed', { description: 'The transfer could not be completed. Please check the transaction details.', duration: 10000 });
                 } else if (cctxResult.status === 'timeout') {
-                  console.log('[UI][CCTX] Showing timeout toast')
                   stopTimer(); // Stop timer on timeout
                   await updateTransactionStatus('failed', 'Cross-chain transfer timeout');
                   toast.warning('Cross-chain transfer timeout', { description: 'Transfer is taking longer than expected. Please check the blockchain explorer.', duration: 10000 });
@@ -653,15 +582,12 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
                     isTimerRunning={isTimerRunning}
                     receiver={transactionReceiver}
                     onViewExplorer={(hash, chain) => {
-                      console.log('[UI][CCTX][EXPLORER] Explorer link clicked', { hash, chain })
                       const explorerUrl = explorerFor(chain)
-                      console.log('[UI][CCTX][EXPLORER] Explorer URL resolved', { chain, explorerUrl })
                       if (explorerUrl) {
                         let fullUrl = `${explorerUrl}${hash}`
                         if (chain.toLowerCase() === 'solana' && network !== 'mainnet') {
                           fullUrl = `${explorerUrl}${hash}?cluster=devnet`
                         }
-                        console.log('[UI][CCTX][EXPLORER] Opening explorer URL', { fullUrl })
                         window.open(fullUrl, '_blank')
                       }
                     }}

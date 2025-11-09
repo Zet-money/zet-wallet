@@ -175,32 +175,27 @@ export async function getTxStatus(params: {
 }): Promise<{ status: 'pending' | 'confirmed' | 'failed'; confirmations: number; blockNumber?: number; gasUsed?: string }> {
   const { originChain, hash, network, rpc } = params
   const rpcUrl = rpc?.[originChain]
-  console.log('[ZETA][EVM] Getting tx status', { originChain, network, rpc: rpcUrl?.[network], hash })
   if (!rpcUrl) {
     return { status: 'pending', confirmations: 0 }
   }
   
   try {
     const provider = new JsonRpcProvider(rpcUrl[network])
-    console.log('[ZETA][EVM] Checking tx status via RPC', { originChain, network, rpc: rpcUrl[network], hash })
     
     // First check if transaction exists
     const tx = await provider.getTransaction(hash)
     if (!tx) {
-      console.log('[ZETA][EVM] Tx not found yet')
       return { status: 'pending', confirmations: 0 }
     }
     
     // Check if transaction is mined
     const receipt = await provider.getTransactionReceipt(hash)
     if (!receipt) {
-      console.log('[ZETA][EVM] Receipt not found yet')
       return { status: 'pending', confirmations: 0 }
     }
     
     // Transaction is mined, check status
     if (receipt.status === 0) {
-      console.log('[ZETA][EVM] Tx failed')
       return { 
         status: 'failed', 
         confirmations: 0, 
@@ -219,7 +214,6 @@ export async function getTxStatus(params: {
       blockNumber: Number(receipt.blockNumber),
       gasUsed: receipt.gasUsed.toString()
     }
-    console.log('[ZETA][EVM] Tx confirmed', res)
     return res
   } catch (error) {
     console.error('Error checking transaction status:', error)
