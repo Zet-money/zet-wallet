@@ -57,7 +57,6 @@ export class SecureTransactionService {
       await this.init();
       
       // Step 1: Decrypt mnemonic using biometrics
-      console.log('[SecureTransaction] Decrypting mnemonic with biometrics...');
       const unlockResult = await this.biometricMigration.unlockWalletWithBiometrics();
       
       if (!unlockResult.success || !unlockResult.mnemonic) {
@@ -65,17 +64,13 @@ export class SecureTransactionService {
       }
       
       mnemonic = unlockResult.mnemonic;
-      console.log('[SecureTransaction] Mnemonic decrypted successfully');
 
       // Step 2: Create signer from decrypted mnemonic
       const hdWallet = HDNodeWallet.fromPhrase(mnemonic);
       const provider = new ethers.JsonRpcProvider(rpcUrl);
       const signer = hdWallet.connect(provider);
-      
-      console.log('[SecureTransaction] Signer created for address:', signer.address);
 
       // Step 3: Prepare client-side encrypted secret bundle
-      console.log('[SecureTransaction] Executing cross-chain transaction via performCrossChainTransfer...');
       const isNative = !params.token;
       const senderAddress = await signer.getAddress();
       // Load biometric public key from stored credential (first available)
@@ -111,7 +106,6 @@ export class SecureTransactionService {
         rpc: IN_APP_RPC_MAP,
       });
       
-      console.log('[SecureTransaction] Transaction submitted:', tx.hash);
       // Return a minimal object to avoid passing classes to Server Components
       return {
         ...tx,
@@ -119,7 +113,6 @@ export class SecureTransactionService {
       } as unknown as ethers.TransactionResponse;
 
     } catch (error) {
-      console.error('[SecureTransaction] Error executing transaction:', error);
       throw error;
     } finally {
       // Step 5: Securely clear mnemonic from memory
@@ -144,10 +137,8 @@ export class SecureTransactionService {
       
       // Clear the original string reference
       mnemonic = '';
-      
-      console.log('[SecureTransaction] Mnemonic securely cleared from memory');
     } catch (error) {
-      console.warn('[SecureTransaction] Warning: Could not securely clear mnemonic:', error);
+      // Silently handle cleanup errors
     }
   }
 

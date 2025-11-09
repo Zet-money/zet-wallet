@@ -76,7 +76,6 @@ export const useSecureTransaction = (): UseSecureTransactionReturn => {
       }));
       
       toast.error(`Transaction failed: ${errorMessage}`);
-      console.error('[useSecureTransaction] Error:', error);
       
       return null;
     }
@@ -91,7 +90,6 @@ export const useSecureTransaction = (): UseSecureTransactionReturn => {
     targetTokenSymbol: string = 'ETH'
   ): Promise<ethers.TransactionResponse | null> => {
     return executeWithErrorHandling(async () => {
-      console.log('[useSecureTransaction] Transferring ETH:', { amount, receiver, targetChain, network, targetTokenSymbol });
       const tx = await secureTransactionService.transferETH(amount, receiver, rpcUrl, targetChain, network as any, targetTokenSymbol);
       
       // Track transaction in backend
@@ -135,7 +133,6 @@ export const useSecureTransaction = (): UseSecureTransactionReturn => {
     targetTokenSymbol: string = 'USDC'
   ): Promise<ethers.TransactionResponse | null> => {
     return executeWithErrorHandling(async () => {
-      console.log('[useSecureTransaction] Transferring ERC20:', { amount, receiver, tokenAddress, targetChain, network, targetTokenSymbol });
       const tx = await secureTransactionService.transferERC20(amount, receiver, tokenAddress, rpcUrl, targetChain, network as any, targetTokenSymbol);
       
       // Track transaction in backend
@@ -174,8 +171,6 @@ export const useSecureTransaction = (): UseSecureTransactionReturn => {
     tokenSymbol: string
   ): Promise<{ hash: string; transactionId?: string } | null> => {
     return executeWithErrorHandling(async () => {
-      console.log('[useSecureTransaction] Same-chain transfer:', { amount, receiver, tokenAddress, chain, network });
-      
       // Unlock app to get mnemonic temporarily
       const unlockResult = await unlockApp(5); // 5 minute timeout
       if (!unlockResult.success || !unlockResult.mnemonic) {
@@ -250,8 +245,6 @@ export const useSecureTransaction = (): UseSecureTransactionReturn => {
     network: string
   ): Promise<{ hash: string; transactionId?: string } | null> => {
     return executeWithErrorHandling(async () => {
-      console.log('[useSecureTransaction] Same-chain ETH transfer:', { amount, receiver, chain, network });
-      
       // Unlock app to get mnemonic temporarily
       const unlockResult = await unlockApp(5); // 5 minute timeout
       if (!unlockResult.success || !unlockResult.mnemonic) {
@@ -343,7 +336,6 @@ export const useSecureTransaction = (): UseSecureTransactionReturn => {
     tokenAddress?: string
   ): Promise<ethers.TransactionResponse | null> => {
     return executeWithErrorHandling(async () => {
-      console.log('[useSecureTransaction] Executing function:', { amount, receiver, types, values, tokenAddress });
       const tx = await secureTransactionService.executeFunction(amount, receiver, types, values, rpcUrl, tokenAddress);
       
       toast.success(`Function execution submitted: ${tx.hash}`);
