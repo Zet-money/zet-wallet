@@ -87,12 +87,36 @@ export default function PwaInstallBanner() {
 
   // iOS Safari: show "Add to Home Screen" instructions instead of prompt
   if (isIOS() && isSafari()) {
+    // Check if iOS banner was dismissed
+    if (isDismissed) return null
+
     return (
       <div className="fixed bottom-4 inset-x-0 flex justify-center z-[60]">
-        <div className="bg-card border shadow-lg rounded-xl px-4 py-3 text-sm max-w-sm">
+        <div className="bg-card border shadow-lg rounded-xl px-4 py-3 text-sm max-w-sm relative">
+          <button
+            className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-muted hover:bg-muted/80 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              try {
+                // Store timestamp for reminder (show again after 24 hours)
+                window.localStorage.setItem('zet.pwa.dismissed', JSON.stringify({
+                  timestamp: Date.now(),
+                  reminder: true
+                }))
+                // Update state immediately
+                updateVisibility()
+              } catch (error) {
+                console.error('Error setting localStorage:', error)
+              }
+            }}
+            aria-label="Dismiss"
+          >
+            ✕
+          </button>
           <div className="font-medium mb-1">Add Zet.money to Home Screen</div>
           <div className="text-muted-foreground">Open the Share menu
-            <span className="inline-block mx-1">⬆️</span> and choose “Add to Home Screen”.
+            <span className="inline-block mx-1">⬆️</span> and choose "Add to Home Screen".
           </div>
         </div>
       </div>
