@@ -43,11 +43,13 @@ export default function Dashboard() {
   const [copied, setCopied] = useState(false);
   const [showSendModal, setShowSendModal] = useState(false);
   const [showReceiveModal, setShowReceiveModal] = useState(false);
+  const [showReceiveAssetSelector, setShowReceiveAssetSelector] = useState(false);
   const [showSellModal, setShowSellModal] = useState(false);
   const [showBuyModal, setShowBuyModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showSendFlow, setShowSendFlow] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<any>(null);
+  const [selectedReceiveAsset, setSelectedReceiveAsset] = useState<any>(null);
   // Chain selection is disabled - only Base is supported
 
   // Persist selected chain on change
@@ -308,7 +310,7 @@ export default function Dashboard() {
             <span>Send Crypto</span>
           </Button>
           <Button 
-            onClick={() => setShowReceiveModal(true)}
+            onClick={() => setShowReceiveAssetSelector(true)}
             variant="outline" 
             className="h-12 sm:h-10 flex items-center justify-center space-x-2"
           >
@@ -565,19 +567,72 @@ export default function Dashboard() {
         </div>
       )}
 
+      {/* Receive Asset Selector Modal */}
+      {showReceiveAssetSelector && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-2 sm:p-4 z-50">
+          <Card className="w-full max-w-md">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+              <div>
+                <CardTitle>Receive Tokens</CardTitle>
+                <CardDescription>Select an asset to receive</CardDescription>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => setShowReceiveAssetSelector(false)}>
+                <X className="w-4 h-4" />
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {networkTokens.map((asset) => (
+                  <Card 
+                    key={asset.id} 
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => {
+                      setShowReceiveAssetSelector(false);
+                      setSelectedReceiveAsset(asset);
+                      setShowReceiveModal(true);
+                    }}
+                  >
+                    <CardContent className="p-3">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center overflow-hidden">
+                          <img 
+                            src={asset.logo} 
+                            alt={asset.symbol}
+                            className="w-6 h-6 object-contain"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                              e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                            }}
+                          />
+                          <div className="w-6 h-6 bg-muted rounded-full items-center justify-center text-xs font-semibold hidden">
+                            {asset.symbol}
+                          </div>
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2">
+                            <span className="font-semibold">{asset.symbol}</span>
+                            <Badge variant="secondary" className="text-xs">{asset.chain}</Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground truncate">{asset.name}</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* Receive Modal */}
-      {showReceiveModal && (
+      {showReceiveModal && selectedReceiveAsset && (
         <ReceiveFlow 
-          asset={(networkTokens.find(t => t.symbol === 'USDC') || networkTokens[0] || {
-            id: `${chainKey}-USDC-0`,
-            symbol: 'USDC',
-            name: 'USD Coin',
-            balance: '0.00',
-            usdValue: '0.00',
-            chain: 'Base',
-            logo: 'https://assets.parqet.com/logos/crypto/USDC?format=png'
-          })}
-          onClose={() => setShowReceiveModal(false)} 
+          asset={selectedReceiveAsset}
+          onClose={() => {
+            setShowReceiveModal(false);
+            setSelectedReceiveAsset(null);
+          }} 
         />
       )}
 
