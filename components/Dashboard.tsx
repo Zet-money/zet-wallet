@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Search, Send, Download, Settings, Copy, Check, X, Lock, TrendingUp, TrendingDown, ArrowRightLeft } from 'lucide-react';
+import { Search, Send, Download, Settings, Copy, Check, X, Lock, TrendingUp, TrendingDown, ArrowRightLeft, Banknote } from 'lucide-react';
 import { useWallet } from '@/contexts/WalletContext';
 import { useBiometric } from '@/contexts/BiometricContext';
 import { useUserSettings } from '@/contexts/UserSettingsContext';
@@ -292,7 +292,7 @@ export default function Dashboard() {
                 </p>
               </div>
               <div className="w-12 h-12 bg-gradient-to-r from-purple-600 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
-                <TrendingUp className="w-6 h-6 text-white" />
+                <Banknote className="w-6 h-6 text-white" />
               </div>
             </div>
           </CardContent>
