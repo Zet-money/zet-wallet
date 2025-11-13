@@ -29,7 +29,7 @@ export default function BiometricLockScreen() {
       const result = await unlockApp(timeoutMinutes);
       
       if (result.success) {
-        setUnlockResult('✅ Successfully unlocked with biometrics!');
+        setUnlockResult('✅ Successfully unlocked!');
       } else {
         setUnlockResult(`❌ Unlock failed: ${result.error}`);
       }
@@ -44,7 +44,7 @@ export default function BiometricLockScreen() {
     try {
       setIsClearing(true);
       await clearBiometricCredentials();
-      setUnlockResult('✅ Biometric credentials cleared. Please set up biometrics again.');
+      setUnlockResult('✅ Passkey credentials cleared. Please set up passkey authentication again.');
     } catch (error) {
       console.error('Clear credentials error:', error);
       setUnlockResult(`❌ Failed to clear credentials: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -61,18 +61,18 @@ export default function BiometricLockScreen() {
             <div className="mx-auto w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
               <XCircle className="h-8 w-8 text-red-600" />
             </div>
-            <CardTitle className="text-red-900">Biometric Not Supported</CardTitle>
+            <CardTitle className="text-red-900">Passkey Not Supported</CardTitle>
             <CardDescription className="text-red-700">
-              Your device doesn't support biometric authentication
+              Your device doesn't support passkey authentication
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="text-sm text-red-600 space-y-2">
-              <p>To use this app, you need a device that supports:</p>
+              <p>To use this app, you need a device that supports passkeys with:</p>
               <ul className="list-disc list-inside space-y-1">
-                <li>Touch ID or Face ID (iOS)</li>
-                <li>Fingerprint or Face unlock (Android)</li>
-                <li>Windows Hello (Windows)</li>
+                <li>Biometrics (Touch ID, Face ID, Fingerprint)</li>
+                <li>Device password or PIN</li>
+                <li>Windows Hello</li>
               </ul>
             </div>
             <div className="bg-red-50 p-3 rounded-lg">
@@ -101,11 +101,11 @@ export default function BiometricLockScreen() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="text-sm text-yellow-600">
-              <p>This app requires biometric authentication for security. Please complete the setup process first.</p>
+              <p>This app requires passkey authentication for security. Please complete the setup process first.</p>
             </div>
             <div className="bg-yellow-50 p-3 rounded-lg">
               <p className="text-sm text-yellow-800">
-                Go back to the main app to set up your biometric authentication.
+                Go back to the main app to set up your passkey authentication.
               </p>
             </div>
           </CardContent>
@@ -123,14 +123,14 @@ export default function BiometricLockScreen() {
           </div>
           <CardTitle className="text-blue-900">App Locked</CardTitle>
           <CardDescription className="text-blue-700">
-            Use your biometric to unlock the app
+            Use your device authentication to unlock
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Status Indicators */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold text-gray-400">Biometric Support:</span>
+              <span className="text-sm font-semibold text-gray-400">Passkey Support:</span>
               <Badge variant="default" className="flex items-center gap-1">
                 <CheckCircle className="h-3 w-3" />
                 Supported
@@ -161,7 +161,7 @@ export default function BiometricLockScreen() {
             ) : (
               <>
                 <Fingerprint className="h-4 w-4" />
-                Unlock with Biometrics
+                Unlock with Passkey
               </>
             )}
           </Button>
@@ -205,8 +205,8 @@ export default function BiometricLockScreen() {
             <h4 className="font-semibold text-blue-900 mb-2">How to unlock:</h4>
             <ul className="text-sm text-blue-800 space-y-1">
               <li>• Tap the unlock button above</li>
-              <li>• Use your device's biometric authentication</li>
-              <li>• Touch ID, Face ID, or Windows Hello</li>
+              <li>• Use your device's authentication method</li>
+              <li>• Biometrics (Face ID, Touch ID, Fingerprint) or device password</li>
               <li>• Your wallet will be unlocked securely</li>
             </ul>
           </div>

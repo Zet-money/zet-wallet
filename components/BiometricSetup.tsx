@@ -27,18 +27,18 @@ export default function BiometricSetup() {
       const result = await setupBiometric();
       
       if (result.success) {
-        setSetupResult('✅ Biometric authentication set up successfully!');
+        setSetupResult('✅ Passkey authentication set up successfully!');
         setIsCompleted(true);
-        toast.success('Biometric authentication enabled!');
+        toast.success('Passkey authentication enabled!');
         await checkMigrationStatus();
       } else {
         setSetupResult(`❌ Setup failed: ${result.error}`);
-        toast.error(`Biometric setup failed: ${result.error}`);
+        toast.error(`Passkey setup failed: ${result.error}`);
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       setSetupResult(`❌ Setup error: ${errorMessage}`);
-      toast.error(`Biometric setup error: ${errorMessage}`);
+      toast.error(`Passkey setup error: ${errorMessage}`);
     } finally {
       setIsSettingUp(false);
     }
@@ -58,28 +58,28 @@ export default function BiometricSetup() {
             <div className="mx-auto w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
               <XCircle className="h-8 w-8 text-red-600" />
             </div>
-            <CardTitle className="text-red-900">Biometric Authentication Required</CardTitle>
+            <CardTitle className="text-red-900">Passkey Authentication Required</CardTitle>
             <CardDescription className="text-red-700">
-              This app requires biometric authentication for security
+              This app requires passkey authentication for security
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="text-sm text-red-600 space-y-2">
-              <p>To use this app, you need a device that supports:</p>
+              <p>To use this app, you need a device that supports passkeys with:</p>
               <ul className="list-disc list-inside space-y-1">
-                <li>Touch ID or Face ID (iOS)</li>
-                <li>Fingerprint or Face unlock (Android)</li>
-                <li>Windows Hello (Windows)</li>
+                <li>Biometrics (Touch ID, Face ID, Fingerprint)</li>
+                <li>Device password or PIN</li>
+                <li>Windows Hello</li>
               </ul>
             </div>
             <div className="bg-red-50 p-3 rounded-lg border border-red-200">
               <p className="text-sm text-red-800 font-medium">
-                Biometric authentication is mandatory for security. Please use a compatible device to access your wallet.
+                Passkey authentication is mandatory for security. Please use a compatible device to access your wallet.
               </p>
             </div>
             <div className="text-center">
               <p className="text-sm text-red-600">
-                This app cannot be used without biometric authentication.
+                This app cannot be used without passkey authentication.
               </p>
             </div>
           </CardContent>
@@ -97,21 +97,21 @@ export default function BiometricSetup() {
           </div>
           <CardTitle className="text-blue-900">Secure Your Wallet</CardTitle>
           <CardDescription className="text-blue-700">
-            Set up biometric authentication to protect your wallet
+            Set up passkey authentication to protect your wallet
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Benefits */}
           <div className="space-y-3">
-            <h4 className="font-semibold text-gray-900">Why biometric security is required:</h4>
+            <h4 className="font-semibold text-gray-900">Why passkey security is required:</h4>
             <ul className="text-sm text-gray-400 space-y-2">
               <li className="flex items-start gap-2">
                 <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                <span>Your recovery phrase is encrypted and protected by your biometrics</span>
+                <span>Your recovery phrase is encrypted and protected by your device</span>
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                <span>Only you can access your wallet using Touch ID, Face ID, or Windows Hello</span>
+                <span>Unlock with biometrics (Face ID, Touch ID) or your device password</span>
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
@@ -139,7 +139,7 @@ export default function BiometricSetup() {
             ) : (
               <>
                 <Fingerprint className="h-4 w-4" />
-                Enable Biometric Security
+                Enable Passkey Security
               </>
             )}
           </Button>
@@ -164,7 +164,7 @@ export default function BiometricSetup() {
               <Lock className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
               <div className="text-sm text-blue-800">
                 <p className="font-semibold">Security Notice:</p>
-                <p>Biometric authentication is mandatory for this app. Your wallet data will be encrypted and protected by your device's biometric security features.</p>
+                <p>Passkey authentication is mandatory for this app. Your wallet data will be encrypted and protected by your device's security features (biometrics or device password).</p>
               </div>
             </div>
           </div>
