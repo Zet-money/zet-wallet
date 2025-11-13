@@ -172,7 +172,7 @@ export const useSecureTransaction = (): UseSecureTransactionReturn => {
   ): Promise<{ hash: string; transactionId?: string } | null> => {
     return executeWithErrorHandling(async () => {
       // Unlock app to get mnemonic temporarily
-      const unlockResult = await unlockApp(5); // 5 minute timeout
+      const unlockResult = await unlockApp(20); // 20 minute timeout
       if (!unlockResult.success || !unlockResult.mnemonic) {
         throw new Error(unlockResult.error || 'Failed to unlock app for transaction');
       }
@@ -233,7 +233,7 @@ export const useSecureTransaction = (): UseSecureTransactionReturn => {
         return { hash: result.hash, transactionId };
       } finally {
         // Mnemonic is automatically discarded when unlockResult goes out of scope
-        // The biometric session will timeout after 5 minutes
+        // The biometric session will timeout after 20 minutes
       }
     });
   }, [executeWithErrorHandling, wallet, getBiometricPublicKey]);
@@ -246,7 +246,7 @@ export const useSecureTransaction = (): UseSecureTransactionReturn => {
   ): Promise<{ hash: string; transactionId?: string } | null> => {
     return executeWithErrorHandling(async () => {
       // Unlock app to get mnemonic temporarily
-      const unlockResult = await unlockApp(5); // 5 minute timeout
+      const unlockResult = await unlockApp(20); // 20 minute timeout
       if (!unlockResult.success || !unlockResult.mnemonic) {
         throw new Error(unlockResult.error || 'Failed to unlock app for transaction');
       }

@@ -142,7 +142,7 @@ export function BiometricProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // Session timeout management - only locks on inactivity
-  const startSessionTimeout = (timeoutMinutes: number = 5) => {
+  const startSessionTimeout = (timeoutMinutes: number = 20) => {
     // Clear existing timeout
     if (sessionTimeoutRef.current) {
       clearInterval(sessionTimeoutRef.current);
