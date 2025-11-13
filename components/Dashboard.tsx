@@ -25,6 +25,7 @@ import SellCryptoModal from './SellCryptoModal';
 import SendFlowSecure from './SendFlowSecure';
 import { useSecureTransaction } from '@/hooks/useSecureTransaction';
 import { NotificationPermissionBanner } from './NotificationPermissionBanner';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 // Solana imports removed - only Base chain supported
 
 // Only Base chain is supported for sending
@@ -304,7 +305,7 @@ export default function Dashboard() {
             className="h-12 sm:h-10 flex items-center justify-center space-x-2 gradient-primary text-white"
           >
             <Send className="w-4 h-4" />
-            <span>Send</span>
+            <span>Send Crypto</span>
           </Button>
           <Button 
             onClick={() => setShowReceiveModal(true)}
@@ -312,43 +313,74 @@ export default function Dashboard() {
             className="h-12 sm:h-10 flex items-center justify-center space-x-2"
           >
             <Download className="w-4 h-4" />
-            <span>Receive</span>
+            <span>Receive Crypto</span>
           </Button>
         </div>
 
         {/* Mainnet/Testnet Action Buttons */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-6">
-          <Button 
-            onClick={() => setShowSellModal(true)}
-            variant="outline" 
-            className="h-12 sm:h-10 flex items-center justify-center space-x-2"
-            disabled={!isMainnet}
-          >
-            <TrendingDown className="w-4 h-4" />
-            <span>Sell Crypto</span>
-            {!isMainnet && <Badge variant="secondary" className="ml-2 text-xs">Mainnet</Badge>}
-          </Button>
-          <Button 
-            onClick={() => setShowBuyModal(true)}
-            variant="outline" 
-            className="h-12 sm:h-10 flex items-center justify-center space-x-2"
-            disabled={!isMainnet}
-          >
-            <TrendingUp className="w-4 h-4" />
-            <span>Buy Crypto</span>
-            {!isMainnet && <Badge variant="secondary" className="ml-2 text-xs">Mainnet</Badge>}
-          </Button>
-          <Button 
-            variant="outline" 
-            className="h-12 sm:h-10 flex items-center justify-center space-x-2 relative bg-gradient-to-r from-purple-500/10 to-blue-500/10 border-purple-500/30 hover:from-purple-500/20 hover:to-blue-500/20 transition-all duration-200"
-            disabled
-          >
-            <ArrowRightLeft className="w-4 h-4 text-purple-600" />
-            <span className="text-purple-700 dark:text-purple-300">Swap Crypto</span>
-            <Badge variant="secondary" className="absolute -top-2 -right-2 text-xs px-1 py-0 bg-gradient-to-r from-orange-500 to-pink-500 text-white border-0">
-              Soon
-            </Badge>
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="w-full">
+                <Button 
+                  onClick={() => setShowSellModal(true)}
+                  variant="outline" 
+                  className="h-12 sm:h-10 flex items-center justify-center space-x-2 w-full"
+                  disabled={!isMainnet}
+                >
+                  <TrendingDown className="w-4 h-4" />
+                  <span>Sell Crypto</span>
+                </Button>
+              </div>
+            </TooltipTrigger>
+            {!isMainnet && (
+              <TooltipContent side="bottom" className="max-w-xs">
+                <p>Selling crypto is only available on Mainnet. Switch to Mainnet to sell your assets.</p>
+              </TooltipContent>
+            )}
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="w-full">
+                <Button 
+                  onClick={() => setShowBuyModal(true)}
+                  variant="outline" 
+                  className="h-12 sm:h-10 flex items-center justify-center space-x-2 w-full"
+                  disabled={!isMainnet}
+                >
+                  <TrendingUp className="w-4 h-4" />
+                  <span>Buy Crypto</span>
+                </Button>
+              </div>
+            </TooltipTrigger>
+            {!isMainnet && (
+              <TooltipContent side="bottom" className="max-w-xs">
+                <p>Buying crypto is only available on Mainnet. Switch to Mainnet to purchase assets.</p>
+              </TooltipContent>
+            )}
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="w-full">
+                <Button 
+                  variant="outline" 
+                  className="h-12 sm:h-10 flex items-center justify-center space-x-2 relative bg-gradient-to-r from-purple-500/10 to-blue-500/10 border-purple-500/30 hover:from-purple-500/20 hover:to-blue-500/20 transition-all duration-200 w-full cursor-not-allowed"
+                  disabled
+                >
+                  <ArrowRightLeft className="w-4 h-4 text-purple-600" />
+                  <span className="text-purple-700 dark:text-purple-300">Swap Crypto</span>
+                  <Badge variant="secondary" className="absolute -top-2 -right-2 text-xs px-1 py-0 bg-gradient-to-r from-orange-500 to-pink-500 text-white border-0">
+                    Soon
+                  </Badge>
+                </Button>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="max-w-xs">
+              <p>🚀 Swap feature is coming soon! We're cooking something amazing for you.</p>
+            </TooltipContent>
+          </Tooltip>
         </div>
 
         {/* Search */}
