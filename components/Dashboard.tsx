@@ -231,7 +231,7 @@ export default function Dashboard() {
               </Button>
               
               <Select value={network} onValueChange={(v) => setNetwork(v as any)}>
-                <SelectTrigger className="w-16 sm:w-20">
+                <SelectTrigger className="w-26 sm:w-30">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
