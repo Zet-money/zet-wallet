@@ -219,7 +219,7 @@ export default function UserSettingsModal({ isOpen, onClose }: UserSettingsModal
               max="60"
               placeholder="5"
               value={formData.sessionTimeout}
-              onChange={(e) => handleInputChange('sessionTimeout', parseInt(e.target.value) || 5)}
+              onChange={(e) => handleInputChange('sessionTimeout', parseInt(e.target.value) || 20)}
               disabled={isSaving}
             />
             <p className="text-xs text-muted-foreground">
