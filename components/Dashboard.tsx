@@ -320,52 +320,56 @@ export default function Dashboard() {
         </div>
 
         {/* Mainnet/Testnet Action Buttons */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-6">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="w-full">
-                <Button 
-                  onClick={() => setShowSellModal(true)}
-                  variant="outline" 
-                  className="h-12 sm:h-10 flex items-center justify-center space-x-2 w-full"
-                  disabled={!isMainnet}
-                >
-                  <TrendingDown className="w-4 h-4" />
-                  <span>Sell Crypto</span>
-                </Button>
-              </div>
-            </TooltipTrigger>
-            {!isMainnet && (
-              <TooltipContent side="bottom" className="max-w-xs">
-                <p>Selling crypto is only available on Mainnet. Switch to Mainnet to sell your assets.</p>
-              </TooltipContent>
-            )}
-          </Tooltip>
+        <div className="space-y-3 sm:space-y-0 sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:gap-4 mb-6">
+          {/* Sell and Buy on same row on mobile */}
+          <div className="grid grid-cols-2 gap-3 sm:contents">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="w-full">
+                  <Button 
+                    onClick={() => setShowSellModal(true)}
+                    variant="outline" 
+                    className="h-12 sm:h-10 flex items-center justify-center space-x-2 w-full"
+                    disabled={!isMainnet}
+                  >
+                    <TrendingDown className="w-4 h-4" />
+                    <span>Sell Crypto</span>
+                  </Button>
+                </div>
+              </TooltipTrigger>
+              {!isMainnet && (
+                <TooltipContent side="bottom" className="max-w-xs">
+                  <p>Selling crypto is only available on Mainnet. Switch to Mainnet to sell your assets.</p>
+                </TooltipContent>
+              )}
+            </Tooltip>
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="w-full">
-                <Button 
-                  onClick={() => setShowBuyModal(true)}
-                  variant="outline" 
-                  className="h-12 sm:h-10 flex items-center justify-center space-x-2 w-full"
-                  disabled={!isMainnet}
-                >
-                  <TrendingUp className="w-4 h-4" />
-                  <span>Buy Crypto</span>
-                </Button>
-              </div>
-            </TooltipTrigger>
-            {!isMainnet && (
-              <TooltipContent side="bottom" className="max-w-xs">
-                <p>Buying crypto is only available on Mainnet. Switch to Mainnet to purchase assets.</p>
-              </TooltipContent>
-            )}
-          </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="w-full">
+                  <Button 
+                    onClick={() => setShowBuyModal(true)}
+                    variant="outline" 
+                    className="h-12 sm:h-10 flex items-center justify-center space-x-2 w-full"
+                    disabled={!isMainnet}
+                  >
+                    <TrendingUp className="w-4 h-4" />
+                    <span>Buy Crypto</span>
+                  </Button>
+                </div>
+              </TooltipTrigger>
+              {!isMainnet && (
+                <TooltipContent side="bottom" className="max-w-xs">
+                  <p>Buying crypto is only available on Mainnet. Switch to Mainnet to purchase assets.</p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </div>
 
+          {/* Swap on separate row on mobile */}
           <Tooltip>
             <TooltipTrigger asChild>
-              <div className="w-full">
+              <div className="w-full sm:col-span-2 lg:col-span-1">
                 <Button 
                   variant="outline" 
                   className="h-12 sm:h-10 flex items-center justify-center space-x-2 relative bg-gradient-to-r from-purple-500/10 to-blue-500/10 border-purple-500/30 hover:from-purple-500/20 hover:to-blue-500/20 transition-all duration-200 w-full cursor-not-allowed"
