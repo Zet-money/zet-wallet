@@ -2,7 +2,7 @@ import { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Zet.money",
-  description: "Your Crypto Super App",
+  description: "Everything Crypto in One App",
   icons: {
     icon: "/favicon.ico",
     apple: "/favicon.ico",
