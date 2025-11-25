@@ -405,10 +405,10 @@ export default function Dashboard() {
           {displayedAssets.map((asset) => (
             <Card 
               key={asset.id} 
-              className="hover:shadow-md transition-shadow cursor-pointer active:scale-[0.98]"
+              className="hover:shadow-md transition-shadow cursor-pointer active:scale-[0.98] p-2 sm:p-3"
               onClick={() => router.push(`/asset/${asset.id}`)}
             >
-              <CardContent className="p-3 sm:p-4">
+              <CardContent>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3 min-w-0 flex-1">
                     <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">

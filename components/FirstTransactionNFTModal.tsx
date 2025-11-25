@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { X, PartyPopper, Gift, ExternalLink } from 'lucide-react';
+import { PartyPopper, Gift, ExternalLink } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import confetti from 'canvas-confetti';
@@ -66,19 +66,19 @@ export function FirstTransactionNFTModal({ isOpen, onClose, walletAddress }: Fir
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[500px] bg-gradient-to-br from-purple-50 via-white to-blue-50 dark:from-purple-950/20 dark:via-background dark:to-blue-950/20">
+    <Dialog open={isOpen} onOpenChange={(open) => {
+      // Only allow closing via the close button
+      if (!open) {
+        handleClose();
+      }
+    }}>
+      <DialogContent 
+        className="sm:max-w-[500px] bg-gradient-to-br from-purple-50 via-white to-blue-50 dark:from-purple-950/20 dark:via-background dark:to-blue-950/20"
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+      >
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle className="sr-only">Congratulations!</DialogTitle>
-            <button
-              onClick={handleClose}
-              className="ml-auto rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground"
-            >
-              <X className="h-4 w-4" />
-              <span className="sr-only">Close</span>
-            </button>
-          </div>
+          <DialogTitle className="sr-only">Congratulations!</DialogTitle>
         </DialogHeader>
 
         <div className="flex flex-col items-center text-center space-y-6 py-6">

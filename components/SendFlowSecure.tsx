@@ -23,6 +23,8 @@ import { resolveRecipient } from '@/lib/utils/ens-resolver';
 import { ethers } from 'ethers';
 import { FirstTransactionNFTModal } from '@/components/FirstTransactionNFTModal';
 import { useUserSettings } from '@/contexts/UserSettingsContext';
+import { useBiometric } from '@/contexts/BiometricContext';
+import { backendApi } from '@/lib/services/backend-api';
 
 interface SendFlowProps {
   asset: {
@@ -74,6 +76,7 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
   const { network } = useNetwork();
   const { wallet } = useWallet();
   const { backendUser } = useUserSettings();
+  const { getBiometricPublicKey } = useBiometric();
   const { transferETH, transferERC20, transferSameChain, transferSameChainETH, isExecuting, error: transactionError, updateTransactionStatus, setLastTransactionId } = useSecureTransaction();
   const [recipientAddress, setRecipientAddress] = useState('');
   const [isResolvingENS, setIsResolvingENS] = useState(false);
@@ -205,7 +208,7 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
   };
 
   // Check if user should see NFT modal for first testnet transaction
-  const checkAndShowNFTModal = () => {
+  const checkAndShowNFTModal = async () => {
     // Only show for testnet
     if (network !== 'testnet') return;
     
@@ -213,12 +216,22 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
     const hasShownModal = localStorage.getItem('zet_first_testnet_tx_modal_shown');
     if (hasShownModal === 'true') return;
     
-    // Check if user has already completed first testnet transaction from backend
-    if (backendUser?.hasCompletedFirstTestnetTransaction) {
-      // This is their first testnet transaction!
-      setShowNFTModal(true);
-      // Mark as shown so we don't show again
-      localStorage.setItem('zet_first_testnet_tx_modal_shown', 'true');
+    // Wait a moment for backend to process, then refetch user data
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    try {
+      const biometricPublicKey = await getBiometricPublicKey();
+      if (biometricPublicKey && wallet?.address) {
+        const updatedUser = await backendApi.getUserProfile(wallet.address, biometricPublicKey);
+        
+        // Check if this was their first testnet transaction
+        if (updatedUser?.hasCompletedFirstTestnetTransaction) {
+          setShowNFTModal(true);
+          localStorage.setItem('zet_first_testnet_tx_modal_shown', 'true');
+        }
+      }
+    } catch (error) {
+      console.error('Failed to check first transaction status:', error);
     }
   };
 
