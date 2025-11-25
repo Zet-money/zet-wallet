@@ -164,8 +164,13 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
             } else {
               toast.warning('Wallet created but registration failed - no biometric key');
             }
-          } catch (error) {
-            if (error instanceof Error) {
+          } catch (error: any) {
+            // If user already exists (importing old wallet), don't show error
+            if (error?.message?.includes('already exists') || error?.status === 409) {
+              // User already exists - UserSettingsContext will automatically sync their data
+              console.log('Existing user found, wallet imported successfully');
+              toast.success('Wallet imported successfully!');
+            } else if (error instanceof Error) {
               toast.error(`Registration failed: ${error.message}`);
             } else {
               toast.error('Registration failed: Unable to connect to server');
