@@ -21,6 +21,8 @@ import { waitForTxConfirmation, getTxStatus } from '@/lib/zetachain';
 import { explorerFor } from '@/lib/explorer';
 import { resolveRecipient } from '@/lib/utils/ens-resolver';
 import { ethers } from 'ethers';
+import { FirstTransactionNFTModal } from '@/components/FirstTransactionNFTModal';
+import { useUserSettings } from '@/contexts/UserSettingsContext';
 
 interface SendFlowProps {
   asset: {
@@ -71,6 +73,7 @@ function logoSymbolForChain(key: string) {
 export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
   const { network } = useNetwork();
   const { wallet } = useWallet();
+  const { backendUser } = useUserSettings();
   const { transferETH, transferERC20, transferSameChain, transferSameChainETH, isExecuting, error: transactionError, updateTransactionStatus, setLastTransactionId } = useSecureTransaction();
   const [recipientAddress, setRecipientAddress] = useState('');
   const [isResolvingENS, setIsResolvingENS] = useState(false);
@@ -91,6 +94,7 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
   const [transactionToken, setTransactionToken] = useState<string>('');
   const [transactionTargetChain, setTransactionTargetChain] = useState<string>('');
   const [transactionReceiver, setTransactionReceiver] = useState<string>('');
+  const [showNFTModal, setShowNFTModal] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const startTimeRef = useRef<number | null>(null);
 
@@ -198,6 +202,28 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
+  };
+
+  // Check if user should see NFT modal for first testnet transaction
+  const checkAndShowNFTModal = () => {
+    // Only show for testnet
+    if (network !== 'testnet') return;
+    
+    // Check if already shown in local storage
+    const hasShownModal = localStorage.getItem('zet_first_testnet_tx_modal_shown');
+    if (hasShownModal === 'true') return;
+    
+    // Check if user has already completed first testnet transaction from backend
+    if (backendUser?.hasCompletedFirstTestnetTransaction) {
+      // This is their first testnet transaction!
+      setShowNFTModal(true);
+      // Mark as shown so we don't show again
+      localStorage.setItem('zet_first_testnet_tx_modal_shown', 'true');
+    }
+  };
+
+  const handleCloseNFTModal = () => {
+    setShowNFTModal(false);
   };
 
   const formatDuration = (seconds: number) => {
@@ -362,6 +388,9 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
                 description: `Successfully transferred ${amount} ${asset.symbol} to ${resolved.originalInput}`, 
                 duration: 10000 
               });
+              
+              // Check if this is first testnet transaction and show NFT modal
+              checkAndShowNFTModal();
             } else {
               // Cross-chain transfer - continue with CCTX tracking
               toast.success('Transaction confirmed on origin chain!', {
@@ -424,6 +453,9 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
                 if (cctxResult.status === 'completed') {
                   stopTimer(); // Stop timer on completion
                   toast.success('Cross-chain transfer completed!', { description: `Successfully transferred to ${destinationChain}`, duration: 10000 });
+                  
+                  // Check if this is first testnet transaction and show NFT modal
+                  checkAndShowNFTModal();
                 } else if (cctxResult.status === 'failed') {
                   stopTimer(); // Stop timer on failure
                   await updateTransactionStatus('failed', 'Cross-chain transfer failed');
@@ -860,6 +892,15 @@ export default function SendFlowSecure({ asset, onClose }: SendFlowProps) {
           )}
         </CardContent>
       </Card>
+
+      {/* First Transaction NFT Reward Modal */}
+      {wallet?.address && (
+        <FirstTransactionNFTModal 
+          isOpen={showNFTModal}
+          onClose={handleCloseNFTModal}
+          walletAddress={wallet.address}
+        />
+      )}
     </div>
   );
 }

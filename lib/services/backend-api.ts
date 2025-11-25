@@ -15,6 +15,9 @@ export interface User {
   isActive: boolean;
   lastLoginAt?: Date;
   lastActive?: Date;
+  hasCompletedFirstTestnetTransaction?: boolean;
+  firstTestnetTransactionDate?: Date;
+  firstTestnetTransactionHash?: string;
   createdAt: Date;
   updatedAt: Date;
 }
