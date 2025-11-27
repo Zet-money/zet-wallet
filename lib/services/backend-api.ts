@@ -351,20 +351,14 @@ class BackendApiService {
 
   // Rewards endpoints
   async dailyCheckIn(walletAddress: string, biometricPublicKey: string): Promise<User> {
-    return this.makeRequest<User>(`/users/me/daily-checkin?walletAddress=${walletAddress}`, {
+    return this.makeRequest<User>(`/users/me/daily-checkin?walletAddress=${walletAddress}&biometricPublicKey=${biometricPublicKey}`, {
       method: 'POST',
-      headers: {
-        'x-biometric-public-key': biometricPublicKey,
-      },
     });
   }
 
   async applyReferralCode(walletAddress: string, biometricPublicKey: string, referralCode: string): Promise<User> {
-    return this.makeRequest<User>(`/users/me/referral/${referralCode}?walletAddress=${walletAddress}`, {
+    return this.makeRequest<User>(`/users/me/referral/${referralCode}?walletAddress=${walletAddress}&biometricPublicKey=${biometricPublicKey}`, {
       method: 'POST',
-      headers: {
-        'x-biometric-public-key': biometricPublicKey,
-      },
     });
   }
 
@@ -379,11 +373,7 @@ class BackendApiService {
       dailyCheckInStreak: number;
       referralCount: number;
       transactionCount: number;
-    }>(`/users/me/points?walletAddress=${walletAddress}`, {
-      headers: {
-        'x-biometric-public-key': biometricPublicKey,
-      },
-    });
+    }>(`/users/me/points?walletAddress=${walletAddress}&biometricPublicKey=${biometricPublicKey}`);
   }
 }
 
