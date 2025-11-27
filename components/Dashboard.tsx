@@ -206,7 +206,7 @@ export default function Dashboard() {
       <BottomNavigation 
         activeView={activeView === 'transactions' ? 'home' : activeView}
         onViewChange={(view) => setActiveView(view)}
-      </div>
+      />
     </div>
   );
 }
