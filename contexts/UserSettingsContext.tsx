@@ -163,14 +163,21 @@ export function UserSettingsProvider({ children }: { children: React.ReactNode }
             } catch (createError) {
               console.warn('Failed to create user after 401 error:', createError);
             }
+          } else if (error?.status === 409 || error?.message?.includes('already taken')) {
+            // Rethrow duplicate username/email errors so the UI can show them
+            throw error;
           } else {
             console.warn('Failed to sync profile with backend:', error);
           }
-          // Don't throw error - local update succeeded
+          // Don't throw error for other backend errors - local update succeeded
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating user profile:', error);
+      // If it's a conflict error (duplicate username/email), pass the message through
+      if (error?.status === 409 || error?.message?.includes('already taken')) {
+        throw error;
+      }
       throw new Error('Failed to update profile');
     }
   };

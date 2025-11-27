@@ -75,8 +75,10 @@ export default function ProfileView() {
       setIsSaving(true);
       await updateProfile(formData);
       toast.success('Profile updated successfully!');
-    } catch (error) {
-      toast.error('Failed to update profile');
+    } catch (error: any) {
+      // Display the specific error message from the backend
+      const errorMessage = error?.message || 'Failed to update profile';
+      toast.error(errorMessage);
       console.error('Error saving profile:', error);
     } finally {
       setIsSaving(false);
