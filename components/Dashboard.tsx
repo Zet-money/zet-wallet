@@ -3,13 +3,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Settings, Lock } from 'lucide-react';
+import { Lock } from 'lucide-react';
 import { useWallet } from '@/contexts/WalletContext';
 import { useBiometric } from '@/contexts/BiometricContext';
 import { useUserSettings } from '@/contexts/UserSettingsContext';
 import { toast } from 'sonner';
 import ThemeToggle from './ThemeToggle';
-import UserSettingsModal from './UserSettingsModal';
 import { useNetwork } from '@/contexts/NetworkContext';
 import { getTokensFor } from '@/lib/tokens';
 import { fetchBalancesForChain } from '@/lib/balances';
@@ -30,7 +29,6 @@ export default function Dashboard() {
   
   // View state management
   const [activeView, setActiveView] = useState<'home' | 'rewards' | 'profile' | 'transactions'>('home');
-  const [showSettingsModal, setShowSettingsModal] = useState(false);
 
   // Balance and price state
   const [balances, setBalances] = useState<Record<string, string>>({})
@@ -162,17 +160,6 @@ export default function Dashboard() {
                 </Button>
               )}
               
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowSettingsModal(true)}
-                className="flex items-center space-x-1 p-2"
-                title="Settings"
-              >
-                <Settings className="w-4 h-4" />
-                <span className="hidden sm:inline">Settings</span>
-              </Button>
-              
               <Select value={network} onValueChange={(v) => setNetwork(v as any)}>
                 <SelectTrigger className="w-26 sm:w-30">
                   <SelectValue />
@@ -219,13 +206,7 @@ export default function Dashboard() {
       <BottomNavigation 
         activeView={activeView === 'transactions' ? 'home' : activeView}
         onViewChange={(view) => setActiveView(view)}
-      />
-
-      {/* Settings Modal */}
-      <UserSettingsModal 
-        isOpen={showSettingsModal} 
-        onClose={() => setShowSettingsModal(false)} 
-      />
+      </div>
     </div>
   );
 }

@@ -51,7 +51,7 @@ export function UserSettingsProvider({ children }: { children: React.ReactNode }
               name: user.name || '',
               username: user.username || '',
               email: user.email,
-              sessionTimeout: user.sessionTimeout || 5,
+              sessionTimeout: user.sessionTimeout || 20,
             };
             
             setProfile(backendProfile);
@@ -112,7 +112,7 @@ export function UserSettingsProvider({ children }: { children: React.ReactNode }
       const updatedProfile: UserProfile = {
         name: '',
         username: '',
-        sessionTimeout: 5, // default 5 minutes
+        sessionTimeout: 20, // default 20 minutes
         ...profile,
         ...newProfile
       };
