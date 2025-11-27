@@ -46,7 +46,7 @@ export default function TransactionsView({ onBack }: TransactionsViewProps) {
       loadTransactions();
       loadStats();
     }
-  }, [wallet?.address]);
+  }, [wallet?.address, network]); // Added network dependency to reload when network changes
 
   // Listen for browser back button
   useEffect(() => {
@@ -94,15 +94,19 @@ export default function TransactionsView({ onBack }: TransactionsViewProps) {
 
       const txList = await backendApi.getUserTransactions(wallet.address, biometricPublicKey);
       
+      // Filter transactions by current network
+      const currentNetwork = network === 'mainnet' ? 'mainnet' : 'testnet';
+      const networkFilteredTxs = txList.filter(tx => tx.network === currentNetwork);
+      
       // Calculate stats from transactions
-      const totalTransactions = txList.length;
-      const completedTxs = txList.filter(tx => tx.status === 'completed');
+      const totalTransactions = networkFilteredTxs.length;
+      const completedTxs = networkFilteredTxs.filter(tx => tx.status === 'completed');
       const successRate = totalTransactions > 0 
         ? (completedTxs.length / totalTransactions) * 100 
         : 0;
       
       // Calculate total volume (sum of amounts)
-      const totalVolume = txList.reduce((sum, tx) => {
+      const totalVolume = networkFilteredTxs.reduce((sum, tx) => {
         const amount = parseFloat(tx.amount || '0');
         return sum + amount;
       }, 0);
@@ -134,7 +138,11 @@ export default function TransactionsView({ onBack }: TransactionsViewProps) {
     const matchesType = filterType === 'all' || tx.type === filterType;
     const matchesStatus = filterStatus === 'all' || tx.status === filterStatus;
     
-    return matchesSearch && matchesType && matchesStatus;
+    // Filter by current network environment (mainnet/testnet)
+    const currentNetwork = network === 'mainnet' ? 'mainnet' : 'testnet';
+    const matchesNetwork = tx.network === currentNetwork;
+    
+    return matchesSearch && matchesType && matchesStatus && matchesNetwork;
   });
 
   const getStatusIcon = (status: string) => {
@@ -278,7 +286,7 @@ export default function TransactionsView({ onBack }: TransactionsViewProps) {
           {filteredTransactions.map((tx) => (
             <Card 
               key={tx._id}
-              className="hover:shadow-md transition-shadow cursor-pointer"
+              className="hover:shadow-md transition-shadow cursor-pointer py-2"
               onClick={() => {
                 if (tx.transactionHash) {
                   const explorerUrl = network === 'mainnet' 

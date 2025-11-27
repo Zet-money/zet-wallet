@@ -19,7 +19,7 @@ import { useRouter } from 'next/navigation';
 
 export default function ProfileView() {
   const { profile, backendUser, updateProfile, isLoading, loadProfile } = useUserSettings();
-  const { lockApp } = useBiometric();
+  const { lockApp, unlockApp } = useBiometric();
   const { wallet } = useWallet();
   const router = useRouter();
 
@@ -123,7 +123,6 @@ export default function ProfileView() {
 
   const handleUnlockSecurity = async () => {
     try {
-      const { unlockApp } = useBiometric();
       const result = await unlockApp(1);
       if (result.success && result.mnemonic) {
         setIsUnlocked(true);
