@@ -12,6 +12,7 @@ export interface User {
   email?: string;
   username?: string;
   sessionTimeout?: number;
+  requireAuthOnReload?: boolean;
   isActive: boolean;
   lastLoginAt?: Date;
   lastActive?: Date;
@@ -36,6 +37,7 @@ export interface CreateUserRequest {
   email?: string;
   username?: string;
   sessionTimeout?: number;
+  requireAuthOnReload?: boolean;
 }
 
 export interface UpdateUserRequest {
@@ -43,6 +45,7 @@ export interface UpdateUserRequest {
   email?: string;
   username?: string;
   sessionTimeout?: number;
+  requireAuthOnReload?: boolean;
 }
 
 export interface PaycrestOrder {

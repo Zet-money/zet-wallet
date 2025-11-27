@@ -12,6 +12,7 @@ export interface UserProfile {
   username: string;
   email?: string;
   sessionTimeout: number; // in minutes
+  requireAuthOnReload: boolean; // whether to require biometric auth on every reload
 }
 
 export interface UserSettingsContextType {
@@ -52,15 +53,17 @@ export function UserSettingsProvider({ children }: { children: React.ReactNode }
               username: user.username || '',
               email: user.email,
               sessionTimeout: user.sessionTimeout || 20,
+              requireAuthOnReload: user.requireAuthOnReload ?? false,
             };
             
             setProfile(backendProfile);
             
-            // Store sessionTimeout in localStorage for BiometricContext to access
+            // Store sessionTimeout and requireAuthOnReload in localStorage for BiometricContext to access
             try {
               localStorage.setItem('zet_session_timeout', backendProfile.sessionTimeout.toString());
+              localStorage.setItem('zet_require_auth_reload', backendProfile.requireAuthOnReload.toString());
             } catch (error) {
-              console.warn('Failed to save session timeout to localStorage:', error);
+              console.warn('Failed to save settings to localStorage:', error);
             }
             
             // Update local storage with backend data
@@ -104,11 +107,12 @@ export function UserSettingsProvider({ children }: { children: React.ReactNode }
         const userProfile = JSON.parse(decryptedData) as UserProfile;
         setProfile(userProfile);
         
-        // Store sessionTimeout in localStorage for BiometricContext to access
+        // Store sessionTimeout and requireAuthOnReload in localStorage for BiometricContext to access
         try {
           localStorage.setItem('zet_session_timeout', userProfile.sessionTimeout.toString());
+          localStorage.setItem('zet_require_auth_reload', (userProfile.requireAuthOnReload ?? false).toString());
         } catch (error) {
-          console.warn('Failed to save session timeout to localStorage:', error);
+          console.warn('Failed to save settings to localStorage:', error);
         }
       }
     } catch (error) {
@@ -127,6 +131,7 @@ export function UserSettingsProvider({ children }: { children: React.ReactNode }
         name: '',
         username: '',
         sessionTimeout: 20, // default 20 minutes
+        requireAuthOnReload: false, // default false
         ...profile,
         ...newProfile
       };
@@ -146,11 +151,12 @@ export function UserSettingsProvider({ children }: { children: React.ReactNode }
 
       setProfile(updatedProfile);
 
-      // Store sessionTimeout in localStorage for BiometricContext to access
+      // Store sessionTimeout and requireAuthOnReload in localStorage for BiometricContext to access
       try {
         localStorage.setItem('zet_session_timeout', updatedProfile.sessionTimeout.toString());
+        localStorage.setItem('zet_require_auth_reload', updatedProfile.requireAuthOnReload.toString());
       } catch (error) {
-        console.warn('Failed to save session timeout to localStorage:', error);
+        console.warn('Failed to save settings to localStorage:', error);
       }
 
       // Sync with backend if wallet is available
@@ -163,6 +169,7 @@ export function UserSettingsProvider({ children }: { children: React.ReactNode }
               email: updatedProfile.email,
               username: updatedProfile.username,
               sessionTimeout: updatedProfile.sessionTimeout,
+              requireAuthOnReload: updatedProfile.requireAuthOnReload,
             });
           }
         } catch (error: any) {
@@ -178,6 +185,7 @@ export function UserSettingsProvider({ children }: { children: React.ReactNode }
                   email: updatedProfile.email,
                   username: updatedProfile.username,
                   sessionTimeout: updatedProfile.sessionTimeout,
+                  requireAuthOnReload: updatedProfile.requireAuthOnReload,
                 });
                 console.log('User created automatically after 401 error');
               }

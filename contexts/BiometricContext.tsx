@@ -67,6 +67,16 @@ export function BiometricProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Helper function to check if user requires auth on reload
+  const getRequireAuthOnReload = (): boolean => {
+    try {
+      const requireAuth = localStorage.getItem('zet_require_auth_reload');
+      return requireAuth === 'true';
+    } catch (error) {
+      return false; // Default false - don't require auth on reload
+    }
+  };
+
   // Helper function to save last unlock time
   const saveLastUnlockTime = () => {
     try {
@@ -146,24 +156,32 @@ export function BiometricProvider({ children }: { children: React.ReactNode }) {
           // Check if the encrypted wallet has actual mnemonic data
           const hasMnemonic = await checkWalletHasMnemonic();
           if (hasMnemonic) {
-            // Check if session has expired
-            const sessionExpired = await checkSessionExpiry();
+            // Check user's preference for auth on reload
+            const requireAuthOnReload = getRequireAuthOnReload();
             
-            if (!sessionExpired) {
-              // Session is still valid, auto-unlock
-              const unlockResult = await biometricMigration.unlockWalletWithBiometrics();
-              if (unlockResult.success) {
-                setIsAppUnlocked(true);
-                const now = Date.now();
-                setLastActivityTime(now);
-                lastActivityRef.current = now;
-                const timeoutMinutes = await getSessionTimeoutMinutes();
-                startSessionTimeout(timeoutMinutes);
-                // Update lastActive timestamp
-                await updateLastActive();
+            if (requireAuthOnReload) {
+              // User wants to authenticate on every reload - leave app locked
+              // isAppUnlocked stays false, user must unlock manually
+            } else {
+              // Check if session has expired
+              const sessionExpired = await checkSessionExpiry();
+              
+              if (!sessionExpired) {
+                // Session is still valid, auto-unlock
+                const unlockResult = await biometricMigration.unlockWalletWithBiometrics();
+                if (unlockResult.success) {
+                  setIsAppUnlocked(true);
+                  const now = Date.now();
+                  setLastActivityTime(now);
+                  lastActivityRef.current = now;
+                  const timeoutMinutes = await getSessionTimeoutMinutes();
+                  startSessionTimeout(timeoutMinutes);
+                  // Update lastActive timestamp
+                  await updateLastActive();
+                }
               }
+              // If session expired, leave app locked (isAppUnlocked stays false)
             }
-            // If session expired, leave app locked (isAppUnlocked stays false)
           } else {
             // If we have encrypted data but no mnemonic, user needs to create wallet
             setNeedsWalletCreation(true);

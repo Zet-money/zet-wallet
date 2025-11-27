@@ -27,7 +27,8 @@ export default function ProfileView() {
     name: '',
     username: '',
     email: '',
-    sessionTimeout: 5
+    sessionTimeout: 5,
+    requireAuthOnReload: false
   });
   const [isSaving, setIsSaving] = useState(false);
   const [copiedAddress, setCopiedAddress] = useState(false);
@@ -56,7 +57,8 @@ export default function ProfileView() {
         name: profile.name || '',
         username: profile.username || '',
         email: profile.email || '',
-        sessionTimeout: profile.sessionTimeout || 5
+        sessionTimeout: profile.sessionTimeout || 5,
+        requireAuthOnReload: profile.requireAuthOnReload || false
       });
     }
     // Also sync from backendUser if available
@@ -65,7 +67,8 @@ export default function ProfileView() {
         name: backendUser.name || prev.name,
         username: backendUser.username || prev.username,
         email: backendUser.email || prev.email,
-        sessionTimeout: backendUser.sessionTimeout || prev.sessionTimeout
+        sessionTimeout: backendUser.sessionTimeout || prev.sessionTimeout,
+        requireAuthOnReload: backendUser.requireAuthOnReload || prev.requireAuthOnReload
       }));
     }
   }, [profile, backendUser]);
@@ -85,7 +88,7 @@ export default function ProfileView() {
     }
   };
 
-  const handleInputChange = (field: string, value: string | number) => {
+  const handleInputChange = (field: string, value: string | number | boolean) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -310,6 +313,25 @@ export default function ProfileView() {
                 value={formData.sessionTimeout}
                 onChange={(e) => handleInputChange('sessionTimeout', parseInt(e.target.value) || 5)}
                 className="mt-1"
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="requireAuthOnReload" className="text-xs">
+                  Require Authentication on Reload
+                </Label>
+                <p className="text-[10px] text-gray-500 dark:text-gray-400">
+                  When disabled, you won't need to authenticate on app reload until timeout expires
+                </p>
+              </div>
+              <input
+                id="requireAuthOnReload"
+                type="checkbox"
+                checked={formData.requireAuthOnReload}
+                onChange={(e) => handleInputChange('requireAuthOnReload', e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300 text-amber-600 focus:ring-amber-500"
+                aria-label="Require authentication on reload"
               />
             </div>
 
