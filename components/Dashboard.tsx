@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Lock } from 'lucide-react';
+import { Lock, Copy, Check } from 'lucide-react';
 import { useWallet } from '@/contexts/WalletContext';
 import { useBiometric } from '@/contexts/BiometricContext';
 import { useUserSettings } from '@/contexts/UserSettingsContext';
@@ -29,6 +29,7 @@ export default function Dashboard() {
   
   // View state management
   const [activeView, setActiveView] = useState<'home' | 'rewards' | 'profile' | 'transactions'>('home');
+  const [copiedAddress, setCopiedAddress] = useState(false);
 
   // Balance and price state
   const [balances, setBalances] = useState<Record<string, string>>({})
@@ -138,9 +139,23 @@ export default function Dashboard() {
                     <img src="https://assets.parqet.com/logos/crypto/ETH?format=png" alt="ETH" className="w-3 h-3 flex-shrink-0" onError={(e) => { e.currentTarget.style.display = 'none' }} />
                     <span className="truncate">{wallet ? truncateAddress(wallet.address) : 'No EVM wallet'}</span>
                     <button
-                      onClick={async () => { if (wallet?.address) { await navigator.clipboard.writeText(wallet.address); toast.success('EVM address copied') } }}
-                      className="px-1 py-0.5 border rounded text-xs flex-shrink-0"
-                    >Copy</button>
+                      onClick={async () => { 
+                        if (wallet?.address) { 
+                          await navigator.clipboard.writeText(wallet.address); 
+                          setCopiedAddress(true);
+                          toast.success('EVM address copied');
+                          setTimeout(() => setCopiedAddress(false), 2000);
+                        } 
+                      }}
+                      className="p-1 hover:bg-accent rounded transition-colors flex-shrink-0"
+                      title={copiedAddress ? "Copied!" : "Copy address"}
+                    >
+                      {copiedAddress ? (
+                        <Check className="w-3 h-3 text-green-500" />
+                      ) : (
+                        <Copy className="w-3 h-3" />
+                      )}
+                    </button>
                   </div>
                 </div>
               </div>
