@@ -13,7 +13,7 @@ import { useBiometric } from '@/contexts/BiometricContext';
 import { backendApi } from '@/lib/services/backend-api';
 
 export default function RewardsView() {
-  const { backendUser } = useUserSettings();
+  const { backendUser, loadProfile } = useUserSettings();
   const { wallet } = useWallet();
   const { getBiometricPublicKey, isAppUnlocked } = useBiometric();
   const [checkingIn, setCheckingIn] = useState(false);
@@ -49,9 +49,17 @@ export default function RewardsView() {
     }
   };
 
+  // Reload profile and points data when component mounts or when dependencies change
   useEffect(() => {
-    loadPointsData();
-  }, [wallet?.address, backendUser, isAppUnlocked]);
+    const refreshData = async () => {
+      // Reload profile from backend to get latest totalPoints
+      await loadProfile();
+      // Then load points breakdown
+      await loadPointsData();
+    };
+    
+    refreshData();
+  }, [wallet?.address, isAppUnlocked]);
 
   const totalPoints = backendUser?.totalPoints || pointsData.totalPoints;
   const dailyCheckInStreak = backendUser?.dailyCheckInStreak || pointsData.dailyCheckInStreak;
@@ -90,7 +98,8 @@ export default function RewardsView() {
       await backendApi.dailyCheckIn(wallet.address, biometricPublicKey);
       toast.success('Daily check-in complete! +10 points');
       
-      // Reload points data
+      // Reload profile and points data
+      await loadProfile();
       await loadPointsData();
     } catch (error: any) {
       if (error.message?.includes('Already checked in')) {

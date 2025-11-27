@@ -18,7 +18,7 @@ import { HDNodeWallet } from 'ethers';
 import { useRouter } from 'next/navigation';
 
 export default function ProfileView() {
-  const { profile, backendUser, updateProfile, isLoading } = useUserSettings();
+  const { profile, backendUser, updateProfile, isLoading, loadProfile } = useUserSettings();
   const { lockApp } = useBiometric();
   const { wallet } = useWallet();
   const router = useRouter();
@@ -42,6 +42,11 @@ export default function ProfileView() {
   const [showPrivateKey, setShowPrivateKey] = useState(false);
   const [copiedMnemonic, setCopiedMnemonic] = useState(false);
   const [copiedPrivateKey, setCopiedPrivateKey] = useState(false);
+
+  // Reload profile when component mounts
+  useEffect(() => {
+    loadProfile();
+  }, []);
 
   useEffect(() => {
     console.log("backendUser:", backendUser);
