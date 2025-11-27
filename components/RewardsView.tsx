@@ -59,6 +59,20 @@ export default function RewardsView() {
   const referralCount = backendUser?.referralCount || pointsData.referralCount;
   const hasClaimedNFT = backendUser?.hasCompletedFirstTestnetTransaction || false;
 
+  // Check if user already checked in today
+  const hasCheckedInToday = () => {
+    if (!backendUser?.lastDailyCheckIn) return false;
+    const lastCheckIn = new Date(backendUser.lastDailyCheckIn);
+    const today = new Date();
+    return (
+      lastCheckIn.getFullYear() === today.getFullYear() &&
+      lastCheckIn.getMonth() === today.getMonth() &&
+      lastCheckIn.getDate() === today.getDate()
+    );
+  };
+
+  const alreadyCheckedIn = hasCheckedInToday();
+
   const handleDailyCheckIn = async () => {
     if (!wallet?.address) {
       toast.error('Wallet not connected');
@@ -143,10 +157,10 @@ export default function RewardsView() {
 
               <Button 
                 onClick={handleDailyCheckIn}
-                disabled={checkingIn}
+                disabled={checkingIn || alreadyCheckedIn}
                 className="w-full gradient-primary text-white"
               >
-                {checkingIn ? 'Checking in...' : 'Check In Today'}
+                {alreadyCheckedIn ? '✓ Already Checked In' : checkingIn ? 'Checking in...' : 'Check In Today'}
               </Button>
             </CardContent>
           </Card>

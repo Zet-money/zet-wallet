@@ -44,6 +44,8 @@ export default function ProfileView() {
   const [copiedPrivateKey, setCopiedPrivateKey] = useState(false);
 
   useEffect(() => {
+    console.log("backendUser:", backendUser);
+    console.log("profile:", profile);
     if (profile) {
       setFormData({
         name: profile.name || '',
@@ -193,14 +195,14 @@ export default function ProfileView() {
       <div className="grid grid-cols-2 gap-3">
         <Card>
           <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold gradient-text">0</p>
+            <p className="text-2xl font-bold gradient-text">{backendUser?.totalPoints || 0}</p>
             <p className="text-xs text-muted-foreground mt-1">Total Points</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold gradient-text">0</p>
-            <p className="text-xs text-muted-foreground mt-1">Transactions</p>
+            <p className="text-2xl font-bold gradient-text">{backendUser?.referralCount || 0}</p>
+            <p className="text-xs text-muted-foreground mt-1">Referrals</p>
           </CardContent>
         </Card>
       </div>
