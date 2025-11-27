@@ -51,8 +51,6 @@ export default function ProfileView() {
   }, []);
 
   useEffect(() => {
-    console.log("backendUser:", backendUser);
-    console.log("profile:", profile);
     if (profile) {
       setFormData({
         name: profile.name || '',
@@ -501,7 +499,7 @@ export default function ProfileView() {
       </div>
 
       <p className="text-xs text-center text-muted-foreground">
-        Zet.money v1.0.0 • Made with ❤️ for Web3
+        Zet.money v0.5.0 • Made with ❤️ for Web3
       </p>
     </div>
   );

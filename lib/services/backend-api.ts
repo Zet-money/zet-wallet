@@ -377,6 +377,20 @@ class BackendApiService {
     }>(`/users/me/points?walletAddress=${walletAddress}&biometricPublicKey=${biometricPublicKey}`);
   }
 
+  async getLeaderboard(walletAddress: string, biometricPublicKey: string): Promise<Array<{
+    rank: number;
+    username: string | null;
+    walletAddress: string;
+    totalPoints: number;
+  }>> {
+    return this.makeRequest<Array<{
+      rank: number;
+      username: string | null;
+      walletAddress: string;
+      totalPoints: number;
+    }>>(`/users/leaderboard?walletAddress=${encodeURIComponent(walletAddress)}&biometricPublicKey=${encodeURIComponent(biometricPublicKey)}`);
+  }
+
   // Whitelist/NFT endpoints
   async checkWhitelistStatus(walletAddress: string, biometricPublicKey: string): Promise<{
     isWhitelisted: boolean;

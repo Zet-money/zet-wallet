@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Gift, Calendar, ArrowRightLeft, Users, CheckCircle2, ExternalLink, Sparkles, Copy, Loader2 } from 'lucide-react';
+import { Gift, Calendar, ArrowRightLeft, Users, CheckCircle2, ExternalLink, Sparkles, Copy, Loader2, Trophy, Medal, Award } from 'lucide-react';
 import { toast } from 'sonner';
 import { useUserSettings } from '@/contexts/UserSettingsContext';
 import { useWallet } from '@/contexts/WalletContext';
@@ -35,6 +35,36 @@ export default function RewardsView() {
     transactionCount: 0,
     referralCount: 0,
   });
+  const [leaderboard, setLeaderboard] = useState<Array<{
+    rank: number;
+    username: string | null;
+    walletAddress: string;
+    totalPoints: number;
+  }>>([]);
+  const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
+
+  const loadLeaderboard = async () => {
+    if (!wallet?.address || !isAppUnlocked) {
+      return;
+    }
+
+    setLoadingLeaderboard(true);
+    try {
+      const biometricPublicKey = await getBiometricPublicKey();
+      if (!biometricPublicKey) {
+        setLoadingLeaderboard(false);
+        return;
+      }
+
+      const data = await backendApi.getLeaderboard(wallet.address, biometricPublicKey);
+      setLeaderboard(data);
+    } catch (error) {
+      console.error('Failed to load leaderboard:', error);
+      toast.error('Failed to load leaderboard');
+    } finally {
+      setLoadingLeaderboard(false);
+    }
+  };
 
   const loadPointsData = async () => {
     if (!wallet?.address || !isAppUnlocked) {
@@ -207,9 +237,10 @@ export default function RewardsView() {
 
   return (
     <div className="pb-20">
-      <Tabs defaultValue="points" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 mb-6">
+      <Tabs defaultValue="points" className="w-full" onValueChange={(value) => { if (value === 'leaderboard') loadLeaderboard(); }}>
+        <TabsList className="grid w-full grid-cols-3 mb-6">
           <TabsTrigger value="points">Points</TabsTrigger>
+          <TabsTrigger value="leaderboard">Leaderboard</TabsTrigger>
           <TabsTrigger value="assets">Assets</TabsTrigger>
         </TabsList>
 
@@ -447,6 +478,92 @@ export default function RewardsView() {
               </p>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Leaderboard Tab */}
+        <TabsContent value="leaderboard" className="space-y-4">
+          {loadingLeaderboard ? (
+            <Card className="p-8">
+              <CardContent className="flex flex-col items-center justify-center">
+                <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
+                <p className="text-muted-foreground">Loading leaderboard...</p>
+              </CardContent>
+            </Card>
+          ) : leaderboard.length === 0 ? (
+            <Card className="p-8">
+              <CardContent className="text-center">
+                <Trophy className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                <h3 className="font-semibold mb-2">No Rankings Yet</h3>
+                <p className="text-sm text-muted-foreground">
+                  Be the first to earn points and appear on the leaderboard!
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {leaderboard.map((user) => {
+                const isTop3 = user.rank <= 3;
+                const truncateAddress = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+                const displayName = user.username || truncateAddress(user.walletAddress);
+                
+                return (
+                  <Card 
+                    key={user.walletAddress} 
+                    className={`p-3 ${
+                      user.rank === 1 ? 'bg-gradient-to-r from-yellow-500/10 to-amber-500/10 border-yellow-500/30' :
+                      user.rank === 2 ? 'bg-gradient-to-r from-gray-400/10 to-gray-500/10 border-gray-400/30' :
+                      user.rank === 3 ? 'bg-gradient-to-r from-orange-600/10 to-amber-700/10 border-orange-600/30' :
+                      'border-border/50'
+                    }`}
+                  >
+                    <CardContent className="p-0">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3 min-w-0 flex-1">
+                          {/* Rank Badge */}
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                            user.rank === 1 ? 'bg-gradient-to-br from-yellow-400 to-yellow-600' :
+                            user.rank === 2 ? 'bg-gradient-to-br from-gray-300 to-gray-500' :
+                            user.rank === 3 ? 'bg-gradient-to-br from-orange-400 to-orange-600' :
+                            'bg-muted'
+                          }`}>
+                            {isTop3 ? (
+                              user.rank === 1 ? <Trophy className="w-5 h-5 text-white" /> :
+                              user.rank === 2 ? <Medal className="w-5 h-5 text-white" /> :
+                              <Award className="w-5 h-5 text-white" />
+                            ) : (
+                              <span className={`font-bold ${isTop3 ? 'text-white' : 'text-muted-foreground'}`}>
+                                {user.rank}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* User Info */}
+                          <div className="min-w-0 flex-1">
+                            <p className={`font-semibold truncate ${isTop3 ? 'text-lg' : 'text-sm'}`}>
+                              {displayName}
+                            </p>
+                            {user.username && (
+                              <p className="text-xs text-muted-foreground truncate">
+                                {truncateAddress(user.walletAddress)}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Points */}
+                        <div className="text-right flex-shrink-0 ml-2">
+                          <p className={`font-bold gradient-text ${isTop3 ? 'text-xl' : 'text-base'}`}>
+                            {user.totalPoints.toLocaleString()}
+                          </p>
+                          <p className="text-xs text-muted-foreground">points</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>
