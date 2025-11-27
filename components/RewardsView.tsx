@@ -44,9 +44,9 @@ export default function RewardsView() {
         {/* Points Tab */}
         <TabsContent value="points" className="space-y-4">
           {/* Total Points Card */}
-          <Card className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 border-purple-500/20 relative overflow-hidden">
+          <Card className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 border-purple-500/20 relative overflow-hidden p-3">
             <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-purple-600/20 to-blue-600/20 rounded-full blur-3xl" />
-            <CardContent className="p-4 relative">
+            <CardContent className="relative">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Total Points</p>
@@ -61,8 +61,8 @@ export default function RewardsView() {
           </Card>
 
           {/* Daily Check-in Card */}
-          <Card className="border-purple-500/20">
-            <CardContent className="p-4">
+          <Card className="border-purple-500/20 p-3">
+            <CardContent>
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center space-x-3">
                   <div className="w-12 h-12 bg-gradient-to-r from-purple-600 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
@@ -96,8 +96,8 @@ export default function RewardsView() {
           </Card>
 
           {/* Transaction Points Card */}
-          <Card className="border-blue-500/20">
-            <CardContent className="p-4">
+          <Card className="border-blue-500/20 p-3">
+            <CardContent>
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center space-x-3">
                   <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
@@ -127,8 +127,8 @@ export default function RewardsView() {
           </Card>
 
           {/* Referral Points Card */}
-          <Card className="border-green-500/20">
-            <CardContent className="p-4">
+          <Card className="border-green-500/20 p-3">
+            <CardContent>
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center space-x-3">
                   <div className="w-12 h-12 bg-gradient-to-r from-green-600 to-emerald-600 rounded-full flex items-center justify-center flex-shrink-0">
@@ -174,7 +174,7 @@ export default function RewardsView() {
           </div>
 
           {/* Early User NFT Card */}
-          <Card className="border-purple-500/20 overflow-hidden">
+          <Card className="border-purple-500/20 overflow-hidden p-3">
             <div className="relative h-48 bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center">
               <div className="absolute inset-0 bg-[url('/Zet money NFT.png')] bg-cover bg-center opacity-30" />
               <div className="relative z-10 text-center text-white">
@@ -183,7 +183,7 @@ export default function RewardsView() {
                 <p className="text-sm opacity-90">Exclusive reward for pioneers</p>
               </div>
             </div>
-            <CardContent className="p-4">
+            <CardContent>
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">Status</span>
@@ -225,8 +225,8 @@ export default function RewardsView() {
           </Card>
 
           {/* Coming Soon Card */}
-          <Card className="border-dashed">
-            <CardContent className="p-4 text-center">
+          <Card className="border-dashed p-3">
+            <CardContent className="text-center">
               <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
                 <Gift className="w-8 h-8 text-muted-foreground" />
               </div>
