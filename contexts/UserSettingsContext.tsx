@@ -37,6 +37,49 @@ export function UserSettingsProvider({ children }: { children: React.ReactNode }
     try {
       setIsLoading(true);
       
+      // IMPORTANT: Backend is single source of truth
+      // First, try to load from backend if wallet is available
+      if (wallet?.address) {
+        try {
+          const biometricPublicKey = await getBiometricPublicKey();
+          if (biometricPublicKey) {
+            const user = await backendApi.getUserProfile(wallet.address, biometricPublicKey);
+            setBackendUser(user);
+            
+            // Extract profile from backend user
+            const backendProfile: UserProfile = {
+              name: user.name || '',
+              username: user.username || '',
+              email: user.email,
+              sessionTimeout: user.sessionTimeout || 5,
+            };
+            
+            setProfile(backendProfile);
+            
+            // Update local storage with backend data
+            await secureDB.init();
+            const masterKey = await cryptoVault.generateMasterKey();
+            const encryptedData = await cryptoVault.encryptData(masterKey, JSON.stringify(backendProfile));
+            const wrappedKey = await cryptoVault.exportKey(masterKey);
+
+            await secureDB.set('user-profile', {
+              wrappedKey,
+              iv: encryptedData.iv,
+              encryptedData: encryptedData.encryptedData,
+              updatedAt: Date.now()
+            });
+            
+            return; // Backend data loaded successfully
+          }
+        } catch (error: any) {
+          // If user doesn't exist (401), we'll fall through to local data or create new
+          if (!(error?.status === 401 || error?.message?.includes('401'))) {
+            console.error('Error loading from backend:', error);
+          }
+        }
+      }
+      
+      // Fallback: Load from local storage only if backend is not available
       // Ensure SecureDB is initialized
       await secureDB.init();
       
@@ -208,9 +251,9 @@ export function UserSettingsProvider({ children }: { children: React.ReactNode }
 
   useEffect(() => {
     loadProfile();
-  }, []);
+  }, [wallet?.address]); // Reload when wallet address changes (import/clear)
 
-  // Sync with backend when wallet becomes available
+  // Sync with backend when wallet becomes available (additional sync for updates)
   useEffect(() => {
     if (wallet?.address && profile) {
       syncWithBackend();
