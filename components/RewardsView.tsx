@@ -15,7 +15,7 @@ import { backendApi } from '@/lib/services/backend-api';
 export default function RewardsView() {
   const { backendUser } = useUserSettings();
   const { wallet } = useWallet();
-  const { getBiometricPublicKey } = useBiometric();
+  const { getBiometricPublicKey, isAppUnlocked } = useBiometric();
   const [checkingIn, setCheckingIn] = useState(false);
   const [loading, setLoading] = useState(true);
   const [pointsData, setPointsData] = useState({
@@ -26,11 +26,17 @@ export default function RewardsView() {
   });
 
   const loadPointsData = async () => {
-    if (!wallet?.address) return;
+    if (!wallet?.address || !isAppUnlocked) {
+      setLoading(false);
+      return;
+    }
     
     try {
       const biometricPublicKey = await getBiometricPublicKey();
-      if (!biometricPublicKey) return;
+      if (!biometricPublicKey) {
+        setLoading(false);
+        return;
+      }
 
       const data = await backendApi.getPoints(wallet.address, biometricPublicKey);
       setPointsData(data);
@@ -43,7 +49,7 @@ export default function RewardsView() {
 
   useEffect(() => {
     loadPointsData();
-  }, [wallet?.address, backendUser]);
+  }, [wallet?.address, backendUser, isAppUnlocked]);
 
   const totalPoints = backendUser?.totalPoints || pointsData.totalPoints;
   const dailyCheckInStreak = backendUser?.dailyCheckInStreak || pointsData.dailyCheckInStreak;
