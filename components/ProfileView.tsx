@@ -79,6 +79,8 @@ export default function ProfileView() {
       setIsSaving(true);
       await updateProfile(formData);
       toast.success('Profile updated successfully!');
+      // Reload profile to get updated data from backend
+      await loadProfile();
     } catch (error: any) {
       // Display the specific error message from the backend
       const errorMessage = error?.message || 'Failed to update profile';

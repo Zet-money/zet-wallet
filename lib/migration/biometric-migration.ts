@@ -269,6 +269,65 @@ export class BiometricMigration {
   }
 
   /**
+   * Unlock wallet silently without triggering biometric prompt
+   * Used for auto-unlock scenarios when session is still valid
+   */
+  async unlockWalletSilently(): Promise<UnlockResult> {
+    try {
+      this.ensureInitialized();
+
+      // Check if biometric authentication is supported
+      const isSupported = await this.isBiometricSupported();
+      if (!isSupported) {
+        return {
+          success: false,
+          error: 'Biometric authentication is not supported on this device'
+        };
+      }
+
+      // Check if encrypted wallet exists
+      if (!(await this.hasEncryptedWallet())) {
+        return {
+          success: false,
+          error: 'No encrypted wallet found'
+        };
+      }
+
+      // Retrieve the encrypted wallet data
+      const securedWallet = await secureDB.getWallet();
+      if (!securedWallet) {
+        return {
+          success: false,
+          error: 'Failed to retrieve encrypted wallet data'
+        };
+      }
+
+      // Skip biometric authentication for silent unlock
+      // Use the stored wrapped key directly
+      const masterKey = await this.cryptoVault.importKey(securedWallet.wrappedMasterKey);
+
+      // Decrypt the mnemonic
+      const mnemonic = await this.cryptoVault.decryptData(
+        masterKey,
+        securedWallet.mnemonicIV,
+        securedWallet.encryptedMnemonic
+      );
+
+      return {
+        success: true,
+        mnemonic
+      };
+
+    } catch (error) {
+      console.error('[BiometricMigration] Error unlocking wallet silently:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error during silent unlock'
+      };
+    }
+  }
+
+  /**
    * Clear unencrypted mnemonic from localStorage
    */
   private clearUnencryptedMnemonic(): void {

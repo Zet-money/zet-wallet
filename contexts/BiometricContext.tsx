@@ -71,9 +71,13 @@ export function BiometricProvider({ children }: { children: React.ReactNode }) {
   const getRequireAuthOnReload = (): boolean => {
     try {
       const requireAuth = localStorage.getItem('zet_require_auth_reload');
-      return requireAuth === 'true';
+      console.log('[BiometricContext] getRequireAuthOnReload - localStorage value:', requireAuth);
+      const result = requireAuth === 'true';
+      console.log('[BiometricContext] getRequireAuthOnReload - result:', result);
+      return result;
     } catch (error) {
-      return false; // Default false - don't require auth on reload
+      console.error('[BiometricContext] Error reading requireAuthOnReload:', error);
+      return true; // Default true - require auth on reload
     }
   };
 
@@ -158,17 +162,22 @@ export function BiometricProvider({ children }: { children: React.ReactNode }) {
           if (hasMnemonic) {
             // Check user's preference for auth on reload
             const requireAuthOnReload = getRequireAuthOnReload();
+            console.log('[BiometricContext] Initialization - requireAuthOnReload:', requireAuthOnReload);
             
             if (requireAuthOnReload) {
               // User wants to authenticate on every reload - leave app locked
+              console.log('[BiometricContext] User requires auth on reload - staying locked');
               // isAppUnlocked stays false, user must unlock manually
             } else {
+              console.log('[BiometricContext] User does NOT require auth on reload - checking session expiry');
               // Check if session has expired
               const sessionExpired = await checkSessionExpiry();
+              console.log('[BiometricContext] Session expired?', sessionExpired);
               
               if (!sessionExpired) {
                 // Session is still valid, auto-unlock
-                const unlockResult = await biometricMigration.unlockWalletWithBiometrics();
+                console.log('[BiometricContext] Session valid - auto-unlocking');
+                const unlockResult = await biometricMigration.unlockWalletSilently();
                 if (unlockResult.success) {
                   setIsAppUnlocked(true);
                   const now = Date.now();
@@ -178,7 +187,12 @@ export function BiometricProvider({ children }: { children: React.ReactNode }) {
                   startSessionTimeout(timeoutMinutes);
                   // Update lastActive timestamp
                   await updateLastActive();
+                  console.log('[BiometricContext] Auto-unlock successful');
+                } else {
+                  console.log('[BiometricContext] Auto-unlock failed:', unlockResult.error);
                 }
+              } else {
+                console.log('[BiometricContext] Session expired - staying locked');
               }
               // If session expired, leave app locked (isAppUnlocked stays false)
             }

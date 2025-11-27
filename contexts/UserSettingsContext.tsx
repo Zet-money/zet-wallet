@@ -110,7 +110,7 @@ export function UserSettingsProvider({ children }: { children: React.ReactNode }
         // Store sessionTimeout and requireAuthOnReload in localStorage for BiometricContext to access
         try {
           localStorage.setItem('zet_session_timeout', userProfile.sessionTimeout.toString());
-          localStorage.setItem('zet_require_auth_reload', (userProfile.requireAuthOnReload ?? false).toString());
+          localStorage.setItem('zet_require_auth_reload', (userProfile.requireAuthOnReload ?? true).toString());
         } catch (error) {
           console.warn('Failed to save settings to localStorage:', error);
         }
@@ -131,7 +131,7 @@ export function UserSettingsProvider({ children }: { children: React.ReactNode }
         name: '',
         username: '',
         sessionTimeout: 20, // default 20 minutes
-        requireAuthOnReload: false, // default false
+        requireAuthOnReload: true, // default true
         ...profile,
         ...newProfile
       };
