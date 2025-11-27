@@ -53,6 +53,48 @@ export function BiometricProvider({ children }: { children: React.ReactNode }) {
   const lastActivityRef = useRef<number>(Date.now());
   const sessionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Helper function to get session timeout from user settings
+  const getSessionTimeoutMinutes = async (): Promise<number> => {
+    try {
+      // Try to get from localStorage first
+      const profileData = localStorage.getItem('zet_session_timeout');
+      if (profileData) {
+        return parseInt(profileData, 10) || 20;
+      }
+      return 20; // Default 20 minutes
+    } catch (error) {
+      return 20;
+    }
+  };
+
+  // Helper function to save last unlock time
+  const saveLastUnlockTime = () => {
+    try {
+      localStorage.setItem('zet_last_unlock', Date.now().toString());
+    } catch (error) {
+      console.error('Failed to save last unlock time:', error);
+    }
+  };
+
+  // Helper function to check if session has expired
+  const checkSessionExpiry = async (): Promise<boolean> => {
+    try {
+      const lastUnlock = localStorage.getItem('zet_last_unlock');
+      if (!lastUnlock) return true; // No record, consider expired
+
+      const timeoutMinutes = await getSessionTimeoutMinutes();
+      const lastUnlockTime = parseInt(lastUnlock, 10);
+      const now = Date.now();
+      const elapsed = now - lastUnlockTime;
+      const timeoutMs = timeoutMinutes * 60 * 1000;
+
+      return elapsed >= timeoutMs;
+    } catch (error) {
+      console.error('Error checking session expiry:', error);
+      return true; // On error, require unlock
+    }
+  };
+
   // Helper function to update lastActive timestamp
   const updateLastActive = async () => {
     try {
@@ -104,17 +146,24 @@ export function BiometricProvider({ children }: { children: React.ReactNode }) {
           // Check if the encrypted wallet has actual mnemonic data
           const hasMnemonic = await checkWalletHasMnemonic();
           if (hasMnemonic) {
-            // If we have encrypted data with mnemonic, try to unlock automatically
-            const unlockResult = await biometricMigration.unlockWalletWithBiometrics();
-            if (unlockResult.success) {
-              setIsAppUnlocked(true);
-              const now = Date.now();
-              setLastActivityTime(now);
-              lastActivityRef.current = now;
-              startSessionTimeout();
-              // Update lastActive timestamp
-              await updateLastActive();
+            // Check if session has expired
+            const sessionExpired = await checkSessionExpiry();
+            
+            if (!sessionExpired) {
+              // Session is still valid, auto-unlock
+              const unlockResult = await biometricMigration.unlockWalletWithBiometrics();
+              if (unlockResult.success) {
+                setIsAppUnlocked(true);
+                const now = Date.now();
+                setLastActivityTime(now);
+                lastActivityRef.current = now;
+                const timeoutMinutes = await getSessionTimeoutMinutes();
+                startSessionTimeout(timeoutMinutes);
+                // Update lastActive timestamp
+                await updateLastActive();
+              }
             }
+            // If session expired, leave app locked (isAppUnlocked stays false)
           } else {
             // If we have encrypted data but no mnemonic, user needs to create wallet
             setNeedsWalletCreation(true);
@@ -122,6 +171,7 @@ export function BiometricProvider({ children }: { children: React.ReactNode }) {
             const now = Date.now();
             setLastActivityTime(now);
             lastActivityRef.current = now;
+            saveLastUnlockTime();
           }
         } else if (status.hasUnencrypted && !status.hasEncrypted) {
           // If we have unencrypted data but no encrypted data, unlock the app
@@ -130,6 +180,7 @@ export function BiometricProvider({ children }: { children: React.ReactNode }) {
           const now = Date.now();
           setLastActivityTime(now);
           lastActivityRef.current = now;
+          saveLastUnlockTime();
         }
       } catch (error) {
         console.error('Error initializing biometric system:', error);
@@ -213,7 +264,7 @@ export function BiometricProvider({ children }: { children: React.ReactNode }) {
     };
   }, []); // Empty deps - only cleanup on unmount
 
-  const unlockApp = async (timeoutMinutes: number = 5): Promise<UnlockResult> => {
+  const unlockApp = async (timeoutMinutes?: number): Promise<UnlockResult> => {
     try {
       if (!isEncrypted) {
         return {
@@ -228,7 +279,12 @@ export function BiometricProvider({ children }: { children: React.ReactNode }) {
         const now = Date.now();
         setLastActivityTime(now);
         lastActivityRef.current = now;
-        startSessionTimeout(timeoutMinutes); // Restart session timeout
+        saveLastUnlockTime(); // Save unlock time to localStorage
+        
+        // Get timeout from user settings or use provided value
+        const timeout = timeoutMinutes || await getSessionTimeoutMinutes();
+        startSessionTimeout(timeout);
+        
         // Update lastActive timestamp
         await updateLastActive();
       }

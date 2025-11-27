@@ -56,6 +56,13 @@ export function UserSettingsProvider({ children }: { children: React.ReactNode }
             
             setProfile(backendProfile);
             
+            // Store sessionTimeout in localStorage for BiometricContext to access
+            try {
+              localStorage.setItem('zet_session_timeout', backendProfile.sessionTimeout.toString());
+            } catch (error) {
+              console.warn('Failed to save session timeout to localStorage:', error);
+            }
+            
             // Update local storage with backend data
             await secureDB.init();
             const masterKey = await cryptoVault.generateMasterKey();
@@ -96,6 +103,13 @@ export function UserSettingsProvider({ children }: { children: React.ReactNode }
         
         const userProfile = JSON.parse(decryptedData) as UserProfile;
         setProfile(userProfile);
+        
+        // Store sessionTimeout in localStorage for BiometricContext to access
+        try {
+          localStorage.setItem('zet_session_timeout', userProfile.sessionTimeout.toString());
+        } catch (error) {
+          console.warn('Failed to save session timeout to localStorage:', error);
+        }
       }
     } catch (error) {
       console.error('Error loading user profile:', error);
@@ -131,6 +145,13 @@ export function UserSettingsProvider({ children }: { children: React.ReactNode }
       });
 
       setProfile(updatedProfile);
+
+      // Store sessionTimeout in localStorage for BiometricContext to access
+      try {
+        localStorage.setItem('zet_session_timeout', updatedProfile.sessionTimeout.toString());
+      } catch (error) {
+        console.warn('Failed to save session timeout to localStorage:', error);
+      }
 
       // Sync with backend if wallet is available
       if (wallet?.address) {
