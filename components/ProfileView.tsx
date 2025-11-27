@@ -184,7 +184,7 @@ export default function ProfileView() {
       {/* Profile Header */}
       <Card className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 border-purple-500/20">
         <CardContent className="p-6">
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-4 mb-3">
             <div className="w-16 h-16 bg-gradient-to-r from-purple-600 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
               <User className="w-8 h-8 text-white" />
             </div>
@@ -196,6 +196,19 @@ export default function ProfileView() {
                 @{formData.username || 'username'}
               </p>
             </div>
+          </div>
+          <div className="flex items-center justify-between space-x-2 bg-background/50 rounded-lg p-2">
+            <code className="text-xs font-mono flex-1 truncate text-muted-foreground">
+              {wallet?.address || 'No wallet'}
+            </code>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={copyAddress}
+              className="flex-shrink-0 h-7 w-7 p-0"
+            >
+              {copiedAddress ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -215,28 +228,6 @@ export default function ProfileView() {
           </CardContent>
         </Card>
       </div>
-
-      {/* Wallet Address */}
-      <Card>
-        <CardContent className="p-3">
-          <Label className="text-xs font-semibold text-muted-foreground uppercase mb-2 block">
-            Wallet Address
-          </Label>
-          <div className="flex items-center justify-between space-x-2">
-            <code className="text-sm font-mono flex-1 truncate">
-              {wallet?.address || 'No wallet'}
-            </code>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={copyAddress}
-              className="flex-shrink-0"
-            >
-              {copiedAddress ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Referral Code */}
       <Card className="border-purple-500/20">
