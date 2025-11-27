@@ -223,7 +223,7 @@ export default function RewardsView() {
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Total Points</p>
                   <p className="text-4xl font-bold gradient-text">{totalPoints}</p>
-                  <p className="text-xs text-muted-foreground mt-2">Keep earning to unlock rewards!</p>
+                  <p className="text-xs text-muted-foreground mt-2">Points will convert to $ZET tokens at launch! 🚀</p>
                 </div>
                 <div className="w-16 h-16 bg-gradient-to-r from-purple-600 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
                   <Sparkles className="w-8 h-8 text-white" />
