@@ -18,6 +18,13 @@ export interface User {
   hasCompletedFirstTestnetTransaction?: boolean;
   firstTestnetTransactionDate?: Date;
   firstTestnetTransactionHash?: string;
+  // Rewards system fields
+  totalPoints?: number;
+  lastDailyCheckIn?: Date;
+  dailyCheckInStreak?: number;
+  referralCount?: number;
+  referredBy?: string;
+  referralCode?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -339,6 +346,43 @@ class BackendApiService {
   async incrementVisitorVisit(visitorId: string): Promise<Visitor> {
     return this.makeRequest<Visitor>(`/visitors/${visitorId}/visit`, {
       method: 'POST',
+    });
+  }
+
+  // Rewards endpoints
+  async dailyCheckIn(walletAddress: string, biometricPublicKey: string): Promise<User> {
+    return this.makeRequest<User>(`/users/me/daily-checkin?walletAddress=${walletAddress}`, {
+      method: 'POST',
+      headers: {
+        'x-biometric-public-key': biometricPublicKey,
+      },
+    });
+  }
+
+  async applyReferralCode(walletAddress: string, biometricPublicKey: string, referralCode: string): Promise<User> {
+    return this.makeRequest<User>(`/users/me/referral/${referralCode}?walletAddress=${walletAddress}`, {
+      method: 'POST',
+      headers: {
+        'x-biometric-public-key': biometricPublicKey,
+      },
+    });
+  }
+
+  async getPoints(walletAddress: string, biometricPublicKey: string): Promise<{
+    totalPoints: number;
+    dailyCheckInStreak: number;
+    referralCount: number;
+    transactionCount: number;
+  }> {
+    return this.makeRequest<{
+      totalPoints: number;
+      dailyCheckInStreak: number;
+      referralCount: number;
+      transactionCount: number;
+    }>(`/users/me/points?walletAddress=${walletAddress}`, {
+      headers: {
+        'x-biometric-public-key': biometricPublicKey,
+      },
     });
   }
 }
