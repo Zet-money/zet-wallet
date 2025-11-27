@@ -27,9 +27,22 @@ export default function Dashboard() {
   const { profile } = useUserSettings();
   const { network, setNetwork } = useNetwork();
   
-  // View state management
-  const [activeView, setActiveView] = useState<'home' | 'rewards' | 'profile' | 'transactions'>('home');
+  // View state management with localStorage persistence
+  const [activeView, setActiveView] = useState<'home' | 'rewards' | 'profile' | 'transactions'>(() => {
+    if (typeof window !== 'undefined') {
+      const savedView = localStorage.getItem('zet_active_view');
+      if (savedView && ['home', 'rewards', 'profile', 'transactions'].includes(savedView)) {
+        return savedView as 'home' | 'rewards' | 'profile' | 'transactions';
+      }
+    }
+    return 'home';
+  });
   const [copiedAddress, setCopiedAddress] = useState(false);
+
+  // Save active view to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('zet_active_view', activeView);
+  }, [activeView]);
 
   // Balance and price state
   const [balances, setBalances] = useState<Record<string, string>>({})
