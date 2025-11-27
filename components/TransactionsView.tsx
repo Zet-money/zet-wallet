@@ -12,20 +12,12 @@ import {
 } from 'lucide-react';
 import { useWallet } from '@/contexts/WalletContext';
 import { useNetwork } from '@/contexts/NetworkContext';
+import { useBiometric } from '@/contexts/BiometricContext';
+import { backendApi, type Transaction as ApiTransaction } from '@/lib/services/backend-api';
 import { toast } from 'sonner';
 
-interface Transaction {
-  _id: string;
-  type: 'blockchain' | 'ramp';
-  status: 'pending' | 'completed' | 'failed' | 'cancelled';
-  amount: string;
-  token: string;
-  network: string;
-  transactionHash?: string;
-  recipientAddress?: string;
-  senderAddress?: string;
-  createdAt: string;
-}
+// Use Transaction type from backend-api
+type Transaction = ApiTransaction;
 
 interface TransactionStats {
   totalTransactions: number;
@@ -37,6 +29,7 @@ interface TransactionStats {
 export default function TransactionsView() {
   const { wallet } = useWallet();
   const { network } = useNetwork();
+  const { getBiometricPublicKey } = useBiometric();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [stats, setStats] = useState<TransactionStats | null>(null);
   const [loading, setLoading] = useState(false);
@@ -56,15 +49,17 @@ export default function TransactionsView() {
     
     setLoading(true);
     try {
-      // TODO: Replace with actual API call
-      // const response = await backendApi.getUserTransactions(wallet.address);
-      // setTransactions(response.data);
-      
-      // Placeholder empty state
-      setTransactions([]);
+      const biometricPublicKey = await getBiometricPublicKey();
+      if (!biometricPublicKey) {
+        throw new Error('Biometric authentication required');
+      }
+
+      const txList = await backendApi.getUserTransactions(wallet.address, biometricPublicKey);
+      setTransactions(txList);
     } catch (error) {
       console.error('Error loading transactions:', error);
       toast.error('Failed to load transactions');
+      setTransactions([]); // Set empty array on error
     } finally {
       setLoading(false);
     }
@@ -74,19 +69,39 @@ export default function TransactionsView() {
     if (!wallet?.address) return;
     
     try {
-      // TODO: Replace with actual API call
-      // const response = await backendApi.getTransactionStats(wallet.address);
-      // setStats(response.data);
+      const biometricPublicKey = await getBiometricPublicKey();
+      if (!biometricPublicKey) return;
+
+      const txList = await backendApi.getUserTransactions(wallet.address, biometricPublicKey);
       
-      // Placeholder data
+      // Calculate stats from transactions
+      const totalTransactions = txList.length;
+      const completedTxs = txList.filter(tx => tx.status === 'completed');
+      const successRate = totalTransactions > 0 
+        ? (completedTxs.length / totalTransactions) * 100 
+        : 0;
+      
+      // Calculate total volume (sum of amounts)
+      const totalVolume = txList.reduce((sum, tx) => {
+        const amount = parseFloat(tx.amount || '0');
+        return sum + amount;
+      }, 0);
+
+      setStats({
+        totalTransactions,
+        totalVolume: totalVolume.toFixed(2),
+        successRate: Math.round(successRate),
+        averageGasUsed: '0.00' // TODO: Calculate from actual gas data if available
+      });
+    } catch (error) {
+      console.error('Error loading stats:', error);
+      // Set default stats on error
       setStats({
         totalTransactions: 0,
         totalVolume: '0.00',
         successRate: 0,
         averageGasUsed: '0.00'
       });
-    } catch (error) {
-      console.error('Error loading stats:', error);
     }
   };
 
