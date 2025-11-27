@@ -52,7 +52,16 @@ export default function ProfileView() {
         sessionTimeout: profile.sessionTimeout || 5
       });
     }
-  }, [profile]);
+    // Also sync from backendUser if available
+    if (backendUser) {
+      setFormData(prev => ({
+        name: backendUser.name || prev.name,
+        username: backendUser.username || prev.username,
+        email: backendUser.email || prev.email,
+        sessionTimeout: backendUser.sessionTimeout || prev.sessionTimeout
+      }));
+    }
+  }, [profile, backendUser]);
 
   const handleSave = async () => {
     try {
@@ -88,7 +97,11 @@ export default function ProfileView() {
   };
 
   const copyReferralCode = async () => {
-    const referralCode = backendUser?.referralCode || wallet?.address.slice(0, 8) || 'ZET12345';
+    const referralCode = backendUser?.referralCode || wallet?.address.slice(2, 10).toUpperCase() || '';
+    if (!referralCode) {
+      toast.error('Referral code not available');
+      return;
+    }
     try {
       await navigator.clipboard.writeText(referralCode);
       setCopiedReferral(true);
@@ -225,13 +238,14 @@ export default function ProfileView() {
           </div>
           <div className="flex items-center justify-between space-x-2">
             <code className="text-lg font-mono font-bold gradient-text">
-              {backendUser?.referralCode || wallet?.address.slice(0, 8) || 'ZET12345'}
+              {backendUser?.referralCode || wallet?.address.slice(2, 10).toUpperCase() || 'LOADING...'}
             </code>
             <Button
               variant="outline"
               size="sm"
               onClick={copyReferralCode}
               className="flex-shrink-0"
+              disabled={!backendUser?.referralCode && !wallet?.address}
             >
               {copiedReferral ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
             </Button>

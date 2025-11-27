@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Gift, Calendar, ArrowRightLeft, Users, CheckCircle2, ExternalLink, Sparkles } from 'lucide-react';
+import { Gift, Calendar, ArrowRightLeft, Users, CheckCircle2, ExternalLink, Sparkles, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 import { useUserSettings } from '@/contexts/UserSettingsContext';
 import { useWallet } from '@/contexts/WalletContext';
@@ -214,15 +214,26 @@ export default function RewardsView() {
               <Button 
                 variant="outline" 
                 className="w-full"
-                onClick={() => {
-                  const code = backendUser?.referralCode || wallet?.address.slice(2, 10).toUpperCase() || 'N/A';
-                  toast.success(`Your referral code: ${code}`, {
-                    description: 'Go to Profile to copy and share it!',
-                    duration: 5000,
-                  });
+                onClick={async () => {
+                  const code = backendUser?.referralCode || wallet?.address.slice(2, 10).toUpperCase();
+                  if (code) {
+                    try {
+                      await navigator.clipboard.writeText(code);
+                      toast.success(`Referral code copied: ${code}`, {
+                        description: 'Share it with friends to earn 100 points each!',
+                        duration: 4000,
+                      });
+                    } catch (err) {
+                      toast.error('Failed to copy code');
+                    }
+                  } else {
+                    toast.error('Referral code not available');
+                  }
                 }}
+                disabled={!backendUser?.referralCode && !wallet?.address}
               >
-                View Referral Code
+                <Copy className="w-4 h-4 mr-2" />
+                Copy Referral Code
               </Button>
             </CardContent>
           </Card>
