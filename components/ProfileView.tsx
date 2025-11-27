@@ -19,7 +19,7 @@ import { useRouter } from 'next/navigation';
 
 export default function ProfileView() {
   const { profile, backendUser, updateProfile, isLoading } = useUserSettings();
-  const { lockApp, clearStorage } = useBiometric();
+  const { lockApp } = useBiometric();
   const { wallet } = useWallet();
   const router = useRouter();
 
@@ -116,7 +116,7 @@ export default function ProfileView() {
 
   const handleUnlockSecurity = async () => {
     try {
-      const { unlockApp } = useBiometric.getState();
+      const { unlockApp } = useBiometric();
       const result = await unlockApp(1);
       if (result.success && result.mnemonic) {
         setIsUnlocked(true);
@@ -158,7 +158,9 @@ export default function ProfileView() {
 
   const handleLogout = async () => {
     if (confirm('Are you sure you want to log out? Make sure you have backed up your seed phrase!')) {
-      await clearStorage();
+      // Clear biometric credentials and lock app
+      const { clearBiometricCredentials } = useBiometric();
+      await clearBiometricCredentials();
       toast.success('Logged out successfully');
       router.push('/');
       window.location.reload();
@@ -194,13 +196,13 @@ export default function ProfileView() {
       {/* Stats Cards */}
       <div className="grid grid-cols-2 gap-3">
         <Card>
-          <CardContent className="p-4 text-center">
+          <CardContent className="p-3 text-center">
             <p className="text-2xl font-bold gradient-text">{backendUser?.totalPoints || 0}</p>
             <p className="text-xs text-muted-foreground mt-1">Total Points</p>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-4 text-center">
+          <CardContent className="p-3 text-center">
             <p className="text-2xl font-bold gradient-text">{backendUser?.referralCount || 0}</p>
             <p className="text-xs text-muted-foreground mt-1">Referrals</p>
           </CardContent>
@@ -209,7 +211,7 @@ export default function ProfileView() {
 
       {/* Wallet Address */}
       <Card>
-        <CardContent className="p-4">
+        <CardContent className="p-3">
           <Label className="text-xs font-semibold text-muted-foreground uppercase mb-2 block">
             Wallet Address
           </Label>
@@ -231,7 +233,7 @@ export default function ProfileView() {
 
       {/* Referral Code */}
       <Card className="border-purple-500/20">
-        <CardContent className="p-4">
+        <CardContent className="p-3">
           <div className="flex items-center justify-between mb-2">
             <Label className="text-xs font-semibold text-muted-foreground uppercase">
               Your Referral Code
@@ -260,7 +262,7 @@ export default function ProfileView() {
 
       {/* Profile Settings */}
       <Card>
-        <CardContent className="p-4 space-y-4">
+        <CardContent className="p-3 space-y-4">
           <h3 className="font-semibold flex items-center space-x-2">
             <Settings className="w-4 h-4" />
             <span>Profile Settings</span>
@@ -327,7 +329,7 @@ export default function ProfileView() {
 
       {/* Security Section */}
       <Card className="border-amber-500/20">
-        <CardContent className="p-4">
+        <CardContent className="p-3">
           <div className="flex items-center space-x-2 mb-4">
             <Shield className="w-5 h-5 text-amber-600" />
             <h3 className="font-semibold">Security & Backup</h3>
