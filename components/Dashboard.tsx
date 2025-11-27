@@ -212,7 +212,7 @@ export default function Dashboard() {
         
         {activeView === 'profile' && <ProfileView />}
         
-        {activeView === 'transactions' && <TransactionsView />}
+        {activeView === 'transactions' && <TransactionsView onBack={() => setActiveView('home')} />}
       </div>
 
       {/* Bottom Navigation */}

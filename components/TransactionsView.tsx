@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   ArrowUpRight, ArrowDownLeft, CheckCircle, XCircle, Clock, 
-  Filter, Search, ExternalLink, TrendingUp, Activity
+  Filter, Search, ExternalLink, TrendingUp, Activity, ArrowLeft
 } from 'lucide-react';
 import { useWallet } from '@/contexts/WalletContext';
 import { useNetwork } from '@/contexts/NetworkContext';
@@ -26,7 +26,11 @@ interface TransactionStats {
   averageGasUsed: string;
 }
 
-export default function TransactionsView() {
+interface TransactionsViewProps {
+  onBack: () => void;
+}
+
+export default function TransactionsView({ onBack }: TransactionsViewProps) {
   const { wallet } = useWallet();
   const { network } = useNetwork();
   const { getBiometricPublicKey } = useBiometric();
@@ -43,6 +47,22 @@ export default function TransactionsView() {
       loadStats();
     }
   }, [wallet?.address]);
+
+  // Listen for browser back button
+  useEffect(() => {
+    const handlePopState = (e: PopStateEvent) => {
+      e.preventDefault();
+      onBack();
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    // Push a state to handle back button
+    window.history.pushState(null, '', window.location.href);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [onBack]);
 
   const loadTransactions = async () => {
     if (!wallet?.address) return;
@@ -159,6 +179,22 @@ export default function TransactionsView() {
 
   return (
     <div className="pb-20 space-y-6">
+      {/* Header with Back Button */}
+      <div className="flex items-center space-x-3">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onBack}
+          className="flex-shrink-0"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </Button>
+        <div>
+          <h2 className="text-2xl font-bold">Transactions</h2>
+          <p className="text-sm text-muted-foreground">View your transaction history</p>
+        </div>
+      </div>
+
       {/* Stats Cards */}
       {stats && (
         <div className="grid grid-cols-2 gap-3">

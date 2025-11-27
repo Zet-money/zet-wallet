@@ -91,11 +91,11 @@ export default function HomeView({
             <p className="text-sm text-muted-foreground">Total Portfolio Value</p>
             <Badge 
               variant="secondary" 
-              className="cursor-pointer hover:bg-secondary/80 transition-colors flex items-center gap-1"
+              className="cursor-pointer hover:bg-blue-500/20 transition-colors flex items-center gap-1 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/30 text-blue-700 dark:text-blue-300 hover:scale-105"
               onClick={onNavigateToTransactions}
             >
               <History className="w-3 h-3" />
-              <span>History</span>
+              <span>Transactions</span>
             </Badge>
           </div>
           <div className="flex items-center justify-between">
