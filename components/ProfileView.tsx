@@ -182,7 +182,7 @@ export default function ProfileView() {
   return (
     <div className="pb-20 space-y-6">
       {/* Profile Header */}
-      <Card className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 border-purple-500/20">
+      <Card className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 border-purple-500/20 py-3">
         <CardContent className="p-6">
           <div className="flex items-center space-x-4 mb-3">
             <div className="w-16 h-16 bg-gradient-to-r from-purple-600 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
@@ -215,13 +215,13 @@ export default function ProfileView() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 gap-3">
-        <Card>
+        <Card className="py-3">
           <CardContent className="p-3 text-center">
             <p className="text-2xl font-bold gradient-text">{backendUser?.totalPoints || 0}</p>
             <p className="text-xs text-muted-foreground mt-1">Total Points</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="py-3">
           <CardContent className="p-3 text-center">
             <p className="text-2xl font-bold gradient-text">{backendUser?.referralCount || 0}</p>
             <p className="text-xs text-muted-foreground mt-1">Referrals</p>
@@ -230,7 +230,7 @@ export default function ProfileView() {
       </div>
 
       {/* Referral Code */}
-      <Card className="border-purple-500/20">
+      <Card className="border-purple-500/20 py-3">
         <CardContent className="p-3">
           <div className="flex items-center justify-between mb-2">
             <Label className="text-xs font-semibold text-muted-foreground uppercase">
@@ -259,7 +259,7 @@ export default function ProfileView() {
       </Card>
 
       {/* Profile Settings */}
-      <Card>
+      <Card className="py-3">
         <CardContent className="p-3 space-y-4">
           <h3 className="font-semibold flex items-center space-x-2">
             <Settings className="w-4 h-4" />
@@ -326,7 +326,7 @@ export default function ProfileView() {
       </Card>
 
       {/* Security Section */}
-      <Card className="border-amber-500/20">
+      <Card className="border-amber-500/20 py-3">
         <CardContent className="p-3">
           <div className="flex items-center space-x-2 mb-4">
             <Shield className="w-5 h-5 text-amber-600" />

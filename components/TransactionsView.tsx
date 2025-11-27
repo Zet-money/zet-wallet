@@ -198,7 +198,7 @@ export default function TransactionsView({ onBack }: TransactionsViewProps) {
       {/* Stats Cards */}
       {stats && (
         <div className="grid grid-cols-2 gap-3">
-          <Card className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 border-purple-500/20">
+          <Card className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 border-purple-500/20 py-3">
             <CardContent className="p-4">
               <div className="flex items-center space-x-2 mb-2">
                 <Activity className="w-4 h-4 text-purple-600" />
@@ -209,7 +209,7 @@ export default function TransactionsView({ onBack }: TransactionsViewProps) {
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-r from-blue-500/10 to-green-500/10 border-blue-500/20">
+          <Card className="bg-gradient-to-r from-blue-500/10 to-green-500/10 border-blue-500/20 py-3">
             <CardContent className="p-4">
               <div className="flex items-center space-x-2 mb-2">
                 <TrendingUp className="w-4 h-4 text-blue-600" />
@@ -223,7 +223,7 @@ export default function TransactionsView({ onBack }: TransactionsViewProps) {
       )}
 
       {/* Filters */}
-      <Card>
+      <Card className="py-3">
         <CardContent className="p-4 space-y-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
