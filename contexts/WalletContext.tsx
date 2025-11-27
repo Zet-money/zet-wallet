@@ -19,7 +19,7 @@ interface WalletContextType {
   isLoading: boolean;
   createWallet: () => void;
   importWallet: (mnemonic: string) => void;
-  confirmMnemonicSaved: () => void;
+  confirmMnemonicSaved: (referralCode?: string) => void;
   clearWallet: () => void;
 }
 
@@ -135,7 +135,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     // Wait for user confirmation before initializing app session
   };
 
-  const confirmMnemonicSaved = async () => {
+  const confirmMnemonicSaved = async (referralCode?: string) => {
     if (wallet) {
       // Encrypt the mnemonic with biometric authentication
       try {
@@ -160,6 +160,25 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
                 username: '',
                 sessionTimeout: 30, // Default 30 minutes
               });
+              
+              // Apply referral code if provided and this is a new wallet (not imported)
+              if (referralCode && referralCode.trim() && !wallet.isImported) {
+                try {
+                  await backendApi.applyReferralCode(wallet.address, biometricPublicKey, referralCode.trim());
+                  toast.success('Referral code applied successfully! You both earned rewards! 🎉');
+                } catch (refError: any) {
+                  // Don't block wallet creation if referral fails
+                  if (refError?.message?.includes('already applied')) {
+                    toast.info('Referral code was already applied');
+                  } else if (refError?.message?.includes('Invalid')) {
+                    toast.error('Invalid referral code');
+                  } else {
+                    toast.warning('Could not apply referral code');
+                  }
+                  console.error('Failed to apply referral code:', refError);
+                }
+              }
+              
               toast.success('Wallet created and registered successfully!');
             } else {
               toast.warning('Wallet created but registration failed - no biometric key');

@@ -15,6 +15,7 @@ export default function WalletSetup() {
   const [showMnemonic, setShowMnemonic] = useState(false);
   const [importMnemonic, setImportMnemonic] = useState('');
   const [copied, setCopied] = useState(false);
+  const [referralCode, setReferralCode] = useState('');
 
   const handleCreateWallet = () => {
     createWallet();
@@ -121,8 +122,29 @@ export default function WalletSetup() {
                 </div>
               </div>
             </div>
+
+            {/* Referral code input - only for new wallets, not imported ones */}
+            {!wallet.isImported && (
+              <div className="space-y-2">
+                <Label htmlFor="referralCode" className="text-sm font-medium">
+                  Referral Code (Optional)
+                </Label>
+                <Input
+                  id="referralCode"
+                  type="text"
+                  placeholder="Enter referral code if someone invited you"
+                  value={referralCode}
+                  onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                  maxLength={8}
+                  className="font-mono"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Have a referral code? Both you and your referrer earn rewards!
+                </p>
+              </div>
+            )}
             
-            <Button onClick={confirmMnemonicSaved} className="w-full gradient-primary text-white">
+            <Button onClick={() => confirmMnemonicSaved(referralCode)} className="w-full gradient-primary text-white">
               I've saved my recovery phrase
             </Button>
           </CardContent>
