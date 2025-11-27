@@ -42,11 +42,11 @@ export default function RewardsView() {
         </TabsList>
 
         {/* Points Tab */}
-        <TabsContent value="points" className="space-y-6">
+        <TabsContent value="points" className="space-y-4">
           {/* Total Points Card */}
           <Card className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 border-purple-500/20 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-purple-600/20 to-blue-600/20 rounded-full blur-3xl" />
-            <CardContent className="p-6 relative">
+            <CardContent className="p-4 relative">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Total Points</p>
@@ -62,7 +62,7 @@ export default function RewardsView() {
 
           {/* Daily Check-in Card */}
           <Card className="border-purple-500/20">
-            <CardContent className="p-6">
+            <CardContent className="p-4">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center space-x-3">
                   <div className="w-12 h-12 bg-gradient-to-r from-purple-600 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
@@ -97,7 +97,7 @@ export default function RewardsView() {
 
           {/* Transaction Points Card */}
           <Card className="border-blue-500/20">
-            <CardContent className="p-6">
+            <CardContent className="p-4">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center space-x-3">
                   <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
@@ -128,7 +128,7 @@ export default function RewardsView() {
 
           {/* Referral Points Card */}
           <Card className="border-green-500/20">
-            <CardContent className="p-6">
+            <CardContent className="p-4">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center space-x-3">
                   <div className="w-12 h-12 bg-gradient-to-r from-green-600 to-emerald-600 rounded-full flex items-center justify-center flex-shrink-0">
@@ -167,7 +167,7 @@ export default function RewardsView() {
         </TabsContent>
 
         {/* Assets Tab */}
-        <TabsContent value="assets" className="space-y-6">
+        <TabsContent value="assets" className="space-y-4">
           <div className="text-center mb-6">
             <h3 className="text-lg font-semibold mb-2">Your Reward Assets</h3>
             <p className="text-sm text-muted-foreground">Exclusive NFTs and rewards for early users</p>
@@ -183,7 +183,7 @@ export default function RewardsView() {
                 <p className="text-sm opacity-90">Exclusive reward for pioneers</p>
               </div>
             </div>
-            <CardContent className="p-6">
+            <CardContent className="p-4">
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">Status</span>
@@ -226,7 +226,7 @@ export default function RewardsView() {
 
           {/* Coming Soon Card */}
           <Card className="border-dashed">
-            <CardContent className="p-6 text-center">
+            <CardContent className="p-4 text-center">
               <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
                 <Gift className="w-8 h-8 text-muted-foreground" />
               </div>
