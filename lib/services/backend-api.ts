@@ -375,6 +375,33 @@ class BackendApiService {
       transactionCount: number;
     }>(`/users/me/points?walletAddress=${walletAddress}&biometricPublicKey=${biometricPublicKey}`);
   }
+
+  // Whitelist/NFT endpoints
+  async checkWhitelistStatus(walletAddress: string, biometricPublicKey: string): Promise<{
+    isWhitelisted: boolean;
+    hasMinted: boolean;
+    canMint: boolean;
+  }> {
+    return this.makeRequest<{
+      isWhitelisted: boolean;
+      hasMinted: boolean;
+      canMint: boolean;
+    }>(`/whitelist/status?walletAddress=${walletAddress}&biometricPublicKey=${biometricPublicKey}`);
+  }
+
+  async whitelistAddress(walletAddress: string, biometricPublicKey: string): Promise<{
+    success: boolean;
+    message: string;
+    isWhitelisted?: boolean;
+  }> {
+    return this.makeRequest<{
+      success: boolean;
+      message: string;
+      isWhitelisted?: boolean;
+    }>(`/whitelist/add?walletAddress=${walletAddress}&biometricPublicKey=${biometricPublicKey}`, {
+      method: 'POST',
+    });
+  }
 }
 
 export const backendApi = new BackendApiService();

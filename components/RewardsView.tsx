@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Gift, Calendar, ArrowRightLeft, Users, CheckCircle2, ExternalLink, Sparkles, Copy } from 'lucide-react';
+import { Gift, Calendar, ArrowRightLeft, Users, CheckCircle2, ExternalLink, Sparkles, Copy, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useUserSettings } from '@/contexts/UserSettingsContext';
 import { useWallet } from '@/contexts/WalletContext';
@@ -18,6 +18,17 @@ export default function RewardsView() {
   const { getBiometricPublicKey, isAppUnlocked } = useBiometric();
   const [checkingIn, setCheckingIn] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [nftStatus, setNftStatus] = useState<{
+    isWhitelisted: boolean;
+    hasMinted: boolean;
+    canMint: boolean;
+    loading: boolean;
+  }>({
+    isWhitelisted: false,
+    hasMinted: false,
+    canMint: false,
+    loading: true,
+  });
   const [pointsData, setPointsData] = useState({
     totalPoints: 0,
     dailyCheckInStreak: 0,
@@ -49,6 +60,30 @@ export default function RewardsView() {
     }
   };
 
+  const loadNftStatus = async () => {
+    if (!wallet?.address || !isAppUnlocked) {
+      setNftStatus(prev => ({ ...prev, loading: false }));
+      return;
+    }
+    
+    try {
+      const biometricPublicKey = await getBiometricPublicKey();
+      if (!biometricPublicKey) {
+        setNftStatus(prev => ({ ...prev, loading: false }));
+        return;
+      }
+
+      const status = await backendApi.checkWhitelistStatus(wallet.address, biometricPublicKey);
+      setNftStatus({
+        ...status,
+        loading: false,
+      });
+    } catch (error) {
+      console.error('Failed to load NFT status:', error);
+      setNftStatus(prev => ({ ...prev, loading: false }));
+    }
+  };
+
   // Reload profile and points data when component mounts or when dependencies change
   useEffect(() => {
     const refreshData = async () => {
@@ -56,6 +91,8 @@ export default function RewardsView() {
       await loadProfile();
       // Then load points breakdown
       await loadPointsData();
+      // Load NFT status
+      await loadNftStatus();
     };
     
     refreshData();
@@ -65,7 +102,9 @@ export default function RewardsView() {
   const dailyCheckInStreak = backendUser?.dailyCheckInStreak || pointsData.dailyCheckInStreak;
   const transactionCount = pointsData.transactionCount;
   const referralCount = backendUser?.referralCount || pointsData.referralCount;
-  const hasClaimedNFT = backendUser?.hasCompletedFirstTestnetTransaction || false;
+  
+  // User is eligible if they have completed first transaction OR have any transactions
+  const isEligibleForNFT = backendUser?.hasCompletedFirstTestnetTransaction || transactionCount > 0;
 
   // Check if user already checked in today
   const hasCheckedInToday = () => {
@@ -109,6 +148,60 @@ export default function RewardsView() {
       }
     } finally {
       setCheckingIn(false);
+    }
+  };
+
+  const handleClaimNFT = async () => {
+    if (!wallet?.address) {
+      toast.error('Wallet not connected');
+      return;
+    }
+
+    if (!isEligibleForNFT) {
+      toast.error('Complete your first transaction to be eligible');
+      return;
+    }
+
+    try {
+      const biometricPublicKey = await getBiometricPublicKey();
+      if (!biometricPublicKey) {
+        toast.error('Biometric authentication required');
+        return;
+      }
+
+      // Check if already whitelisted
+      toast.loading('Checking eligibility...', { id: 'nft-check' });
+      const status = await backendApi.checkWhitelistStatus(wallet.address, biometricPublicKey);
+      
+      // If not whitelisted, whitelist them first
+      if (!status.isWhitelisted) {
+        toast.loading('Whitelisting your address...', { id: 'nft-check' });
+        const whitelistResult = await backendApi.whitelistAddress(wallet.address, biometricPublicKey);
+        
+        if (!whitelistResult.success) {
+          toast.error('Failed to whitelist address. Please try again.', { id: 'nft-check' });
+          return;
+        }
+        
+        toast.success('Address whitelisted! Redirecting...', { id: 'nft-check' });
+      } else if (status.hasMinted) {
+        toast.error('You have already claimed this NFT', { id: 'nft-check' });
+        setNftStatus({ ...status, loading: false });
+        return;
+      } else {
+        toast.success('Opening NFT claim page...', { id: 'nft-check' });
+      }
+
+      // Redirect to NFT claim page
+      window.open('https://reward.zet.money', '_blank');
+      
+      // Reload NFT status after a delay
+      setTimeout(() => {
+        loadNftStatus();
+      }, 2000);
+    } catch (error: any) {
+      console.error('Failed to process NFT claim:', error);
+      toast.error(error.message || 'Failed to process request', { id: 'nft-check' });
     }
   };
 
@@ -283,7 +376,17 @@ export default function RewardsView() {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">Status</span>
-                  {hasClaimedNFT ? (
+                  {nftStatus.loading ? (
+                    <Badge variant="secondary">
+                      <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                      Loading...
+                    </Badge>
+                  ) : nftStatus.hasMinted ? (
+                    <Badge className="bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300">
+                      <CheckCircle2 className="w-3 h-3 mr-1" />
+                      Already Claimed
+                    </Badge>
+                  ) : isEligibleForNFT ? (
                     <Badge className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300">
                       <CheckCircle2 className="w-3 h-3 mr-1" />
                       Eligible to Claim
@@ -296,19 +399,31 @@ export default function RewardsView() {
                 </div>
 
                 <div className="text-sm text-muted-foreground">
-                  {hasClaimedNFT ? (
+                  {nftStatus.hasMinted ? (
+                    <p>You have already claimed your exclusive Early User NFT. Thank you for being an early supporter!</p>
+                  ) : isEligibleForNFT ? (
                     <p>Congratulations! You're eligible to mint your exclusive Early User NFT. Click below to claim it.</p>
                   ) : (
-                    <p>Complete your first testnet transaction to become eligible for this exclusive NFT reward.</p>
+                    <p>Complete your first transaction to become eligible for this exclusive NFT reward.</p>
                   )}
                 </div>
 
                 <Button 
                   className="w-full gradient-primary text-white"
-                  disabled={!hasClaimedNFT}
-                  onClick={() => window.open('https://reward.zet.money', '_blank')}
+                  disabled={!isEligibleForNFT || nftStatus.hasMinted || nftStatus.loading}
+                  onClick={handleClaimNFT}
                 >
-                  {hasClaimedNFT ? (
+                  {nftStatus.loading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Checking Status...
+                    </>
+                  ) : nftStatus.hasMinted ? (
+                    <>
+                      <CheckCircle2 className="w-4 h-4 mr-2" />
+                      Claimed
+                    </>
+                  ) : isEligibleForNFT ? (
                     <>
                       Claim NFT <ExternalLink className="w-4 h-4 ml-2" />
                     </>
