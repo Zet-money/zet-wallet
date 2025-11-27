@@ -28,7 +28,7 @@ export default function ProfileView() {
     name: '',
     username: '',
     email: '',
-    sessionTimeout: 5,
+    sessionTimeout: 20,
     requireAuthOnReload: true
   });
   const [isSaving, setIsSaving] = useState(false);
@@ -58,7 +58,7 @@ export default function ProfileView() {
         name: profile.name || '',
         username: profile.username || '',
         email: profile.email || '',
-        sessionTimeout: profile.sessionTimeout || 5,
+        sessionTimeout: profile.sessionTimeout || 30,
         requireAuthOnReload: profile.requireAuthOnReload ?? true
       });
     }

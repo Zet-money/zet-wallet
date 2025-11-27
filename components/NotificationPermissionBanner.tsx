@@ -132,8 +132,8 @@ export function NotificationPermissionBanner() {
   }
 
   return (
-    <div className="fixed bottom-4 right-4 top-4 left-4 sm:top-auto sm:left-auto z-50">
-      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-4 max-w-sm mx-auto sm:mx-0">
+    <div className="fixed bottom-20 right-4 left-4 sm:left-auto z-50 max-w-sm mx-auto sm:mx-0 sm:mr-4">
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-4">
         <div className="flex items-start justify-between">
           <div className="flex items-start space-x-3">
             <BellRing className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
