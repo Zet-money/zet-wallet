@@ -263,17 +263,21 @@ class BackendApiService {
     });
   }
 
-  async getUserTransactions(walletAddress: string, biometricPublicKey: string): Promise<Transaction[]> {
-    return this.makeRequest<Transaction[]>(`/transactions/user/${walletAddress}?biometricPublicKey=${biometricPublicKey}`);
+  async getUserTransactions(walletAddress: string, biometricPublicKey: string, network?: string): Promise<Transaction[]> {
+    const params = new URLSearchParams({ biometricPublicKey });
+    if (network) params.append('network', network);
+    return this.makeRequest<Transaction[]>(`/transactions/user/${walletAddress}?${params}`);
   }
 
-  async getTransactionStats(walletAddress: string, biometricPublicKey: string): Promise<{
+  async getTransactionStats(walletAddress: string, biometricPublicKey: string, network?: string): Promise<{
     totalTransactions: number;
     totalVolume: string;
     successRate: number;
     averageGasUsed: string;
   }> {
-    return this.makeRequest(`/transactions/user/${walletAddress}/stats?biometricPublicKey=${biometricPublicKey}`);
+    const params = new URLSearchParams({ biometricPublicKey });
+    if (network) params.append('network', network);
+    return this.makeRequest(`/transactions/user/${walletAddress}/stats?${params}`);
   }
 
   async getTransactionById(transactionId: string, walletAddress: string, biometricPublicKey: string): Promise<Transaction> {

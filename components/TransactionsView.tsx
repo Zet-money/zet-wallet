@@ -74,7 +74,8 @@ export default function TransactionsView({ onBack }: TransactionsViewProps) {
         throw new Error('Biometric authentication required');
       }
 
-      const txList = await backendApi.getUserTransactions(wallet.address, biometricPublicKey);
+      const currentNetwork = network === 'mainnet' ? 'mainnet' : 'testnet';
+      const txList = await backendApi.getUserTransactions(wallet.address, biometricPublicKey, currentNetwork);
       setTransactions(txList);
     } catch (error) {
       console.error('Error loading transactions:', error);
@@ -92,21 +93,18 @@ export default function TransactionsView({ onBack }: TransactionsViewProps) {
       const biometricPublicKey = await getBiometricPublicKey();
       if (!biometricPublicKey) return;
 
-      const txList = await backendApi.getUserTransactions(wallet.address, biometricPublicKey);
-      
-      // Filter transactions by current network
       const currentNetwork = network === 'mainnet' ? 'mainnet' : 'testnet';
-      const networkFilteredTxs = txList.filter(tx => tx.network === currentNetwork);
+      const txList = await backendApi.getUserTransactions(wallet.address, biometricPublicKey, currentNetwork);
       
       // Calculate stats from transactions
-      const totalTransactions = networkFilteredTxs.length;
-      const completedTxs = networkFilteredTxs.filter(tx => tx.status === 'completed');
+      const totalTransactions = txList.length;
+      const completedTxs = txList.filter(tx => tx.status === 'completed');
       const successRate = totalTransactions > 0 
         ? (completedTxs.length / totalTransactions) * 100 
         : 0;
       
       // Calculate total volume (sum of amounts)
-      const totalVolume = networkFilteredTxs.reduce((sum, tx) => {
+      const totalVolume = txList.reduce((sum, tx) => {
         const amount = parseFloat(tx.amount || '0');
         return sum + amount;
       }, 0);
@@ -138,11 +136,7 @@ export default function TransactionsView({ onBack }: TransactionsViewProps) {
     const matchesType = filterType === 'all' || tx.type === filterType;
     const matchesStatus = filterStatus === 'all' || tx.status === filterStatus;
     
-    // Filter by current network environment (mainnet/testnet)
-    const currentNetwork = network === 'mainnet' ? 'mainnet' : 'testnet';
-    const matchesNetwork = tx.network === currentNetwork;
-    
-    return matchesSearch && matchesType && matchesStatus && matchesNetwork;
+    return matchesSearch && matchesType && matchesStatus;
   });
 
   const getStatusIcon = (status: string) => {
