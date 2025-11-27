@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import { 
   User, Mail, AtSign, Clock, Copy, Check, LogOut, Lock, 
   Eye, EyeOff, AlertTriangle, Key, Shield, Settings
@@ -28,7 +29,7 @@ export default function ProfileView() {
     username: '',
     email: '',
     sessionTimeout: 5,
-    requireAuthOnReload: false
+    requireAuthOnReload: true
   });
   const [isSaving, setIsSaving] = useState(false);
   const [copiedAddress, setCopiedAddress] = useState(false);
@@ -58,7 +59,7 @@ export default function ProfileView() {
         username: profile.username || '',
         email: profile.email || '',
         sessionTimeout: profile.sessionTimeout || 5,
-        requireAuthOnReload: profile.requireAuthOnReload || false
+        requireAuthOnReload: profile.requireAuthOnReload ?? true
       });
     }
     // Also sync from backendUser if available
@@ -68,7 +69,7 @@ export default function ProfileView() {
         username: backendUser.username || prev.username,
         email: backendUser.email || prev.email,
         sessionTimeout: backendUser.sessionTimeout || prev.sessionTimeout,
-        requireAuthOnReload: backendUser.requireAuthOnReload || prev.requireAuthOnReload
+        requireAuthOnReload: backendUser.requireAuthOnReload ?? prev.requireAuthOnReload
       }));
     }
   }, [profile, backendUser]);
@@ -325,13 +326,10 @@ export default function ProfileView() {
                   When disabled, you won't need to authenticate on app reload until timeout expires
                 </p>
               </div>
-              <input
+              <Switch
                 id="requireAuthOnReload"
-                type="checkbox"
                 checked={formData.requireAuthOnReload}
-                onChange={(e) => handleInputChange('requireAuthOnReload', e.target.checked)}
-                className="h-4 w-4 rounded border-gray-300 text-amber-600 focus:ring-amber-500"
-                aria-label="Require authentication on reload"
+                onCheckedChange={(checked: boolean) => handleInputChange('requireAuthOnReload', checked)}
               />
             </div>
 

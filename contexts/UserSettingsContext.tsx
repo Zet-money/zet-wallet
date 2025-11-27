@@ -53,7 +53,7 @@ export function UserSettingsProvider({ children }: { children: React.ReactNode }
               username: user.username || '',
               email: user.email,
               sessionTimeout: user.sessionTimeout || 20,
-              requireAuthOnReload: user.requireAuthOnReload ?? false,
+              requireAuthOnReload: user.requireAuthOnReload ?? true,
             };
             
             setProfile(backendProfile);
