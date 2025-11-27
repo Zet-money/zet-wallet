@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -8,26 +8,74 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Gift, Calendar, ArrowRightLeft, Users, CheckCircle2, ExternalLink, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { useUserSettings } from '@/contexts/UserSettingsContext';
+import { useWallet } from '@/contexts/WalletContext';
+import { useBiometric } from '@/contexts/BiometricContext';
+import { backendApi } from '@/lib/services/backend-api';
 
 export default function RewardsView() {
-  const { profile } = useUserSettings();
+  const { backendUser } = useUserSettings();
+  const { wallet } = useWallet();
+  const { getBiometricPublicKey } = useBiometric();
   const [checkingIn, setCheckingIn] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [pointsData, setPointsData] = useState({
+    totalPoints: 0,
+    dailyCheckInStreak: 0,
+    transactionCount: 0,
+    referralCount: 0,
+  });
 
-  // Placeholder data - will be replaced with real API data
-  const totalPoints = 0;
-  const dailyCheckInStreak = 0;
-  const transactionCount = 0;
-  const referralCount = 0;
-  const hasClaimedNFT = profile?.hasCompletedFirstTestnetTransaction || false;
+  const loadPointsData = async () => {
+    if (!wallet?.address) return;
+    
+    try {
+      const biometricPublicKey = await getBiometricPublicKey();
+      if (!biometricPublicKey) return;
+
+      const data = await backendApi.getPoints(wallet.address, biometricPublicKey);
+      setPointsData(data);
+    } catch (error) {
+      console.error('Failed to load points data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadPointsData();
+  }, [wallet?.address, backendUser]);
+
+  const totalPoints = backendUser?.totalPoints || pointsData.totalPoints;
+  const dailyCheckInStreak = backendUser?.dailyCheckInStreak || pointsData.dailyCheckInStreak;
+  const transactionCount = pointsData.transactionCount;
+  const referralCount = backendUser?.referralCount || pointsData.referralCount;
+  const hasClaimedNFT = backendUser?.hasCompletedFirstTestnetTransaction || false;
 
   const handleDailyCheckIn = async () => {
+    if (!wallet?.address) {
+      toast.error('Wallet not connected');
+      return;
+    }
+
     setCheckingIn(true);
     try {
-      // TODO: Call backend API for daily check-in
-      // await backendApi.dailyCheckIn();
+      const biometricPublicKey = await getBiometricPublicKey();
+      if (!biometricPublicKey) {
+        toast.error('Biometric authentication required');
+        return;
+      }
+
+      await backendApi.dailyCheckIn(wallet.address, biometricPublicKey);
       toast.success('Daily check-in complete! +10 points');
+      
+      // Reload points data
+      await loadPointsData();
     } catch (error: any) {
-      toast.error(error.message || 'Failed to check in');
+      if (error.message?.includes('Already checked in')) {
+        toast.error('Already checked in today!');
+      } else {
+        toast.error(error.message || 'Failed to check in');
+      }
     } finally {
       setCheckingIn(false);
     }

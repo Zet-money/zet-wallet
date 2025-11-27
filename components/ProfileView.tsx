@@ -88,7 +88,7 @@ export default function ProfileView() {
   };
 
   const copyReferralCode = async () => {
-    const referralCode = wallet?.address.slice(0, 8) || 'ZET12345'; // Placeholder
+    const referralCode = backendUser?.referralCode || wallet?.address.slice(0, 8) || 'ZET12345';
     try {
       await navigator.clipboard.writeText(referralCode);
       setCopiedReferral(true);
@@ -225,7 +225,7 @@ export default function ProfileView() {
           </div>
           <div className="flex items-center justify-between space-x-2">
             <code className="text-lg font-mono font-bold gradient-text">
-              {wallet?.address.slice(0, 8) || 'ZET12345'}
+              {backendUser?.referralCode || wallet?.address.slice(0, 8) || 'ZET12345'}
             </code>
             <Button
               variant="outline"
