@@ -87,49 +87,36 @@ export default function HomeView({
       {/* Total Portfolio Value */}
       <Card className="mb-6 bg-gradient-to-r from-purple-500/10 to-blue-500/10 border-purple-500/20 p-0">
         <CardContent className="p-4">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm text-muted-foreground">Total Portfolio Value</p>
+            <Badge 
+              variant="secondary" 
+              className="cursor-pointer hover:bg-secondary/80 transition-colors flex items-center gap-1"
+              onClick={onNavigateToTransactions}
+            >
+              <History className="w-3 h-3" />
+              <span>History</span>
+            </Badge>
+          </div>
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground mb-1">Total Portfolio Value</p>
-              <p className="text-2xl sm:text-3xl font-bold gradient-text">
-                {loadingBalances ? (
-                  <span className="inline-block h-8 w-24 bg-muted animate-pulse rounded" />
-                ) : (
-                  (() => {
-                    const total = displayedAssets.reduce((sum, asset) => {
-                      const bal = balances[asset.symbol]
-                      const price = prices[asset.symbol]
-                      if (bal === undefined || price === undefined) return sum
-                      return sum + (Number(bal) * price)
-                    }, 0)
-                    return `$${total.toFixed(2)}`
-                  })()
-                )}
-              </p>
-            </div>
+            <p className="text-2xl sm:text-3xl font-bold gradient-text">
+              {loadingBalances ? (
+                <span className="inline-block h-8 w-24 bg-muted animate-pulse rounded" />
+              ) : (
+                (() => {
+                  const total = displayedAssets.reduce((sum, asset) => {
+                    const bal = balances[asset.symbol]
+                    const price = prices[asset.symbol]
+                    if (bal === undefined || price === undefined) return sum
+                    return sum + (Number(bal) * price)
+                  }, 0)
+                  return `$${total.toFixed(2)}`
+                })()
+              )}
+            </p>
             <div className="w-12 h-12 bg-gradient-to-r from-purple-600 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
               <Banknote className="w-6 h-6 text-white" />
             </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Transaction History Card */}
-      <Card 
-        className="mb-6 cursor-pointer hover:shadow-md transition-all active:scale-[0.98] bg-gradient-to-r from-blue-500/5 to-purple-500/5 border-blue-500/20"
-        onClick={onNavigateToTransactions}
-      >
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
-                <History className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-sm">Transaction History</h3>
-                <p className="text-xs text-muted-foreground">View all your transactions and activity</p>
-              </div>
-            </div>
-            <ArrowRight className="w-5 h-5 text-muted-foreground" />
           </div>
         </CardContent>
       </Card>

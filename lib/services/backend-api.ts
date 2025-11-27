@@ -264,10 +264,7 @@ class BackendApiService {
   }
 
   async getUserTransactions(walletAddress: string, biometricPublicKey: string): Promise<Transaction[]> {
-    return this.makeRequest<Transaction[]>(`/transactions/user/${walletAddress}`, {
-      method: 'GET',
-      body: JSON.stringify({ walletAddress, biometricPublicKey }),
-    });
+    return this.makeRequest<Transaction[]>(`/transactions/user/${walletAddress}?biometricPublicKey=${biometricPublicKey}`);
   }
 
   async getTransactionStats(walletAddress: string, biometricPublicKey: string): Promise<{
@@ -276,10 +273,7 @@ class BackendApiService {
     successRate: number;
     averageGasUsed: string;
   }> {
-    return this.makeRequest(`/transactions/user/${walletAddress}/stats`, {
-      method: 'GET',
-      body: JSON.stringify({ walletAddress, biometricPublicKey }),
-    });
+    return this.makeRequest(`/transactions/user/${walletAddress}/stats?biometricPublicKey=${biometricPublicKey}`);
   }
 
   async getTransactionById(transactionId: string, walletAddress: string, biometricPublicKey: string): Promise<Transaction> {
