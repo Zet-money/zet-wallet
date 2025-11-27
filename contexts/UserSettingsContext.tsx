@@ -31,15 +31,15 @@ export function UserSettingsProvider({ children }: { children: React.ReactNode }
   const [isLoading, setIsLoading] = useState(true);
   const [cryptoVault] = useState(() => new CryptoVault());
   const { wallet } = useWallet();
-  const { getBiometricPublicKey } = useBiometric();
+  const { getBiometricPublicKey, isAppUnlocked } = useBiometric();
 
   const loadProfile = async (): Promise<void> => {
     try {
       setIsLoading(true);
       
       // IMPORTANT: Backend is single source of truth
-      // First, try to load from backend if wallet is available
-      if (wallet?.address) {
+      // First, try to load from backend if wallet is available AND app is unlocked
+      if (wallet?.address && isAppUnlocked) {
         try {
           const biometricPublicKey = await getBiometricPublicKey();
           if (biometricPublicKey) {
@@ -176,7 +176,7 @@ export function UserSettingsProvider({ children }: { children: React.ReactNode }
   };
 
   const syncWithBackend = async (): Promise<void> => {
-    if (!wallet?.address) return;
+    if (!wallet?.address || !isAppUnlocked) return;
 
     try {
       const biometricPublicKey = await getBiometricPublicKey();
@@ -251,14 +251,14 @@ export function UserSettingsProvider({ children }: { children: React.ReactNode }
 
   useEffect(() => {
     loadProfile();
-  }, [wallet?.address]); // Reload when wallet address changes (import/clear)
+  }, [wallet?.address, isAppUnlocked]); // Reload when wallet address changes OR when app is unlocked
 
   // Sync with backend when wallet becomes available (additional sync for updates)
   useEffect(() => {
-    if (wallet?.address && profile) {
+    if (wallet?.address && profile && isAppUnlocked) {
       syncWithBackend();
     }
-  }, [wallet?.address, profile]);
+  }, [wallet?.address, profile, isAppUnlocked]);
 
   return (
     <UserSettingsContext.Provider
