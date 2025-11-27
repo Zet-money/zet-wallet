@@ -38,6 +38,8 @@ export default function RewardsView() {
         return;
       }
 
+      console.log(biometricPublicKey)
+
       const data = await backendApi.getPoints(wallet.address, biometricPublicKey);
       setPointsData(data);
     } catch (error) {
@@ -212,9 +214,15 @@ export default function RewardsView() {
               <Button 
                 variant="outline" 
                 className="w-full"
-                onClick={() => toast.info('Referral system coming soon!')}
+                onClick={() => {
+                  const code = backendUser?.referralCode || wallet?.address.slice(2, 10).toUpperCase() || 'N/A';
+                  toast.success(`Your referral code: ${code}`, {
+                    description: 'Go to Profile to copy and share it!',
+                    duration: 5000,
+                  });
+                }}
               >
-                Get Referral Code
+                View Referral Code
               </Button>
             </CardContent>
           </Card>

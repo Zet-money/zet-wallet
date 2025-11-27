@@ -18,7 +18,7 @@ import { HDNodeWallet } from 'ethers';
 import { useRouter } from 'next/navigation';
 
 export default function ProfileView() {
-  const { profile, updateProfile, isLoading } = useUserSettings();
+  const { profile, backendUser, updateProfile, isLoading } = useUserSettings();
   const { lockApp, clearStorage } = useBiometric();
   const { wallet } = useWallet();
   const router = useRouter();
