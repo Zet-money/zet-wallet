@@ -1,0 +1,45 @@
+name: Trigger auto deployment for zet-wallet
+
+# When this action will be executed
+on:
+  # Automatically trigger it when detected changes in repo
+  push:
+    branches: 
+      [ main ]
+    paths:
+    - '**'
+    - '.github/workflows/zet-wallet-AutoDeployTrigger-408ce2ac-b3f8-4fdf-b7e3-d6e48883b1a9.yml'
+
+  # Allow manual trigger 
+  workflow_dispatch:
+      
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout to the branch
+        uses: actions/checkout@v2
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.ZETWALLET_AZURE_CREDENTIALS }}
+
+      - name: Build and push container image to registry
+        uses: azure/container-apps-deploy-action@v2
+        with:
+          appSourcePath: ${{ github.workspace }}
+          _dockerfilePathKey_: _dockerfilePath_
+          _targetLabelKey_: _targetLabel_
+          registryUrl: veridaqcr.azurecr.io
+          registryUsername: ${{ secrets.ZETWALLET_REGISTRY_USERNAME }}
+          registryPassword: ${{ secrets.ZETWALLET_REGISTRY_PASSWORD }}
+          containerAppName: zet-wallet
+          resourceGroup: zet-money-ca
+          imageToBuild: veridaqcr.azurecr.io/zet-wallet:${{ github.sha }}
+          
+            
+
+     
+
