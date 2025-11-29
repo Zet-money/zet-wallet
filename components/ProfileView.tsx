@@ -20,7 +20,7 @@ import { useRouter } from 'next/navigation';
 
 export default function ProfileView() {
   const { profile, backendUser, updateProfile, isLoading, loadProfile } = useUserSettings();
-  const { lockApp, unlockApp } = useBiometric();
+  const { lockApp, unlockApp, clearBiometricCredentials } = useBiometric();
   const { wallet } = useWallet();
   const router = useRouter();
 
@@ -169,7 +169,6 @@ export default function ProfileView() {
   const handleLogout = async () => {
     if (confirm('Are you sure you want to log out? Make sure you have backed up your seed phrase!')) {
       // Clear biometric credentials and lock app
-      const { clearBiometricCredentials } = useBiometric();
       await clearBiometricCredentials();
       toast.success('Logged out successfully');
       router.push('/');
