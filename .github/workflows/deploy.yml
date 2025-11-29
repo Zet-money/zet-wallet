@@ -1,4 +1,4 @@
-name: Deploy to Azure Container Registry (ACR) and Kubernetes
+name: Deploy to Azure Container Registry (ACR)
 
 on:
   push:
