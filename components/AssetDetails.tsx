@@ -215,7 +215,7 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
 
       {/* Buy Crypto Modal - Placeholder */}
       {isMainnet && showBuy && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[100]">
           <Card className="w-full max-w-md">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
               <div>
