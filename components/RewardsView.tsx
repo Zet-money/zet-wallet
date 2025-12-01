@@ -23,11 +23,16 @@ export default function RewardsView() {
     hasMinted: boolean;
     canMint: boolean;
     loading: boolean;
+    nftDetails?: {
+      tokenId: string | null;
+      tokenURI: string | null;
+    } | null;
   }>({
     isWhitelisted: false,
     hasMinted: false,
     canMint: false,
     loading: true,
+    nftDetails: null,
   });
   const [pointsData, setPointsData] = useState({
     totalPoints: 0,
@@ -35,6 +40,11 @@ export default function RewardsView() {
     transactionCount: 0,
     referralCount: 0,
   });
+  const [nftMetadata, setNftMetadata] = useState<{
+    name?: string;
+    description?: string;
+    image?: string;
+  } | null>(null);
   const [leaderboard, setLeaderboard] = useState<Array<{
     rank: number;
     username: string | null;
@@ -108,9 +118,36 @@ export default function RewardsView() {
         ...status,
         loading: false,
       });
+
+      // If user has minted, fetch the NFT metadata
+      if (status.hasMinted && status.nftDetails?.tokenURI) {
+        fetchNftMetadata(status.nftDetails.tokenURI);
+      }
     } catch (error) {
       console.error('Failed to load NFT status:', error);
       setNftStatus(prev => ({ ...prev, loading: false }));
+    }
+  };
+
+  const fetchNftMetadata = async (tokenURI: string) => {
+    try {
+      // Convert IPFS URI to HTTP gateway URL if needed
+      let metadataUrl = tokenURI;
+      if (tokenURI.startsWith('ipfs://')) {
+        metadataUrl = tokenURI.replace('ipfs://', 'https://ipfs.io/ipfs/');
+      }
+
+      const response = await fetch(metadataUrl);
+      const metadata = await response.json();
+      
+      // Convert image IPFS URI to HTTP gateway URL if needed
+      if (metadata.image && metadata.image.startsWith('ipfs://')) {
+        metadata.image = metadata.image.replace('ipfs://', 'https://ipfs.io/ipfs/');
+      }
+
+      setNftMetadata(metadata);
+    } catch (error) {
+      console.error('Failed to fetch NFT metadata:', error);
     }
   };
 
@@ -395,73 +432,127 @@ export default function RewardsView() {
 
           {/* Early User NFT Card */}
           <Card className="border-purple-500/20 overflow-hidden p-3">
-            <div className="relative h-48 bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center">
-              <div className="absolute inset-0 bg-[url('/Zet money NFT.png')] bg-cover bg-center opacity-30" />
-              <div className="relative z-10 text-center text-white">
-                <Gift className="w-16 h-16 mx-auto mb-3" />
-                <h3 className="text-xl font-bold">Early User NFT</h3>
-                <p className="text-sm opacity-90">Exclusive reward for pioneers</p>
+            {nftStatus.hasMinted && nftMetadata?.image ? (
+              // Show the actual minted NFT
+              <div className="relative h-64 bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center p-4">
+                <img 
+                  src={nftMetadata.image} 
+                  alt={nftMetadata.name || 'Your NFT'} 
+                  className="w-full h-full object-contain"
+                  onError={(e) => {
+                    // Fallback if image fails to load
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
               </div>
-            </div>
+            ) : (
+              // Show placeholder for unclaimed NFT
+              <div className="relative h-48 bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center">
+                <div className="absolute inset-0 bg-[url('/Zet money NFT.png')] bg-cover bg-center opacity-30" />
+                <div className="relative z-10 text-center text-white">
+                  <Gift className="w-16 h-16 mx-auto mb-3" />
+                  <h3 className="text-xl font-bold">Early User NFT</h3>
+                  <p className="text-sm opacity-90">Exclusive reward for pioneers</p>
+                </div>
+              </div>
+            )}
             <CardContent>
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Status</span>
-                  {nftStatus.loading ? (
-                    <Badge variant="secondary">
-                      <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                      Loading...
-                    </Badge>
-                  ) : nftStatus.hasMinted ? (
-                    <Badge className="bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300">
-                      <CheckCircle2 className="w-3 h-3 mr-1" />
-                      Already Claimed
-                    </Badge>
-                  ) : isEligibleForNFT ? (
-                    <Badge className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300">
-                      <CheckCircle2 className="w-3 h-3 mr-1" />
-                      Eligible to Claim
-                    </Badge>
-                  ) : (
-                    <Badge variant="secondary">
-                      Complete first transaction
-                    </Badge>
-                  )}
-                </div>
+                {nftStatus.hasMinted && nftMetadata ? (
+                  // Show NFT details when minted
+                  <>
+                    <div className="space-y-2">
+                      <h3 className="text-lg font-bold">{nftMetadata.name || 'Early User NFT'}</h3>
+                      {nftMetadata.description && (
+                        <p className="text-sm text-muted-foreground">{nftMetadata.description}</p>
+                      )}
+                      {nftStatus.nftDetails?.tokenId && (
+                        <Badge variant="secondary" className="text-xs">
+                          Token ID: #{nftStatus.nftDetails.tokenId}
+                        </Badge>
+                      )}
+                    </div>
+                    
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => {
+                          if (nftStatus.nftDetails?.tokenId) {
+                            window.open(`https://basescan.org/nft/0x89b2bb6A991c4036a33563E7F257758fd090a475/${nftStatus.nftDetails.tokenId}`, '_blank');
+                          }
+                        }}
+                      >
+                        View on BaseScan <ExternalLink className="w-4 h-4 ml-2" />
+                      </Button>
+                      {nftStatus.nftDetails?.tokenURI && (
+                        <Button 
+                          variant="outline"
+                          className="flex-1"
+                          onClick={() => {
+                            if (nftStatus.nftDetails?.tokenURI) {
+                              const ipfsUrl = nftStatus.nftDetails.tokenURI.startsWith('ipfs://') 
+                                ? nftStatus.nftDetails.tokenURI.replace('ipfs://', 'https://ipfs.io/ipfs/')
+                                : nftStatus.nftDetails.tokenURI;
+                              window.open(ipfsUrl, '_blank');
+                            }
+                          }}
+                        >
+                          View Metadata <ExternalLink className="w-4 h-4 ml-2" />
+                        </Button>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  // Show claim UI when not minted
+                  <>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Status</span>
+                      {nftStatus.loading ? (
+                        <Badge variant="secondary">
+                          <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                          Loading...
+                        </Badge>
+                      ) : isEligibleForNFT ? (
+                        <Badge className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300">
+                          <CheckCircle2 className="w-3 h-3 mr-1" />
+                          Eligible to Claim
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary">
+                          Complete first transaction
+                        </Badge>
+                      )}
+                    </div>
 
-                <div className="text-sm text-muted-foreground">
-                  {nftStatus.hasMinted ? (
-                    <p>You have already claimed your exclusive Early User NFT. Thank you for being an early supporter!</p>
-                  ) : isEligibleForNFT ? (
-                    <p>Congratulations! You're eligible to mint your exclusive Early User NFT. Click below to claim it.</p>
-                  ) : (
-                    <p>Complete your first transaction to become eligible for this exclusive NFT reward.</p>
-                  )}
-                </div>
+                    <div className="text-sm text-muted-foreground">
+                      {isEligibleForNFT ? (
+                        <p>Congratulations! You're eligible to mint your exclusive Early User NFT. Click below to claim it.</p>
+                      ) : (
+                        <p>Complete your first transaction to become eligible for this exclusive NFT reward.</p>
+                      )}
+                    </div>
 
-                <Button 
-                  className="w-full gradient-primary text-white"
-                  disabled={!isEligibleForNFT || nftStatus.hasMinted || nftStatus.loading}
-                  onClick={handleClaimNFT}
-                >
-                  {nftStatus.loading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Checking Status...
-                    </>
-                  ) : nftStatus.hasMinted ? (
-                    <>
-                      <CheckCircle2 className="w-4 h-4 mr-2" />
-                      Claimed
-                    </>
-                  ) : isEligibleForNFT ? (
-                    <>
-                      Claim NFT <ExternalLink className="w-4 h-4 ml-2" />
-                    </>
-                  ) : (
-                    'Not Yet Eligible'
-                  )}
-                </Button>
+                    <Button 
+                      className="w-full gradient-primary text-white"
+                      disabled={!isEligibleForNFT || nftStatus.hasMinted || nftStatus.loading}
+                      onClick={handleClaimNFT}
+                    >
+                      {nftStatus.loading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Checking Status...
+                        </>
+                      ) : isEligibleForNFT ? (
+                        <>
+                          Claim NFT <ExternalLink className="w-4 h-4 ml-2" />
+                        </>
+                      ) : (
+                        'Not Yet Eligible'
+                      )}
+                    </Button>
+                  </>
+                )}
               </div>
             </CardContent>
           </Card>

@@ -396,11 +396,19 @@ class BackendApiService {
     isWhitelisted: boolean;
     hasMinted: boolean;
     canMint: boolean;
+    nftDetails?: {
+      tokenId: string | null;
+      tokenURI: string | null;
+    } | null;
   }> {
     return this.makeRequest<{
       isWhitelisted: boolean;
       hasMinted: boolean;
       canMint: boolean;
+      nftDetails?: {
+        tokenId: string | null;
+        tokenURI: string | null;
+      } | null;
     }>(`/whitelist/status?walletAddress=${walletAddress}&biometricPublicKey=${biometricPublicKey}`);
   }
 
