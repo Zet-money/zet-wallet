@@ -91,8 +91,8 @@ export default function PwaInstallBanner() {
     if (isDismissed) return null
 
     return (
-      <div className="fixed bottom-4 inset-x-0 flex justify-center z-[60]">
-        <div className="bg-card border shadow-lg rounded-xl px-4 py-3 text-sm max-w-sm relative">
+      <div className="fixed bottom-24 inset-x-0 flex justify-center z-[60] px-4">
+        <div className="bg-card border shadow-lg rounded-xl px-4 py-3 text-sm max-w-sm relative w-full">
           <button
             className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-muted hover:bg-muted/80 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
             onClick={(e) => {
@@ -129,8 +129,8 @@ export default function PwaInstallBanner() {
   console.log('PWA Banner rendering:', { visible, canInstall, isDismissed })
 
   return (
-    <div className="fixed bottom-4 inset-x-0 flex justify-center z-[60]">
-      <div className="bg-card border shadow-lg rounded-xl px-4 py-3 flex items-center space-x-3 relative">
+    <div className="fixed bottom-24 inset-x-0 flex justify-center z-[60] px-4">
+      <div className="bg-card border shadow-lg rounded-xl px-4 py-3 flex items-center space-x-3 relative w-full max-w-md">
         <div className="text-sm">
           <div className="font-medium">Install Zet.money</div>
           <div className="text-muted-foreground">Get the best experience as a PWA.</div>
