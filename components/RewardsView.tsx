@@ -473,22 +473,23 @@ export default function RewardsView() {
                       )}
                     </div>
                     
-                    <div className="flex gap-2">
+                    <div className="flex flex-col sm:flex-row gap-2">
                       <Button 
                         variant="outline"
-                        className="flex-1"
+                        className="flex-1 text-sm"
                         onClick={() => {
                           if (nftStatus.nftDetails?.tokenId) {
                             window.open(`https://basescan.org/nft/0x89b2bb6A991c4036a33563E7F257758fd090a475/${nftStatus.nftDetails.tokenId}`, '_blank');
                           }
                         }}
                       >
-                        View on BaseScan <ExternalLink className="w-4 h-4 ml-2" />
+                        <span className="truncate">View on BaseScan</span>
+                        <ExternalLink className="w-4 h-4 ml-2 flex-shrink-0" />
                       </Button>
                       {nftStatus.nftDetails?.tokenURI && (
                         <Button 
                           variant="outline"
-                          className="flex-1"
+                          className="flex-1 text-sm"
                           onClick={() => {
                             if (nftStatus.nftDetails?.tokenURI) {
                               const ipfsUrl = nftStatus.nftDetails.tokenURI.startsWith('ipfs://') 
@@ -498,7 +499,8 @@ export default function RewardsView() {
                             }
                           }}
                         >
-                          View Metadata <ExternalLink className="w-4 h-4 ml-2" />
+                          <span className="truncate">View Metadata</span>
+                          <ExternalLink className="w-4 h-4 ml-2 flex-shrink-0" />
                         </Button>
                       )}
                     </div>
