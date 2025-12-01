@@ -143,7 +143,7 @@ export default function Dashboard() {
                   <h1 className="font-semibold text-sm sm:text-base gradient-text">Zet.money</h1>
                   {profile?.name && (
                     <span className="text-sm text-muted-foreground hidden sm:inline truncate max-w-[120px]" title={profile.name}>
-                      Hi, {profile.name}
+                      Hi, {profile.name.split(' ')[0]}
                     </span>
                   )}
                 </div>
