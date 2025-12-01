@@ -202,7 +202,7 @@ export default function RewardsView() {
       }
 
       await backendApi.dailyCheckIn(wallet.address, biometricPublicKey);
-      toast.success('Daily check-in complete! +10 points');
+      toast.success('Daily check-in complete! +2 points');
       
       // Reload profile and points data
       await loadProfile();
@@ -310,11 +310,11 @@ export default function RewardsView() {
                   </div>
                   <div>
                     <h3 className="font-semibold">Daily Check-in</h3>
-                    <p className="text-sm text-muted-foreground">Earn 10 points every day</p>
+                    <p className="text-sm text-muted-foreground">Earn 2 points every day</p>
                   </div>
                 </div>
                 <Badge variant="secondary" className="bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300">
-                  +10 pts
+                  +2 pts
                 </Badge>
               </div>
               
@@ -345,11 +345,11 @@ export default function RewardsView() {
                   </div>
                   <div>
                     <h3 className="font-semibold">Transactions</h3>
-                    <p className="text-sm text-muted-foreground">Earn 5 points per transaction</p>
+                    <p className="text-sm text-muted-foreground">Earn 10 points per transaction</p>
                   </div>
                 </div>
                 <Badge variant="secondary" className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
-                  +5 pts each
+                  +10 pts each
                 </Badge>
               </div>
               
@@ -360,7 +360,7 @@ export default function RewardsView() {
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Points Earned</span>
-                  <span className="font-semibold gradient-text">{transactionCount * 5} pts</span>
+                  <span className="font-semibold gradient-text">{transactionCount * 10} pts</span>
                 </div>
               </div>
             </CardContent>
@@ -376,11 +376,11 @@ export default function RewardsView() {
                   </div>
                   <div>
                     <h3 className="font-semibold">Referrals</h3>
-                    <p className="text-sm text-muted-foreground">Earn 10 points per referral</p>
+                    <p className="text-sm text-muted-foreground">Earn 5 points per referral</p>
                   </div>
                 </div>
                 <Badge variant="secondary" className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300">
-                  +10 pts each
+                  +5 pts each
                 </Badge>
               </div>
               
@@ -391,7 +391,7 @@ export default function RewardsView() {
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Points Earned</span>
-                  <span className="font-semibold gradient-text">{referralCount * 10} pts</span>
+                  <span className="font-semibold gradient-text">{referralCount * 5} pts</span>
                 </div>
               </div>
 
