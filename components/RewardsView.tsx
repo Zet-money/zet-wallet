@@ -339,11 +339,11 @@ export default function RewardsView() {
                   </div>
                   <div>
                     <h3 className="font-semibold">Referrals</h3>
-                    <p className="text-sm text-muted-foreground">Earn 100 points per referral</p>
+                    <p className="text-sm text-muted-foreground">Earn 10 points per referral</p>
                   </div>
                 </div>
                 <Badge variant="secondary" className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300">
-                  +100 pts each
+                  +10 pts each
                 </Badge>
               </div>
               
@@ -354,7 +354,7 @@ export default function RewardsView() {
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Points Earned</span>
-                  <span className="font-semibold gradient-text">{referralCount * 100} pts</span>
+                  <span className="font-semibold gradient-text">{referralCount * 10} pts</span>
                 </div>
               </div>
 

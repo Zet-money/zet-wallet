@@ -238,7 +238,7 @@ export default function ProfileView() {
             <Label className="text-xs font-semibold text-muted-foreground uppercase">
               Your Referral Code
             </Label>
-            <Badge variant="secondary" className="text-xs">+100 pts per referral</Badge>
+            <Badge variant="secondary" className="text-xs">+10 pts per referral</Badge>
           </div>
           <div className="flex items-center justify-between space-x-2">
             <code className="text-lg font-mono font-bold gradient-text">

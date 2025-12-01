@@ -95,7 +95,7 @@ export default function HomeView({
               onClick={onNavigateToTransactions}
             >
               <History className="w-3 h-3" />
-              <span>Transactions</span>
+              <span>Records</span>
             </Badge>
           </div>
           <div className="flex items-center justify-between">
