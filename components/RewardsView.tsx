@@ -259,8 +259,8 @@ export default function RewardsView() {
         toast.success('Opening NFT claim page...', { id: 'nft-check' });
       }
 
-      // Redirect to NFT claim page
-      window.open('https://reward.zet.money', '_blank');
+      // Redirect to NFT claim page with wallet address
+      window.open(`https://reward.zet.money?wallet=${encodeURIComponent(wallet.address)}`, '_blank');
       
       // Reload NFT status after a delay
       setTimeout(() => {
