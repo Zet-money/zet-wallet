@@ -294,7 +294,7 @@ export default function RewardsView() {
                   <p className="text-xs text-muted-foreground mt-2">Points will convert to $ZET tokens at launch! 🚀</p>
                 </div>
                 <div className="w-16 h-16 bg-gradient-to-r from-purple-600 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
-                  <Sparkles className="w-8 h-8 text-white" />
+                  <Trophy className="w-8 h-8 text-white" />
                 </div>
               </div>
             </CardContent>
