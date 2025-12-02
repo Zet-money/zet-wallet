@@ -48,6 +48,7 @@ export function BiometricProvider({ children }: { children: React.ReactNode }) {
   const [needsBiometricSetup, setNeedsBiometricSetup] = useState(false);
   const [needsWalletCreation, setNeedsWalletCreation] = useState(false);
   const [lastActivityTime, setLastActivityTime] = useState<number>(Date.now());
+  const [biometricPublicKey, setBiometricPublicKey] = useState<string | null>(null);
   
   // Use refs to track activity time and timeout (avoids stale closure issues)
   const lastActivityRef = useRef<number>(Date.now());
@@ -312,13 +313,19 @@ export function BiometricProvider({ children }: { children: React.ReactNode }) {
         setLastActivityTime(now);
         lastActivityRef.current = now;
         saveLastUnlockTime(); // Save unlock time to localStorage
-        
         // Get timeout from user settings or use provided value
         const timeout = timeoutMinutes || await getSessionTimeoutMinutes();
         startSessionTimeout(timeout);
-        
-        // Update lastActive timestamp
         await updateLastActive();
+        // Fetch and cache biometric public key
+        try {
+          const credentials = await secureDB.getAllCredentials();
+          if (credentials && credentials.length > 0) {
+            setBiometricPublicKey(credentials[0].publicKey);
+          }
+        } catch (err) {
+          setBiometricPublicKey(null);
+        }
       }
       return result;
     } catch (error) {
@@ -333,6 +340,7 @@ export function BiometricProvider({ children }: { children: React.ReactNode }) {
   const lockApp = () => {
     setIsAppUnlocked(false);
     clearSessionTimeout();
+    setBiometricPublicKey(null); // Clear cached public key
   };
 
   const setupBiometric = async (): Promise<MigrationResult> => {
@@ -401,9 +409,12 @@ export function BiometricProvider({ children }: { children: React.ReactNode }) {
   };
 
   const getBiometricPublicKey = async (): Promise<string | null> => {
+    // Return cached value if available
+    if (biometricPublicKey) return biometricPublicKey;
     try {
       const credentials = await secureDB.getAllCredentials();
       if (credentials && credentials.length > 0) {
+        setBiometricPublicKey(credentials[0].publicKey); // Cache for future
         return credentials[0].publicKey;
       }
       return null;
