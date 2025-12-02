@@ -166,21 +166,6 @@ export default function ProfileView() {
     }
   };
 
-  const handleLogout = async () => {
-    if (confirm('Are you sure you want to log out? Make sure you have backed up your seed phrase!')) {
-      // Clear biometric credentials and lock app
-      await clearBiometricCredentials();
-      toast.success('Logged out successfully');
-      router.push('/');
-      window.location.reload();
-    }
-  };
-
-  const truncateAddress = (address: string) => {
-    if (!address) return '';
-    return `${address.slice(0, 6)}...${address.slice(-4)}`;
-  };
-
   return (
     <div className="pb-20 space-y-6">
       {/* Profile Header */}
@@ -485,15 +470,6 @@ export default function ProfileView() {
         >
           <Lock className="w-4 h-4 mr-2" />
           Lock App
-        </Button>
-
-        <Button
-          variant="destructive"
-          onClick={handleLogout}
-          className="w-full"
-        >
-          <LogOut className="w-4 h-4 mr-2" />
-          Logout
         </Button>
       </div>
 
